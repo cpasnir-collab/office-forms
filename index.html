@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1f2a44">
+<title>קליטת עובד – הסכם עבודה וטופס 101</title>
+<style>
+  :root{--ink:#1c2333;--mute:#5d6678;--line:#d9dde5;--bg:#f5f6f8;--card:#fff;--acc:#1f2a44;--ok:#1d7a4a;--warn:#a5520c}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5}
+  header{background:var(--acc);color:#fff;padding:14px 18px}
+  header h1{margin:0;font-size:19px}
+  header p{margin:2px 0 0;font-size:13px;opacity:.85}
+  main{max-width:760px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 10px;font-size:17px}
+  .card h3{margin:14px 0 6px;font-size:15px}
+  label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+  textarea{min-height:70px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){.row{grid-template-columns:1fr}}
+  .chk{display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:15px;color:var(--ink)}
+  .chk input{width:20px;height:20px;flex:none;margin-top:2px}
+  .req::after{content:" *";color:#b3261e}
+  .btn{display:inline-block;border:0;border-radius:10px;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:#fff;text-decoration:none;text-align:center}
+  .btn.sec{background:#e7eaf0;color:var(--ink)}
+  .btn.ok{background:var(--ok)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .note{font-size:13px;color:var(--mute)}
+  .warn{background:#fff6ea;border:1px solid #f1d2ad;color:var(--warn);padding:10px;border-radius:8px;font-size:14px}
+  .steps{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+  .steps span{font-size:13px;padding:4px 10px;border-radius:20px;background:#e7eaf0;color:var(--mute)}
+  .steps span.on{background:var(--acc);color:#fff}
+  .sig{border:1.5px dashed #9aa3b5;border-radius:8px;background:#fff;touch-action:none;width:100%;height:150px;display:block}
+  .days{display:grid;grid-template-columns:70px 1fr;gap:6px 10px;align-items:center}
+  .days b{font-weight:500;font-size:14px}
+  .doc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;max-height:420px;overflow:auto;font-size:14.5px}
+  .doc h4{margin:12px 0 4px;font-size:15px}
+  .doc p,.doc li{margin:4px 0}
+  table.kids{width:100%;border-collapse:collapse;font-size:14px}
+  table.kids td,table.kids th{border:1px solid var(--line);padding:4px}
+  table.kids input{padding:6px}
+  .hidden{display:none!important}
+  .linkbox{word-break:break-all;background:#f0f2f6;border-radius:8px;padding:10px;font-size:13px;direction:ltr;text-align:left}
+  /* PDF output */
+  #pdf{width:794px;padding:36px 44px;background:#fff;color:#000;font-size:13px;line-height:1.45;direction:rtl}
+  #pdf h1{font-size:18px;margin:0 0 6px;text-align:center}
+  #pdf h2{font-size:15px;margin:16px 0 6px;border-bottom:1px solid #000;padding-bottom:2px}
+  #pdf table{width:100%;border-collapse:collapse;margin:4px 0}
+  #pdf td,#pdf th{border:1px solid #888;padding:3px 6px;vertical-align:top;font-size:12.5px}
+  #pdf .sigimg{height:60px}
+  #pdf .pb{page-break-before:always}
+  #pdf .meta{font-size:11px;color:#333;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="hdr">קליטת עובד חדש</h1>
+  <p id="sub">הסכם עבודה וטופס 101 – בחתימה דיגיטלית</p>
+</header>
+<main id="app"></main>
+
+<!-- PDF render target (offscreen) -->
+<div style="position:fixed;left:-10000px;top:0"><div id="pdf"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+<script>
+"use strict";
+/* ============ helpers ============ */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+function b64urlEncode(obj){
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function b64urlDecode(s){
+  s = s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length % 4) s += "=";
+  const bin = atob(s); const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function fmtDate(d){ if(!d) return ""; const [y,m,dd] = d.split("-"); return dd && m && y ? `${dd}/${m}/${y}` : d; }
+function nowStamp(){ const d = new Date(); return d.toLocaleString("he-IL",{timeZone:"Asia/Jerusalem"}); }
+function validId(id){
+  id = String(id||"").trim(); if(!/^\d{5,9}$/.test(id)) return false;
+  id = id.padStart(9,"0"); let sum = 0;
+  for(let i=0;i<9;i++){ let n = Number(id[i]) * ((i%2)+1); sum += n>9 ? n-9 : n; }
+  return sum % 10 === 0;
+}
+
+/* signature pad */
+function sigPad(canvas){
+  const ctx = canvas.getContext("2d"); let drawing = false, dirty = false, last = null;
+  function fit(){ const r = canvas.getBoundingClientRect(); const dpr = Math.max(1, window.devicePixelRatio||1);
+    canvas.width = r.width*dpr; canvas.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b1b4a"; dirty = false; }
+  fit();
+  const pos = e => { const r = canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; };
+  canvas.addEventListener("pointerdown", e => { drawing = true; last = pos(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener("pointermove", e => { if(!drawing) return; const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last = p; dirty = true; });
+  ["pointerup","pointercancel","pointerleave"].forEach(t => canvas.addEventListener(t, () => drawing = false));
+  return {
+    clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); dirty = false; },
+    isEmpty(){ return !dirty; },
+    data(){ // small PNG: trim to a 400x130 copy
+      const c = document.createElement("canvas"); c.width = 400; c.height = 130;
+      const x = c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,400,130);
+      x.drawImage(canvas,0,0,400,130); return c.toDataURL("image/jpeg",0.6);
+    }
+  };
+}
+
+/* ============ agreement text ============ */
+function wageText(t){
+  if(t.wageType === "monthly") return `שכר חודשי ברוטו בסך ${esc(t.wage)} ₪ למשרה בהיקף המפורט לעיל.`;
+  return `שכר שעתי ברוטו בסך ${esc(t.wage)} ₪ לשעת עבודה.`;
+}
+function scheduleText(t){
+  const rows = DAYS.map((d,i) => t.days && t.days[i] ? `<li>יום ${d}: ${esc(t.days[i])}</li>` : "").join("");
+  return rows ? `<ul>${rows}</ul>` : "<p>לפי סידור עבודה שיימסר לעובד מראש.</p>";
+}
+function agreementHTML(t, emp){
+  const name = emp && emp.fullName ? esc(emp.fullName) : "__________";
+  const id = emp && emp.idNum ? esc(emp.idNum) : "__________";
+  const pension = t.pensionFund ? `בקופה: ${esc(t.pensionFund)}` : "בקופה שיבחר העובד, ובהיעדר בחירה – בקרן ברירת המחדל שנבחרה על ידי המעסיק";
+  return `
+  <p><b>הסכם עבודה אישי והודעה לעובד על תנאי עבודה</b><br>
+  לפי חוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002</p>
+  <p><b>בין:</b> ${esc(t.company)}${t.companyId ? `, ח.פ/ע.מ ${esc(t.companyId)}` : ""}, ${esc(t.address)} (להלן: "המעסיק")<br>
+  <b>לבין:</b> ${name}, ת"ז ${id} (להלן: "העובד")</p>
+
+  <h4>1. התפקיד ותחילת העבודה</h4>
+  <p>העובד יועסק בתפקיד <b>${esc(t.role)}</b> החל מיום <b>${fmtDate(t.start)}</b>. הממונה הישיר: ${esc(t.manager || t.signer)}.
+  ${t.probation ? `שלושת החודשים הראשונים${t.probation!=="3"?` (${esc(t.probation)} חודשים)`:""} הם תקופת ניסיון, שבמהלכה רשאי כל צד לסיים את ההעסקה בהודעה מוקדמת כדין.` : ""}
+  ההעסקה היא לתקופה בלתי קצובה, אלא אם צוין אחרת בכתב.</p>
+
+  <h4>2. ימי עבודה ושעות עבודה</h4>
+  <p>היקף המשרה: <b>${esc(t.weeklyHours)}</b> שעות שבועיות. יום המנוחה השבועי: <b>${esc(t.restDay)}</b>.</p>
+  ${scheduleText(t)}
+  <p>העבודה בשעות נוספות תיעשה רק לפי דרישת המעסיק או באישורו מראש, ותשולם לפי חוק שעות עבודה ומנוחה, התשי"א-1951.
+  העובד ידווח על שעות עבודתו באמצעי הרישום שיקבע המעסיק.</p>
+
+  <h4>3. שכר</h4>
+  <p>${wageText(t)} השכר ישולם לא יאוחר מה-9 בחודש שלאחר החודש שבעדו הוא משתלם, בהעברה לחשבון הבנק של העובד.</p>
+  ${t.globalOT ? `<p>גמול שעות נוספות גלובלי: ${esc(t.globalOT)} שעות נוספות בחודש ישולמו כתוספת נפרדת בתלוש. תוספת זו היא תמורה עבור שעות נוספות בלבד ואינה חלק מהשכר הרגיל. ככל שהעובד יעבוד בפועל יותר מכך – ישולם לו ההפרש כדין.</p>` : ""}
+  ${t.commission ? `<p>עמלות: ${esc(t.commission)}. העמלות משולמות כתוספת לשכר היסוד ואינן מהוות חלק ממנו, למעט ככל שהדין קובע אחרת.</p>` : ""}
+  ${t.extras ? `<p>תנאים נוספים: ${esc(t.extras)}</p>` : ""}
+
+  <h4>4. נסיעות, הבראה וחופשה</h4>
+  <p>החזר הוצאות נסיעה לעבודה וממנה, דמי הבראה, ימי חופשה שנתית, דמי מחלה ותשלום חגים – לפי הדין, צו ההרחבה הכללי ובהתאם לוותק.
+  ${t.travel ? `החזר נסיעות: ${esc(t.travel)}.` : ""}</p>
+
+  <h4>5. פנסיה ופיצויים</h4>
+  <p>המעסיק יבטח את העובד בביטוח פנסיוני ${pension}, החל מהמועד הקבוע בצו ההרחבה לביטוח פנסיוני מקיף במשק (לרבות רטרואקטיבית ככל שנדרש):
+  הפרשות עובד ${esc(t.empPct||"6")}%, הפרשות מעסיק לתגמולים ${esc(t.erPct||"6.5")}%, והפרשות מעסיק לפיצויים ${esc(t.sevPct||"6")}%${t.sevPct && Number(t.sevPct) >= 8.33 ? "" : " (או בשיעור גבוה יותר שיוסכם)"}.</p>
+  ${t.sec14 ? `<p><b>סעיף 14:</b> הצדדים מסכימים כי על ההפרשות לפיצויים יחול האישור הכללי בדבר תשלומי מעביד לקרן פנסיה ולקופת ביטוח במקום פיצויי פיטורים, לפי סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963. ההפרשות ייעשו במקום פיצויי פיטורים בשיעור ההפרשה${Number(t.sevPct||6) >= 8.33 ? " (100%)" : ` (${esc(t.sevPct||"6")}/8.33 מהפיצויים, וההשלמה – לפי הדין)`}, וכספי הפיצויים שנצברו ישוחררו לעובד בסיום העבודה, למעט במקרים שבהם נשללה זכאות לפיצויים בפסק דין או בהסכם.</p>` : ""}
+
+  <h4>6. סודיות, ציוד ומערכות</h4>
+  <p>העובד ישמור בסוד כל מידע עסקי, מסחרי או אישי על המעסיק, לקוחותיו וספקיו, ולא ישתמש בו אלא לצורך עבודתו – גם לאחר סיום ההעסקה.
+  ציוד, מסמכים ומערכות שנמסרו לעובד הם רכוש המעסיק ויוחזרו בסיום העבודה.
+  תיבת דואר אלקטרוני ומערכות שהעמיד המעסיק נועדו לשימוש לצורכי עבודה. המעסיק רשאי לנטר את השימוש בהן בהתאם למדיניות שתימסר לעובד ובכפוף לדין, ולא יעיין בתכנים אישיים אלא בהסכמת העובד או לפי הדין.</p>
+
+  <h4>7. מניעת הטרדה מינית</h4>
+  <p>העובד מאשר כי הובא לידיעתו שהמעסיק פועל לפי החוק למניעת הטרדה מינית, התשנ"ח-1998, וכי ידוע לו למי לפנות בתלונה${t.harassContact ? ` (${esc(t.harassContact)})` : ""}. ככל שהמעסיק מחויב בתקנון – התקנון נמסר לעובד או הוצג לו.</p>
+
+  <h4>8. סיום העבודה</h4>
+  <p>כל צד רשאי לסיים את ההעסקה בהודעה מוקדמת כקבוע בחוק הודעה מוקדמת לפיטורים ולהתפטרות, התשס"א-2001. פיטורים ייעשו לאחר שימוע כדין.</p>
+
+  <h4>9. כללי</h4>
+  <p>הסכם זה מהווה גם הודעה לעובד על תנאי עבודתו. שינוי בתנאים יימסר לעובד בכתב. אין בהסכם כדי לגרוע מזכות המוקנית לעובד לפי דין, צו הרחבה או הסכם קיבוצי החל עליו.
+  העובד מצהיר כי קרא את ההסכם, הבין אותו והוא מסכים לתנאיו. חתימה אלקטרונית על הסכם זה כמוה כחתימה בכתב יד.</p>`;
+}
+
+/* ============ setup (employer) ============ */
+function renderSetup(){
+  $("#hdr").textContent = "הכנת הסכם עבודה";
+  $("#sub").textContent = "המעסיק ממלא את התנאים, חותם, ושולח לעובד קישור אישי";
+  const saved = store.get("employer") || {};
+  const dayRows = DAYS.map((d,i) => `<b>${d}</b><input data-day="${i}" placeholder="למשל 09:00-17:00 (ריק = לא עובד)">`).join("");
+  $("#app").innerHTML = `
+  <div class="steps"><span class="on">1. תנאים</span><span>2. חתימת מעסיק</span><span>3. קישור לעובד</span></div>
+
+  <div class="card">
+    <h2>לאן נשלחים המסמכים החתומים</h2>
+    <div class="row">
+      <div><label class="req">המייל שלך</label><input id="ownerEmail" type="email" value="${esc(saved.ownerEmail||"")}"></div>
+      <div><label class="req">מייל רואה החשבון</label><input id="cpaEmail" type="email" value="${esc(saved.cpaEmail||"")}"></div>
+    </div>
+    <p class="note">הכתובות ופרטי החברה נשמרים רק במכשיר הזה, כדי שלא תצטרך למלא אותם בכל פעם.</p>
+  </div>
+
+  <div class="card">
+    <h2>פרטי המעסיק</h2>
+    <div class="row">
+      <div><label class="req">שם החברה / העסק</label><input id="company" value="${esc(saved.company||"")}"></div>
+      <div><label>ח.פ / ע.מ</label><input id="companyId" inputmode="numeric" value="${esc(saved.companyId||"")}"></div>
+    </div>
+    <label class="req">כתובת העסק</label><input id="address" value="${esc(saved.address||"")}">
+    <div class="row">
+      <div><label class="req">שם החותם מטעם המעסיק</label><input id="signer" value="${esc(saved.signer||"")}"></div>
+      <div><label>ממונה ישיר (אם אחר)</label><input id="manager"></div>
+    </div>
+    <label>איש קשר לתלונות על הטרדה מינית</label><input id="harassContact" value="${esc(saved.harassContact||"")}" placeholder="שם ותפקיד">
+  </div>
+
+  <div class="card">
+    <h2>תפקיד ושעות</h2>
+    <div class="row">
+      <div><label class="req">תפקיד</label><input id="role"></div>
+      <div><label class="req">תאריך תחילת עבודה</label><input id="start" type="date"></div>
+    </div>
+    <h3>ימים ושעות</h3>
+    <div class="days">${dayRows}</div>
+    <div class="btns"><button class="btn sec" type="button" id="fillWeek">א׳–ה׳ 09:00-17:00</button><button class="btn sec" type="button" id="clearWeek">נקה</button></div>
+    <div class="row">
+      <div><label class="req">היקף שעות שבועי</label><input id="weeklyHours" inputmode="decimal"></div>
+      <div><label class="req">יום מנוחה שבועי</label>
+        <select id="restDay"><option>שבת</option><option>שישי</option><option>ראשון</option></select></div>
+    </div>
+    <label>תקופת ניסיון (חודשים)</label>
+    <select id="probation"><option value="">ללא</option><option value="3" selected>3</option><option value="6">6</option></select>
+  </div>
+
+  <div class="card">
+    <h2>שכר ותנאים</h2>
+    <div class="row">
+      <div><label class="req">סוג שכר</label><select id="wageType"><option value="hourly">שעתי</option><option value="monthly">חודשי</option></select></div>
+      <div><label class="req">סכום ברוטו (₪)</label><input id="wage" inputmode="decimal"></div>
+    </div>
+    <label>שעות נוספות גלובליות בחודש (רק אם יש)</label><input id="globalOT" inputmode="decimal">
+    <label>עמלות (רק אם יש) – אחוז, על מה, ובסיס החישוב</label><textarea id="commission" placeholder="למשל: 5% ממכירות מוצרים, לפני מע&quot;מ"></textarea>
+    <label>החזר נסיעות</label><input id="travel" placeholder="למשל: לפי צו ההרחבה / חופשי חודשי">
+    <label>תנאים נוספים</label><textarea id="extras"></textarea>
+    <h3>פנסיה</h3>
+    <label>קופת פנסיה (אם ידוע)</label><input id="pensionFund">
+    <div class="row">
+      <div><label>עובד %</label><input id="empPct" value="6" inputmode="decimal"></div>
+      <div><label>מעסיק תגמולים %</label><input id="erPct" value="6.5" inputmode="decimal"></div>
+    </div>
+    <label>מעסיק פיצויים %</label><input id="sevPct" value="6" inputmode="decimal">
+    <div class="chk"><input type="checkbox" id="sec14" checked><span>הפיצויים לפי סעיף 14 (מומלץ – מגן על המעסיק מתשלום פיצויים כפול)</span></div>
+  </div>
+
+  <div class="card">
+    <h2>חתימת המעסיק</h2>
+    <canvas class="sig" id="sigEmp"></canvas>
+    <div class="btns"><button class="btn sec" type="button" id="sigClear">נקה חתימה</button></div>
+    <p class="note">החתימה תופיע על ההסכם שהעובד יקבל.</p>
+  </div>
+
+  <div class="card">
+    <button class="btn" type="button" id="makeLink">צור קישור לעובד</button>
+    <div id="linkOut" class="hidden">
+      <h3>הקישור לעובד</h3>
+      <div class="linkbox" id="linkTxt"></div>
+      <div class="btns">
+        <button class="btn sec" type="button" id="copyLink">העתק קישור</button>
+        <a class="btn ok" id="waLink" target="_blank" rel="noopener">שלח בוואטסאפ</a>
+      </div>
+      <p class="note">הקישור מכיל רק את תנאי ההעסקה שמילאת. פרטים אישיים של העובד לא עוברים בקישור ולא נשמרים בשום שרת.</p>
+    </div>
+  </div>`;
+
+  const pad = sigPad($("#sigEmp"));
+  $("#sigClear").onclick = () => pad.clear();
+  $("#fillWeek").onclick = () => { document.querySelectorAll("[data-day]").forEach((el,i)=> el.value = i<5 ? "09:00-17:00" : ""); if(!$("#weeklyHours").value) $("#weeklyHours").value = "40"; };
+  $("#clearWeek").onclick = () => document.querySelectorAll("[data-day]").forEach(el => el.value = "");
+
+  $("#makeLink").onclick = () => {
+    const v = id => $("#"+id).value.trim();
+    const need = {ownerEmail:"המייל שלך",cpaEmail:"מייל רואה החשבון",company:"שם החברה",address:"כתובת",signer:"שם החותם",role:"תפקיד",start:"תאריך תחילה",weeklyHours:"היקף שעות",wage:"סכום השכר"};
+    const miss = Object.keys(need).filter(k => !v(k));
+    if(miss.length){ alertBox("חסר: " + miss.map(k=>need[k]).join(", ")); return; }
+    if(pad.isEmpty()){ alertBox("חסרה חתימת המעסיק"); return; }
+    const t = {
+      v:1, ownerEmail:v("ownerEmail"), cpaEmail:v("cpaEmail"),
+      company:v("company"), companyId:v("companyId"), address:v("address"), signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
+      role:v("role"), start:v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:v("probation"),
+      days:[...document.querySelectorAll("[data-day]")].map(el => el.value.trim()),
+      wageType:v("wageType"), wage:v("wage"), globalOT:v("globalOT"), commission:v("commission"), travel:v("travel"), extras:v("extras"),
+      pensionFund:v("pensionFund"), empPct:v("empPct"), erPct:v("erPct"), sevPct:v("sevPct"), sec14:$("#sec14").checked,
+      empSig: pad.data(), empSignedAt: nowStamp()
+    };
+    store.set("employer", {ownerEmail:t.ownerEmail,cpaEmail:t.cpaEmail,company:t.company,companyId:t.companyId,address:t.address,signer:t.signer,harassContact:t.harassContact});
+    const url = location.origin + location.pathname + "#e=" + b64urlEncode(t);
+    $("#linkTxt").textContent = url;
+    $("#waLink").href = "https://wa.me/?text=" + encodeURIComponent(`שלום, מצורף קישור למילוי הסכם העבודה וטופס 101 ב${t.company}. ממלאים מהטלפון, בסוף חותמים ושולחים:\n${url}`);
+    $("#linkOut").classList.remove("hidden");
+    $("#linkOut").scrollIntoView({behavior:"smooth"});
+  };
+  $("#copyLink") && ($("#copyLink").onclick = async () => {
+    try{ await navigator.clipboard.writeText($("#linkTxt").textContent); $("#copyLink").textContent = "הועתק ✓"; }
+    catch(e){ alertBox("לא הצלחתי להעתיק – סמן את הקישור והעתק ידנית"); }
+  });
+}
+
+/* ============ employee flow ============ */
+let T = null, E = {}, F = {}, sigE = null, idImg = null;
+
+function renderEmployee(){
+  $("#hdr").textContent = "הסכם עבודה – " + T.company;
+  $("#sub").textContent = "ממלאים פרטים, קוראים, חותמים. אחר כך טופס 101.";
+  $("#app").innerHTML = `
+  <div class="steps"><span class="on">1. פרטים והסכם</span><span>2. טופס 101</span><span>3. שליחה</span></div>
+  <div class="card">
+    <h2>פרטים אישיים</h2>
+    <div class="row">
+      <div><label class="req">שם פרטי</label><input id="first"></div>
+      <div><label class="req">שם משפחה</label><input id="last"></div>
+    </div>
+    <div class="row">
+      <div><label class="req">מספר תעודת זהות (9 ספרות)</label><input id="idNum" inputmode="numeric" maxlength="9"></div>
+      <div><label class="req">תאריך לידה</label><input id="birth" type="date"></div>
+    </div>
+    <div class="row">
+      <div><label class="req">מין</label><select id="gender"><option value="">בחר</option><option>זכר</option><option>נקבה</option></select></div>
+      <div><label class="req">טלפון נייד</label><input id="phone" inputmode="tel"></div>
+    </div>
+    <label>מייל</label><input id="email" type="email">
+    <div class="row">
+      <div><label class="req">רחוב ומספר</label><input id="street"></div>
+      <div><label class="req">יישוב</label><input id="city"></div>
+    </div>
+    <label>מיקוד</label><input id="zip" inputmode="numeric">
+    <h3>חשבון בנק להעברת השכר</h3>
+    <div class="row">
+      <div><label class="req">בנק</label><input id="bank" placeholder="שם או מספר"></div>
+      <div><label class="req">סניף</label><input id="branch" inputmode="numeric"></div>
+    </div>
+    <label class="req">מספר חשבון</label><input id="account" inputmode="numeric">
+  </div>
+
+  <div class="card">
+    <h2>הסכם העבודה</h2>
+    <div class="doc" id="agr"></div>
+    <div class="chk"><input type="checkbox" id="agree"><span>קראתי את ההסכם ואני מסכים/ה לתנאיו${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}</span></div>
+    <h3>חתימת העובד</h3>
+    <canvas class="sig" id="sigE"></canvas>
+    <div class="btns"><button class="btn sec" type="button" id="sigClear">נקה חתימה</button></div>
+    <div class="btns"><button class="btn" type="button" id="toForm">המשך לטופס 101</button></div>
+  </div>`;
+  const upd = () => { $("#agr").innerHTML = agreementHTML(T, {fullName:($("#first").value+" "+$("#last").value).trim(), idNum:$("#idNum").value.trim()}); };
+  upd(); ["first","last","idNum"].forEach(id => $("#"+id).addEventListener("input", upd));
+  sigE = sigPad($("#sigE")); $("#sigClear").onclick = () => sigE.clear();
+  $("#toForm").onclick = () => {
+    const ids = ["first","last","idNum","birth","gender","phone","street","city","bank","branch","account"];
+    const miss = ids.filter(i => !$("#"+i).value.trim());
+    if(miss.length){ alertBox("יש למלא את כל השדות המסומנים בכוכבית"); $("#"+miss[0]).focus(); return; }
+    if(!validId($("#idNum").value)){ alertBox("מספר תעודת הזהות לא תקין – בדוק/י שוב"); $("#idNum").focus(); return; }
+    if(!$("#agree").checked){ alertBox("יש לסמן שקראת ואת/ה מסכים/ה להסכם"); return; }
+    if(sigE.isEmpty()){ alertBox("חסרה חתימה"); return; }
+    ["first","last","idNum","birth","gender","phone","email","street","city","zip","bank","branch","account"].forEach(i => E[i] = $("#"+i).value.trim());
+    E.sig = sigE.data(); E.signedAt = nowStamp();
+    render101();
+  };
+}
+
+function kidRow(){ return `<tr><td><input data-k="name"></td><td><input data-k="id" inputmode="numeric"></td><td><input data-k="birth" type="date"></td><td style="text-align:center"><input type="checkbox" data-k="custody" checked></td><td style="text-align:center"><input type="checkbox" data-k="allowance"></td></tr>`; }
+
+function render101(){
+  window.scrollTo(0,0);
+  $("#hdr").textContent = "טופס 101 – כרטיס עובד";
+  $("#sub").textContent = "לשנת המס " + new Date().getFullYear() + " · הפרטים מההסכם כבר מולאו";
+  const credits = [
+    ["resident","אני תושב/ת ישראל"],
+    ["locality","אני תושב/ת קבוע/ה ביישוב מזכה (ממלאים שם היישוב ומתי)"],
+    ["newImm","אני עולה חדש/ה או תושב/ת חוזר/ת"],
+    ["spouseNoInc","בן/בת הזוג שלי גר/ה איתי ואין לו/ה הכנסה (רלוונטי רק במקרים שקבועים בחוק)"],
+    ["singleParent","אני הורה במשפחה חד-הורית"],
+    ["kidsCustody","ילדיי בחזקתי – זכאות לנקודות זיכוי בעד ילדים"],
+    ["kidsNotCustody","יש לי ילדים שאינם בחזקתי ואני משתתף/ת בכלכלתם"],
+    ["alimony","אני משלם/ת מזונות לבן/בת זוג לשעבר"],
+    ["disabledChild","יש לי ילד/ה עם מוגבלות"],
+    ["soldier","שחררתי משירות סדיר / לאומי בשלוש השנים האחרונות"],
+    ["degree","סיימתי תואר אקדמי / לימודי מקצוע ולא ביקשתי את הזיכוי בדוח שנתי"],
+    ["disabled","אני נכה / עיוור/ת עם פטור לפי סעיף 9(5) (מצרפים אישור)"]
+  ];
+  $("#app").innerHTML = `
+  <div class="steps"><span>1. פרטים והסכם ✓</span><span class="on">2. טופס 101</span><span>3. שליחה</span></div>
+  <div class="card">
+    <h2>א. המעסיק</h2>
+    <p>${esc(T.company)}${T.companyId?` · ${esc(T.companyId)}`:""} · ${esc(T.address)}</p>
+    <h2>ב. פרטי העובד</h2>
+    <p>${esc(E.first)} ${esc(E.last)} · ת"ז ${esc(E.idNum)} · נולד/ה ${fmtDate(E.birth)} · ${esc(E.street)}, ${esc(E.city)} · ${esc(E.phone)}</p>
+    <div class="row">
+      <div><label class="req">מצב משפחתי</label><select id="marital"><option value="">בחר</option><option>רווק/ה</option><option>נשוי/אה</option><option>גרוש/ה</option><option>אלמן/ה</option><option>פרוד/ה</option></select></div>
+      <div><label class="req">תושב/ת ישראל</label><select id="israeli"><option>כן</option><option>לא</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>קופת חולים</label><input id="hmo"></div>
+      <div><label>חבר/ת קיבוץ / מושב שיתופי</label><select id="kibbutz"><option>לא</option><option>כן – ההכנסה מועברת לקיבוץ</option><option>כן – ההכנסה לא מועברת לקיבוץ</option></select></div>
+    </div>
+    <label>תאריך עלייה (אם רלוונטי)</label><input id="aliyah" type="date">
+  </div>
+
+  <div class="card">
+    <h2>ג. ילדים עד גיל 19</h2>
+    <table class="kids"><thead><tr><th>שם</th><th>ת"ז</th><th>תאריך לידה</th><th>בחזקתי</th><th>מקבל/ת קצבת ילדים</th></tr></thead><tbody id="kids">${kidRow()}</tbody></table>
+    <div class="btns"><button class="btn sec" type="button" id="addKid">הוסף ילד/ה</button></div>
+  </div>
+
+  <div class="card">
+    <h2>ד. ההכנסה ממעסיק זה</h2>
+    <select id="incType"><option>משכורת חודש</option><option>משכורת נוספת</option><option>משכורת חלקית</option><option>שכר עבודה (עובד יומי)</option><option>קצבה</option><option>מלגה</option></select>
+    <label>תאריך תחילת העבודה בשנה זו</label><input id="incStart" type="date" value="${esc(T.start)}">
+  </div>
+
+  <div class="card">
+    <h2>ה. הכנסות אחרות</h2>
+    <select id="otherInc"><option value="none">אין לי הכנסות אחרות</option><option value="yes">יש לי הכנסות אחרות</option></select>
+    <div id="otherBox" class="hidden">
+      <label>אילו הכנסות (משכורת ממקום אחר, קצבה, מלגה וכו')</label><input id="otherDesc">
+      <div class="chk"><input type="radio" name="credHere" value="here" checked><span>אבקש לקבל נקודות זיכוי ומדרגות מס כאן</span></div>
+      <div class="chk"><input type="radio" name="credHere" value="other"><span>אני מקבל/ת נקודות זיכוי ומדרגות מס בהכנסה אחרת</span></div>
+      <div class="chk"><input type="checkbox" id="coord"><span>יש לי אישור תיאום מס מפקיד השומה (מצרפים)</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ו. בן/בת זוג</h2>
+    <div class="row">
+      <div><label>שם מלא</label><input id="spName"></div>
+      <div><label>ת"ז</label><input id="spId" inputmode="numeric"></div>
+    </div>
+    <div class="row">
+      <div><label>תאריך לידה</label><input id="spBirth" type="date"></div>
+      <div><label>הכנסה</label><select id="spInc"><option value="">—</option><option>אין לבן/בת הזוג הכנסה</option><option>יש הכנסה מעבודה / עסק</option><option>יש הכנסה אחרת</option></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ח. בקשה לפטור או זיכוי ממס</h2>
+    ${credits.map(([k,t]) => `<div class="chk"><input type="checkbox" data-cr="${k}"><span>${t}</span></div>`).join("")}
+    <label>פרטים לבקשות שסימנת (שם יישוב ותאריך, תאריכי שירות, תואר וכו')</label><textarea id="credDetails"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>צילום תעודת זהות כולל ספח</h2>
+    <input type="file" id="idFile" accept="image/*" capture="environment">
+    <p class="note">צילום ברור של הת"ז והספח. אישורים לבקשות (אישור תושב, תעודת שחרור וכו') אפשר לשלוח בנפרד לרואה החשבון.</p>
+  </div>
+
+  <div class="card">
+    <h2>ט. הצהרה</h2>
+    <div class="chk"><input type="checkbox" id="decl"><span>אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בפרטים בתוך שבוע.</span></div>
+    <p class="note">החתימה שלך מההסכם תופיע גם על טופס זה.</p>
+    <div class="btns"><button class="btn sec" type="button" id="back">חזרה להסכם</button><button class="btn" type="button" id="finish">סיום והפקת מסמך חתום</button></div>
+  </div>`;
+
+  $("#addKid").onclick = () => $("#kids").insertAdjacentHTML("beforeend", kidRow());
+  $("#otherInc").onchange = e => $("#otherBox").classList.toggle("hidden", e.target.value !== "yes");
+  $("#back").onclick = () => renderEmployee();
+  $("#idFile").onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const img = new Image(); const r = new FileReader();
+    r.onload = () => { img.onload = () => { const max = 1100, s = Math.min(1, max/Math.max(img.width,img.height));
+      const c = document.createElement("canvas"); c.width = img.width*s; c.height = img.height*s;
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); idImg = c.toDataURL("image/jpeg",0.75); }; img.src = r.result; };
+    r.readAsDataURL(f);
+  };
+  $("#finish").onclick = () => {
+    if(!$("#marital").value){ alertBox("יש לבחור מצב משפחתי"); return; }
+    if(!$("#decl").checked){ alertBox("יש לסמן את ההצהרה"); return; }
+    F = {
+      marital:$("#marital").value, israeli:$("#israeli").value, hmo:$("#hmo").value, kibbutz:$("#kibbutz").value, aliyah:$("#aliyah").value,
+      kids:[...document.querySelectorAll("#kids tr")].map(tr => { const o = {}; tr.querySelectorAll("[data-k]").forEach(el => o[el.dataset.k] = el.type==="checkbox" ? el.checked : el.value.trim()); return o; }).filter(k => k.name || k.id),
+      incType:$("#incType").value, incStart:$("#incStart").value,
+      otherInc:$("#otherInc").value, otherDesc:$("#otherDesc").value, credHere:(document.querySelector("[name=credHere]:checked")||{}).value, coord:$("#coord").checked,
+      spName:$("#spName").value, spId:$("#spId").value, spBirth:$("#spBirth").value, spInc:$("#spInc").value,
+      credits:[...document.querySelectorAll("[data-cr]")].filter(el => el.checked).map(el => el.nextElementSibling.textContent),
+      credDetails:$("#credDetails").value
+    };
+    renderSend();
+  };
+}
+
+/* ============ PDF + send ============ */
+function buildPdfHTML(){
+  const kids = F.kids.length ? `<table><tr><th>שם</th><th>ת"ז</th><th>תאריך לידה</th><th>בחזקתי</th><th>קצבת ילדים</th></tr>${F.kids.map(k=>`<tr><td>${esc(k.name)}</td><td>${esc(k.id)}</td><td>${fmtDate(k.birth)}</td><td>${k.custody?"כן":"לא"}</td><td>${k.allowance?"כן":"לא"}</td></tr>`).join("")}</table>` : "<p>אין</p>";
+  const empName = `${esc(E.first)} ${esc(E.last)}`;
+  return `
+  <h1>הסכם עבודה – ${esc(T.company)}</h1>
+  <div class="meta">נחתם דיגיטלית · מעסיק: ${esc(T.empSignedAt)} · עובד: ${esc(E.signedAt)}</div>
+  ${agreementHTML(T, {fullName:`${E.first} ${E.last}`, idNum:E.idNum})}
+  <h2>פרטי העובד</h2>
+  <table>
+    <tr><td>שם</td><td>${empName}</td><td>ת"ז</td><td>${esc(E.idNum)}</td></tr>
+    <tr><td>תאריך לידה</td><td>${fmtDate(E.birth)}</td><td>מין</td><td>${esc(E.gender)}</td></tr>
+    <tr><td>כתובת</td><td>${esc(E.street)}, ${esc(E.city)} ${esc(E.zip)}</td><td>טלפון</td><td>${esc(E.phone)}</td></tr>
+    <tr><td>מייל</td><td>${esc(E.email)}</td><td>בנק</td><td>בנק ${esc(E.bank)} · סניף ${esc(E.branch)} · חשבון ${esc(E.account)}</td></tr>
+  </table>
+  <h2>חתימות</h2>
+  <table><tr>
+    <td>המעסיק: ${esc(T.company)}<br>חותם: ${esc(T.signer)}<br>${esc(T.empSignedAt)}<br><img class="sigimg" src="${T.empSig}"></td>
+    <td>העובד: ${empName}<br>ת"ז ${esc(E.idNum)}<br>${esc(E.signedAt)}<br><img class="sigimg" src="${E.sig}"></td>
+  </tr></table>
+
+  <div class="pb"></div>
+  <h1>טופס 101 – כרטיס עובד ובקשה להקלה ולתיאום מס · שנת ${new Date().getFullYear()}</h1>
+  <h2>א. המעסיק</h2>
+  <table><tr><td>שם</td><td>${esc(T.company)}</td><td>ח.פ / תיק ניכויים</td><td>${esc(T.companyId)}</td></tr><tr><td>כתובת</td><td colspan="3">${esc(T.address)}</td></tr></table>
+  <h2>ב. העובד</h2>
+  <table>
+    <tr><td>שם</td><td>${empName}</td><td>ת"ז</td><td>${esc(E.idNum)}</td></tr>
+    <tr><td>תאריך לידה</td><td>${fmtDate(E.birth)}</td><td>תאריך עלייה</td><td>${fmtDate(F.aliyah)}</td></tr>
+    <tr><td>כתובת</td><td>${esc(E.street)}, ${esc(E.city)} ${esc(E.zip)}</td><td>טלפון</td><td>${esc(E.phone)}</td></tr>
+    <tr><td>מין</td><td>${esc(E.gender)}</td><td>מצב משפחתי</td><td>${esc(F.marital)}</td></tr>
+    <tr><td>תושב ישראל</td><td>${esc(F.israeli)}</td><td>חבר קיבוץ</td><td>${esc(F.kibbutz)}</td></tr>
+    <tr><td>קופת חולים</td><td>${esc(F.hmo)}</td><td>מייל</td><td>${esc(E.email)}</td></tr>
+  </table>
+  <h2>ג. ילדים</h2>${kids}
+  <h2>ד. ההכנסה ממעסיק זה</h2><p>${esc(F.incType)} · מתאריך ${fmtDate(F.incStart)}</p>
+  <h2>ה. הכנסות אחרות</h2>
+  <p>${F.otherInc==="yes" ? `יש: ${esc(F.otherDesc)} · ${F.credHere==="here"?"מבקש/ת נקודות זיכוי ומדרגות מס כאן":"מקבל/ת נקודות זיכוי בהכנסה אחרת"}${F.coord?" · יש אישור תיאום מס":""}` : "אין לי הכנסות אחרות"}</p>
+  <h2>ו. בן/בת זוג</h2>
+  <p>${F.spName ? `${esc(F.spName)} · ת"ז ${esc(F.spId)} · ${fmtDate(F.spBirth)} · ${esc(F.spInc)}` : "—"}</p>
+  <h2>ח. בקשות לפטור או זיכוי</h2>
+  ${F.credits.length ? `<ul>${F.credits.map(c=>`<li>${esc(c)}</li>`).join("")}</ul>` : "<p>לא התבקשו</p>"}
+  ${F.credDetails ? `<p>פרטים: ${esc(F.credDetails)}</p>` : ""}
+  <h2>ט. הצהרה</h2>
+  <p>אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים, וידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בתוך שבוע.</p>
+  <p>חתימת העובד: <img class="sigimg" src="${E.sig}"> · ${esc(E.signedAt)}</p>
+  ${idImg ? `<div class="pb"></div><h2>צילום תעודת זהות</h2><img src="${idImg}" style="max-width:100%;max-height:900px">` : ""}`;
+}
+
+let pdfBlob = null;
+function renderSend(){
+  window.scrollTo(0,0);
+  $("#hdr").textContent = "סיום ושליחה";
+  $("#sub").textContent = T.company;
+  const fname = `הסכם עבודה ו-101 – ${E.first} ${E.last} – ${T.company}.pdf`;
+  $("#app").innerHTML = `
+  <div class="steps"><span>1. פרטים והסכם ✓</span><span>2. טופס 101 ✓</span><span class="on">3. שליחה</span></div>
+  <div class="card">
+    <h2>המסמך החתום מוכן</h2>
+    <p id="pdfState">מכין PDF…</p>
+    <div class="btns">
+      <button class="btn ok" type="button" id="share" disabled>שלח למעסיק ולרואה החשבון</button>
+      <button class="btn sec" type="button" id="dl" disabled>הורד PDF</button>
+    </div>
+    <p class="note">בלחיצה על "שלח" ייפתח חלון השיתוף של הטלפון – בחר במייל או בוואטסאפ. אם השיתוף לא עובד: הורד את ה-PDF וצרף אותו למייל אל ${esc(T.ownerEmail)} ו-${esc(T.cpaEmail)}.</p>
+    <div class="btns"><a class="btn sec" id="mail">פתח מייל מוכן (בלי קובץ)</a></div>
+  </div>`;
+  $("#mail").href = `mailto:${encodeURIComponent(T.ownerEmail)}?cc=${encodeURIComponent(T.cpaEmail)}&subject=${encodeURIComponent("הסכם עבודה וטופס 101 – "+E.first+" "+E.last)}&body=${encodeURIComponent("מצורף ה-PDF החתום (הסכם עבודה וטופס 101).")}`;
+  $("#pdf").innerHTML = buildPdfHTML();
+  const go = () => {
+    if(typeof html2pdf === "undefined"){ setTimeout(go, 400); return; }
+    html2pdf().set({ margin:[8,8,8,8], filename:fname, image:{type:"jpeg",quality:0.9}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:"mm",format:"a4",orientation:"portrait"}, pagebreak:{mode:["css"],before:".pb"} })
+      .from($("#pdf")).outputPdf("blob").then(b => {
+        pdfBlob = b; $("#pdfState").textContent = "ה-PDF מוכן ✓"; $("#share").disabled = false; $("#dl").disabled = false;
+      }).catch(() => { $("#pdfState").textContent = "לא הצלחתי להפיק PDF במכשיר הזה. נסה מדפדפן אחר (כרום)."; });
+  };
+  go();
+  $("#dl").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(pdfBlob); a.download = fname; a.click(); };
+  $("#share").onclick = async () => {
+    const file = new File([pdfBlob], fname, {type:"application/pdf"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:fname, text:`הסכם עבודה וטופס 101 חתומים – ${E.first} ${E.last}. לשליחה אל ${T.ownerEmail}, ${T.cpaEmail}`}); }
+      catch(e){ /* user cancelled */ }
+    } else { $("#dl").click(); alertBox("השיתוף הישיר לא נתמך במכשיר הזה – הקובץ ירד. צרף אותו למייל."); }
+  };
+}
+
+/* ============ misc ============ */
+function alertBox(msg){
+  let el = $("#toast"); if(!el){ el = document.createElement("div"); el.id = "toast";
+    el.style.cssText = "position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1c2333;color:#fff;padding:12px 16px;border-radius:10px;max-width:92%;z-index:9;font-size:15px";
+    document.body.appendChild(el); }
+  el.textContent = msg; el.style.display = "block"; clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", 3800);
+}
+
+function route(){
+  const h = location.hash;
+  if(h.startsWith("#e=")){
+    try{ T = b64urlDecode(h.slice(3)); }catch(e){ $("#app").innerHTML = `<div class="card warn">הקישור פגום. בקש/י מהמעסיק קישור חדש.</div>`; return; }
+    renderEmployee();
+  } else renderSetup();
+}
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
