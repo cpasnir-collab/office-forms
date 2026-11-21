@@ -73,6 +73,7 @@
 /* ============ helpers ============ */
 const $ = (s, r=document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const CPA_EMAIL = "cpa.snir@gmail.com";
 const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
 const store = {
   get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } },
@@ -186,18 +187,15 @@ function agreementHTML(t, emp){
 function renderSetup(){
   $("#hdr").textContent = "הכנת הסכם עבודה";
   $("#sub").textContent = "המעסיק ממלא את התנאים, חותם, ושולח לעובד קישור אישי";
-  const saved = store.get("employer") || {};
+  const saved = Object.assign({}, store.get("employer") || {}, PRESET || {});
   const dayRows = DAYS.map((d,i) => `<b>${d}</b><input data-day="${i}" placeholder="למשל 09:00-17:00 (ריק = לא עובד)">`).join("");
   $("#app").innerHTML = `
   <div class="steps"><span class="on">1. תנאים</span><span>2. חתימת מעסיק</span><span>3. קישור לעובד</span></div>
 
   <div class="card">
     <h2>לאן נשלחים המסמכים החתומים</h2>
-    <div class="row">
-      <div><label class="req">המייל שלך</label><input id="ownerEmail" type="email" value="${esc(saved.ownerEmail||"")}"></div>
-      <div><label class="req">מייל רואה החשבון</label><input id="cpaEmail" type="email" value="${esc(saved.cpaEmail||"")}"></div>
-    </div>
-    <p class="note">הכתובות ופרטי החברה נשמרים רק במכשיר הזה, כדי שלא תצטרך למלא אותם בכל פעם.</p>
+    <label class="req">המייל שלך</label><input id="ownerEmail" type="email" value="${esc(saved.ownerEmail||"")}">
+    <p class="note">עותק של כל מסמך חתום נשלח גם למשרד רואה החשבון (${CPA_EMAIL}).</p>
   </div>
 
   <div class="card">
@@ -279,12 +277,12 @@ function renderSetup(){
 
   $("#makeLink").onclick = () => {
     const v = id => $("#"+id).value.trim();
-    const need = {ownerEmail:"המייל שלך",cpaEmail:"מייל רואה החשבון",company:"שם החברה",address:"כתובת",signer:"שם החותם",role:"תפקיד",start:"תאריך תחילה",weeklyHours:"היקף שעות",wage:"סכום השכר"};
+    const need = {ownerEmail:"המייל שלך",company:"שם החברה",address:"כתובת",signer:"שם החותם",role:"תפקיד",start:"תאריך תחילה",weeklyHours:"היקף שעות",wage:"סכום השכר"};
     const miss = Object.keys(need).filter(k => !v(k));
     if(miss.length){ alertBox("חסר: " + miss.map(k=>need[k]).join(", ")); return; }
     if(pad.isEmpty()){ alertBox("חסרה חתימת המעסיק"); return; }
     const t = {
-      v:1, ownerEmail:v("ownerEmail"), cpaEmail:v("cpaEmail"),
+      v:1, ownerEmail:v("ownerEmail"), cpaEmail:CPA_EMAIL,
       company:v("company"), companyId:v("companyId"), address:v("address"), signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
       role:v("role"), start:v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:v("probation"),
       days:[...document.querySelectorAll("[data-day]")].map(el => el.value.trim()),
@@ -292,7 +290,7 @@ function renderSetup(){
       pensionFund:v("pensionFund"), empPct:v("empPct"), erPct:v("erPct"), sevPct:v("sevPct"), sec14:$("#sec14").checked,
       empSig: pad.data(), empSignedAt: nowStamp()
     };
-    store.set("employer", {ownerEmail:t.ownerEmail,cpaEmail:t.cpaEmail,company:t.company,companyId:t.companyId,address:t.address,signer:t.signer,harassContact:t.harassContact});
+    store.set("employer", {ownerEmail:t.ownerEmail,company:t.company,companyId:t.companyId,address:t.address,signer:t.signer,harassContact:t.harassContact});
     const url = location.origin + location.pathname + "#e=" + b64urlEncode(t);
     $("#linkTxt").textContent = url;
     $("#waLink").href = "https://wa.me/?text=" + encodeURIComponent(`שלום, מצורף קישור למילוי הסכם העבודה וטופס 101 ב${t.company}. ממלאים מהטלפון, בסוף חותמים ושולחים:\n${url}`);
@@ -306,6 +304,7 @@ function renderSetup(){
 }
 
 /* ============ employee flow ============ */
+let PRESET = null;
 let T = null, E = {}, F = {}, sigE = null, idImg = null;
 
 function renderEmployee(){
@@ -584,8 +583,12 @@ function route(){
   const h = location.hash;
   if(h.startsWith("#e=")){
     try{ T = b64urlDecode(h.slice(3)); }catch(e){ $("#app").innerHTML = `<div class="card warn">הקישור פגום. בקש/י מהמעסיק קישור חדש.</div>`; return; }
+    T.cpaEmail = CPA_EMAIL;
     renderEmployee();
-  } else renderSetup();
+  } else {
+    if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
+    renderSetup();
+  }
 }
 window.addEventListener("hashchange", route);
 route();
