@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = "http://localhost:8765/"
-OUT = os.environ.get("OUT", "/tmp/v32")
+OUT = os.environ.get("OUT", "/tmp/v33")
 os.makedirs(OUT, exist_ok=True)
 URI = {"company":"אורי כלפה","companyId":"024592693","deductions":"904105525","address":"עירית 1, קריית שמונה","signer":"אורי כלפה"}
 def preset(extra=None):
@@ -27,12 +27,14 @@ async def employer(pg, mode="new", f101="print", wage="40", sev="6", days=True, 
     if not pre: await pg.select_option("#industry", "general")
     await pg.click(f"label:has(input[name=mode][value={mode}])")
     if mode == "new": await pg.click(f"label:has(input[name=f101][value={f101}])")
-    vals = {"ephone":"0501234567","ownerEmail":"uri@example.com","empName":"ישראל בדיקה","empPhone":"0500000000","role":"עובד דלפק","wage":wage,"pensionFund":"מגדל מקפת","harassContact":"אורי כלפה 0501234567"}
+    vals = {"ephone":"0501234567","ownerEmail":"uri@example.com","empName":"ישראל בדיקה","empPhone":"0500000000","role":"עובד דלפק","wage":wage,"pensionFund":"מגדל מקפת","harassContact":"אורי כלפה 0501234567","manager":"אורי כלפה, בעלים"}
     if mode == "new": vals["start"] = "2026-12-01"
     else:
         vals.update({"effDate":"2027-01-01","origStart":"2026-12-01"})
-        for k,v in (changes or {"wage":"40 ₪ לשעה"}).items():
-            await pg.check(f"[data-chg={k}]"); vals["prev_"+k] = v
+        for k,v in (changes or {"wage":"40"}).items():
+            await pg.check(f"[data-chg={k}]")
+            if k == "wage" and isinstance(v, tuple): vals["prev_wage"] = v[0]; await pg.select_option("#prev_wageType", v[1])
+            else: vals["prev_"+k] = v
     if extra: vals.update(extra)
     for k,v in vals.items(): await pg.fill("#"+k, v)
     if days: await pg.click("#fillWeek")
@@ -151,18 +153,18 @@ async def main():
             await pg.select_option("#breakMin", "45"); check("G-03: הפסקה 45 – בלי אזהרת סעיף 20", "סעיף 20" not in await checks())
             for i in range(5): await pg.fill(f"[data-day='{i}']", "08:00-18:00")
             await pg.fill("#weeklyHours", "46.25"); c = await checks()
-            check("G-05: שעות נוספות יומיות ושבועיות בלי כפל (43 רגילות→42, 4.25 נוספות)", "42 שעות רגילות ו-4.25 שעות נוספות" in c and "3.25 יומיות, 1 שבועיות" in c, c[:300])
+            check("G-04/05: עם יום מקוצר (חמישי 7:36) – 4.25 נוספות יומיות, 0 שבועיות, 42 רגילות", "42 שעות רגילות ו-4.25 שעות נוספות" in c and "4.25 יומיות, 0 שבועיות" in c, c[:300])
             await pg.select_option("#pattern", "6")
             for i in range(6): await pg.fill(f"[data-day='{i}']", "07:00-19:00")
             c = await checks()
-            check("G-04/05: 6 ימים × 11.25 – מעל 16 שעות נוספות חוסם (שישי = ערב מנוחה, 7 שעות)", "מעל 16 שעות" in c, c[:300])
+            check("G-04/05: 6 ימים × 11.25 – מעל 16 שעות נוספות חוסם (שישי = ערב מנוחה, 7 שעות)", "מעל 16." in c, c[:300])
             await pg.select_option("#pattern", "5"); await pg.fill("[data-day='5']", "")
             await pg.click("#fillWeek"); await pg.click("#clearWeek"); await pg.click("#fillWeek"); await pg.fill("#weeklyHours", "36.25")
             await pg.select_option("#industry", "construction")
-            check("G-12: ענף עם צו – חוסם עד אישור משרד", "⛔" in await checks() and "המשרד יבדוק" in await checks())
+            check("G-12: ענף עם צו – חוסם עד אישור משרד", "⛔" in await checks() and "אישור משרד חתום" in await checks())
             link = await make_link(pg); check("G-12: לא נוצר קישור בענף לא מאושר", not link)
             await pg.select_option("#industry", "general"); await pg.fill("#collective", "הסכם קיבוצי בדיקה")
-            check("G-12: הסכם קיבוצי – חוסם עד אישור משרד", "המשרד יבדוק" in await checks())
+            check("G-12: הסכם קיבוצי – חוסם עד אישור משרד, ודורש פרטי ארגון העובדים", "אישור משרד חתום" in await checks() and "ארגון העובדים" in await checks())
             await pg.fill("#collective", "")
             await pg.fill("#harassContact", ""); check("G-26: חובה אחראי הטרדה מינית", "הטרדה מינית" in await checks())
             await pg.fill("#harassContact", "אורי 050")
@@ -178,10 +180,51 @@ async def main():
             await pg.select_option("#wageType", "monthly"); await pg.fill("#wage", "5000")
             check("G-02: חודשי מתחת למינימום היחסי – חוסם", "⛔" in await checks() and "נמוך משכר המינימום היחסי" in await checks())
 
-            # ענף מאושר ע"י המשרד בקישור המעסיק
+            # ---------- סבב 2: בדיקות קצה ----------
+            await employer(pg); await pg.fill("#start", "2023-05-01"); await pg.fill("#wage", "30")
+            check("R2-02: מאי 2023 – 30 ₪ נחסם (מינימום 30.61)", "30.61" in await checks())
+            await pg.fill("#wage", "30.61"); check("R2-02: מאי 2023 – 30.61 עובר", "נמוך משכר המינימום" not in await checks())
+            await pg.fill("#start", "2023-01-10"); check("R2-02: לפני 4/2023 – אין טבלה, חוסם", "לפני 1.4.2023" in await checks())
+            await pg.fill("#start", "2027-05-01"); check("R2-02: אחרי 3/2027 – חוסם עד עדכון", "טבלת שכר המינימום בכלי עוד לא עודכנה" in await checks())
+            await pg.fill("#start", "2026-12-01"); await pg.fill("#wage", "-5"); check("R2-02: שכר שלילי לא תקין", "סכום השכר לא תקין" in await checks())
+            await pg.fill("#wage", "abc"); check("R2-02: שכר לא מספרי לא תקין", "סכום השכר לא תקין" in await checks())
+            await pg.select_option("#wageType", "monthly"); await pg.fill("#wage", "3500")
+            for i in range(5): await pg.fill(f"[data-day='{i}']", "08:00-17:21")
+            await pg.fill("[data-day='4']", "08:00-16:21"); await pg.fill("#weeklyHours", "20"); c = await checks()
+            check("R2-02: סידור של 42 שעות והיקף מוצהר 20 – סתירה חוסמת ומינימום לפי 42", "יש להתאים" in c and "6443.85" in c, c[:300])
+            await pg.fill("#weeklyHours", "42"); await pg.select_option("#wageType", "hourly"); await pg.fill("#wage", "40"); c = await checks()
+            check("R2-03: 4×8:36 + יום מקוצר 7:36 = 42 בלי שעות נוספות", "שעות נוספות" not in c and "יש להתאים" not in c, c[:300])
+            await pg.fill("[data-day='4']", "08:00-17:21"); await pg.fill("[data-day='3']", "08:00-16:21"); c = await checks()
+            check("R2-03: 8:36 ביום המקוצר – שעה נוספת יומית למרות 42 בשבוע", "41 שעות רגילות ו-1 שעות נוספות" in c and "1 יומיות, 0 שבועיות" in c, c[:300])
+            await pg.select_option("#shortDay", "3"); c = await checks()
+            check("R2-03: בחירת יום מקוצר אחר (רביעי) – בלי נוספות", "שעות נוספות" not in c, c[:200])
+            await pg.select_option("#shortDay", "5"); check("R2-03: יום מקוצר שאינו יום עבודה – חוסם", "היום המקוצר שנבחר אינו יום עבודה" in await checks())
+            await pg.select_option("#shortDay", "4"); await pg.click("#clearWeek")
+            await pg.fill("[data-day='0']", "12:00-23:00"); await pg.fill("[data-day='1']", "06:00-12:00")
+            check("R2-04: 7 שעות בין ראשון לשני – חוסם (סעיף 21)", "סעיף 21" in await checks())
+            await pg.fill("[data-day='1']", "07:00-12:00"); check("R2-04: 8 שעות בדיוק – תקין", "סעיף 21" not in await checks())
+            await pg.fill("[data-day='0']", "09:00-17:00/90"); await pg.fill("[data-day='1']", "09:00-11:00/150")
+            check("G-03: הפסקה ארוכה מהמשמרת – חוסם", "ההפסקה ארוכה מהמשמרת" in await checks())
+            await pg.fill("[data-day='1']", "09:00-17:00/30"); c = await checks()
+            check("G-03: הפסקה שונה ביום מסוים (/30) – אזהרה רק על היום הזה", "ביום שני" in c and "30 דקות" in c and "ביום ראשון (8 שעות) מוגדרת" not in c, c[:300])
+            await pg.check("#breakPermit"); check("G-03: היתר להפסקות – בלי אזהרת 45 דקות, עם בדיקת משרד", "סעיף 20" not in await checks() and "חל היתר" in await checks())
+            await pg.uncheck("#breakPermit"); await pg.check("#breakPaid"); check("G-03: הפסקה משולמת לא פוטרת מההפסקה עצמה", "גם כשהעובד נדרש להישאר" in await checks())
+            await pg.uncheck("#breakPaid"); await pg.click("#clearWeek"); await pg.click("#fillWeek"); await pg.fill("#weeklyHours", "36.25")
+            await pg.fill("#globalOT", "10"); check("G-23: גלובלי בלי סכום – חוסם", "יש לרשום סכום" in await checks())
+            await pg.fill("#globalOTAmount", "100"); check("G-23: גלובלי נמוך מ-125% – חוסם", "נמוך מ-125%" in await checks())
+            await pg.fill("#globalOTAmount", "500"); check("G-23: גלובלי מספיק – עובר", "גלובלי" not in await checks())
+            await pg.fill("#globalOT", ""); await pg.fill("#globalOTAmount", "")
+            await pg.check("#cameras"); check("G-25: מצלמות בלי אישור מסירת מדיניות – חוסם", "מדיניות המצלמות" in await checks())
+            await pg.check("#camPolicy"); check("G-25: עם אישור מסירה – עובר", "מדיניות המצלמות" not in await checks())
+            await pg.uncheck("#sec14"); check("G-07: ביטול סעיף 14 ב-6% – חוסם", "מכוח צו ההרחבה" in await checks())
+            await pg.check("#sec14"); await pg.fill("#harassContact", "אורי"); check("G-26: אחראי הטרדה בלי דרך פנייה – חוסם", "דרך פנייה" in await checks())
+            await pg.fill("#harassContact", "אורי 0501234567"); await pg.fill("#manager", ""); check("G-13: ממונה ישיר חובה", "הממונה הישיר" in await checks())
+
+            # דגל ענף בקישור מעסיק ידני
             await employer(pg, pre=preset({"officeOk":True,"industry":"construction"}))
-            check("G-12: ענף שהמשרד אישר בקישור – אזהרה בלבד", "המשרד אישר" in await checks() and "המשרד יבדוק" not in await checks())
-            link = await make_link(pg); check("G-12: עם אישור משרד – נוצר קישור", "#k=" in link)
+            await pg.select_option("#industry", "construction")
+            check("G-12: דגל officeOk בקישור ידני אינו אישור – עדיין חוסם", "אישור משרד חתום" in await checks())
+            link = await make_link(pg); check("G-12: במצב ידני אין קישור לענף גם עם הדגל", not link)
 
             # ---------- תרחיש 1: עובדת חדשה, 101 להדפסה ----------
             await employer(pg)
@@ -189,7 +232,7 @@ async def main():
             check("קישור נוצר ומכיל מזהה (#k=)", "#k=" in link, link[:60])
             check("G-28: במצב ידני מוצג שהקישור דחוס ולא מוצפן", "לא מוצפנים" in await pg.inner_text("#linkNote"))
             tj = await pg.evaluate("l => unpackK(l.split('#k=')[1]).then(JSON.stringify)", link)
-            check("טלפון העובד לא נכנס לקישור; גרסת קישור 4; מזהה 128 ביט", "0500000000" not in tj and '"v":4' in tj and len(json.loads(tj)["linkId"]) == 32)
+            check("טלפון העובד לא נכנס לקישור; גרסת קישור 5; מזהה 128 ביט", "0500000000" not in tj and '"v":5' in tj and len(json.loads(tj)["linkId"]) == 32)
             check("אורך הקישור", len(link) < 900, str(len(link)))
             await pg.goto("about:blank"); await pg.goto(link); await pg.wait_for_timeout(400); await pg.click("#go"); await pg.wait_for_timeout(200)
             check("G-36: בלי אישור הודעת הפרטיות לא ממשיכים", await pg.locator("#privOk").count() == 1 and await pg.locator("#first").count() == 0)
@@ -278,16 +321,21 @@ async def main():
             # ---------- תרחיש 9: שינוי תנאים לעובד קיים ----------
             await employer(pg, mode="change", wage="40")
             check("G-01: לפני=אחרי (שכחו לעדכן את השכר ל-43) – חוסם", "זהים" in await pg.inner_text("#checks"))
-            await pg.fill("#wage", "43"); await pg.fill("#changeText", "העלאה מ-40 ל-45"); await pg.wait_for_timeout(150)
-            check("G-01: מספר בהערות שסותר את הערכים – חוסם", "45" in await pg.inner_text("#checks") and "לא תואם" in await pg.inner_text("#checks"))
-            await pg.fill("#changeText", "העלאה מ-40 ל-43 בעקבות ותק"); await pg.wait_for_timeout(150)
-            check("G-01: הערות תואמות – בלי שגיאה", "לא תואם" not in await pg.inner_text("#checks"))
+            check("G-01: אין שדה הערות חופשי בהודעת שינוי", await pg.locator("#changeText").count() == 0)
+            await employer(pg, mode="change", wage="40", changes={"wage":("40","monthly")})
+            check("R2-01: שינוי מ-40 לחודש ל-40 לשעה אינו 'זהה'", "זהים" not in await pg.inner_text("#checks"))
+            await employer(pg, mode="change", wage="43", changes={"wage":"40","hours":"36.25","pension":"עובד 6% · מעסיק 6.5% · פיצויים 6%"})
+            await pg.wait_for_timeout(150); ct = await pg.inner_text("#checks")
+            check("R2-01: היקף זהה ופנסיה זהה – נחסמים", "ההיקף הקודם והחדש זהים" in ct and "הפרשות לפנסיה זהים" in ct)
+            await employer(pg, mode="change", wage="43")
+            await pg.select_option("#chgReason", "העלאת שכר")
             link = await make_link(pg)
             await employee(pg, link)
             docs = await wait_docs(pg, 1); agr = await pg.evaluate("buildAgreementHtml()")
             check("תרחיש 9: הודעה על שינוי תנאים – מסמך אחד", len(docs) == 1 and "שינוי" in docs[0]["f"], str(docs))
             check("G-01: טבלת לפני/אחרי – 40 לפני, 43 אחרי, ומועד תחולה", "40 ₪ לשעה" in agr and "43 ₪ לשעה" in agr and "01/01/2027" in agr and agr.index("40 ₪ לשעה") < agr.index("43 ₪ לשעה"))
             check("G-01: אין 40 בעמודת 'אחרי' (אותו אובייקט מזין טבלה ותנאים)", "<b>40 ₪ לשעה</b>" not in agr)
+            check("G-01: סיבת שינוי מרשימה סגורה מופיעה", "סיבת השינוי: העלאת שכר" in agr)
             await save_docs(pg, "s9_change")
 
             # ---------- תרחיש 10: קישור ישן (v2, #e=) ----------
@@ -328,6 +376,31 @@ async def main():
             await employee(pg, link); await wait_docs(pg, 1); agr = await pg.evaluate("buildAgreementHtml()")
             check("G-09: מכתב לקופה – מכוח הצו, לא רטרואקטיבי, עם שורת תיעוד מסירה", "בהתאם לצו ההרחבה" in agr and "אינה חלה רטרואקטיבית" in agr and "תיעוד מסירה" in agr)
 
+            # ---------- תרחיש 17: 101 מורכב – ילד שאינו בחזקה ----------
+            await employer(pg); link = await make_link(pg)
+            await employee(pg, link, gender="זכר")
+            await fill101(pg, marital="גרוש/ה", kids=[("רון","000000059","2014-02-02")])
+            check("G-16: גרוש עם ילדים – מסומן לבדיקת משרד לפני שימוש", "לבדיקת משרד" in await pg.evaluate("cover101()") and len(await pg.evaluate("F.complex")) >= 1)
+
+            # ---------- תרחיש 18: שנת מס בלי טופס – מסלול נייר, לא מיכפל ----------
+            await employer(pg); link = await make_link(pg)
+            await pg.goto("about:blank"); await pg.goto(link); await pg.wait_for_timeout(400)
+            await pg.evaluate("T.start = '2027-01-05'")
+            await pg.check("#privOk"); await pg.click("#go")
+            for k,v in {"first":"דנה","last":"בדיקה","idNum":"000000018","birth":"1990-05-05","phone":"0500000000","street":"הרצל","house":"1","city":"חיפה","bank":"12","branch":"718","account":"1"}.items(): await pg.fill("#"+k, v)
+            await pg.click("label:has(input[name=gender][value='נקבה'])"); await pg.click("label:has(input[name=pens][value=no])")
+            await pg.click("#next"); await pg.wait_for_timeout(300); await pg.check("#agree"); await sign(pg, "#sigE"); await pg.click("#next"); await pg.wait_for_timeout(300)
+            check("G-17: שנת מס 2027 – הסבר שהטופס לא עודכן", "עדיין לא עודכן" in await pg.inner_text("#app"))
+            await pg.click("#next"); await wait_docs(pg, 1)
+            check("G-17: המסלול מסומן 'paper' ולא מיכפל, ומסך הסיום לא מבטיח לינק מיכפל", await pg.evaluate("MODE()") == "paper" and await pg.evaluate("T.f101") == "paper")
+
+            # ---------- תרחיש 19: גבר בן 20 – גיל זכאות לפנסיה ----------
+            await employer(pg); link = await make_link(pg)
+            await employee(pg, link, gender="זכר", birth="2006-06-01"); agr = await pg.evaluate("buildAgreementHtml()")
+            check("G-10: גבר בן 20 – ההסכם מציין גיל זכאות 21", "טרם מלאו לו 21" in agr)
+            check("G-10: בלי ביטוח קודם – בלי טענה על תשלום רטרואקטיבי", "רטרואקטיבי" not in agr.split("סעיף 14")[0])
+            check("G-21: מחלה – 'יום וחצי' בלי 'עד'", "צבירה של יום וחצי" in agr and "צבירה של עד" not in agr)
+
             # ---------- תרחיש 11: שליחה אוטומטית מול שרת דמה (קישור אטום) ----------
             reg, sub, store = [], [], {}
             async def mock(route):
@@ -350,9 +423,15 @@ async def main():
             await employer(pg, pre=preset({"tok":"TESTTOK"})); link = await make_link(pg)
             check("G-28/29: קישור אטום (#r=, 32 תווים) והתנאים נשמרו בשרת", "#r=" in link and len(link.split("#r=")[1]) == 32 and len(reg) == 1 and reg[0]["terms"]["wage"] == "40" and "tok" not in reg[0]["terms"])
             check("G-28: אין תנאים בתוך הקישור", "#k=" not in link and len(link) < 120)
+            await pg.goto("about:blank"); await pg.goto(BASE + "#k=AAAA"); await pg.wait_for_timeout(400)
+            check("G-28/G-40: במצב שרת קישור ידני (#k=) נדחה", "גרסה ידנית" in await pg.inner_text("#app"))
+            await employer(pg, pre=preset({"tok":"TESTTOK","industry":"construction","okSig":"S"*32,"okExp":"2099-01-01"}))
+            c = await pg.inner_text("#checks")
+            check("G-12: במצב שרת עם אישור חתום – אזהרה, והשדות נעולים", "השרת יאמת" in c and await pg.is_disabled("#industry"))
+            l2 = await make_link(pg); check("G-12: האישור נשלח לשרת לאימות", "#r=" in l2 and reg[-1]["terms"]["okSig"] == "S"*32)
             await employee(pg, link); await fill101(pg); await finish_print(pg); await wait_docs(pg, 2)
             await pg.click("#share"); await pg.wait_for_timeout(1500)
-            check("תרחיש 11: נשלחו 2 קבצים עם מזהה קישור, מזהה מסמך וטביעת תנאים", len(sub) == 1 and len(sub[0]["files"]) == 2 and sub[0]["linkId"] == reg[0]["linkId"] and len(sub[0]["docId"]) == 10 and sub[0]["termsHash"] == "a"*64)
+            check("תרחיש 11: נשלחו 2 קבצים עם מזהה קישור, מזהה מסמך וטביעת תנאים", len(sub) == 1 and len(sub[0]["files"]) == 2 and sub[0]["linkId"] == reg[0]["linkId"] and sub[0]["mode"] == "print" and len(sub[0]["docId"]) == 10 and sub[0]["termsHash"] == "a"*64)
             check("G-35: הדף לא שולח מייל עובד לשרת", "employeeEmail" not in sub[0])
             check("תרחיש 11: מסך תודה אחרי שליחה", "תודה" in (await pg.text_content("h1") or ""))
             await pg.goto("about:blank"); await pg.goto(BASE + "#r=" + "0"*32); await pg.wait_for_timeout(600)
