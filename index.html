@@ -234,7 +234,7 @@ function probationText(t){
   const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
   return ` ${words} להעסקה הם תקופת ניסיון.`;
 }
-const AGR_VER = "3.0 (11/2026)";
+const AGR_VER = "3.1 (11/2026)";
 function agreementBody(t, emp){
   const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
   const id = emp && emp.idNum ? esc(emp.idNum) : "<span style='color:#999'>(ת\"ז)</span>";
@@ -257,7 +257,8 @@ function agreementBody(t, emp){
   <div>
   ${H("מבוא ופרשנות")}
   ${P("המבוא להסכם זה מהווה חלק בלתי נפרד ממנו. כותרות הסעיפים נועדו לנוחות בלבד. האמור בלשון זכר או נקבה – אחד הוא.")}
-  ${P(`הסכם זה מהווה גם הודעה לעובד על תנאי עבודתו לפי חוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002. על יחסי העבודה יחולו, בנוסף להסכם, דיני העבודה וצווי ההרחבה החלים על המעסיק.`)}
+  ${P(`הסכם זה מהווה גם הודעה לעובד על תנאי עבודתו לפי חוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002. על יחסי העבודה יחולו, בנוסף להסכם, דיני העבודה וצווי ההרחבה הכלליים החלים על המעסיק.`)}
+  ${P(t.collective ? `על העובד חל: <b>${esc(t.collective)}</b>, והוראותיו יחולו על יחסי העבודה.` : `נכון למועד החתימה, המעסיק אינו חבר בארגון מעסיקים ולא חל על העובד הסכם קיבוצי.${t.industry && t.industry !== "general" ? " ככל שחל על המעסיק צו הרחבה ענפי – יחולו הוראותיו." : ""}`)}
 
   ${H("התפקיד, מקום העבודה וסמכויות ניהול")}
   ${P(`העובד יועסק בתפקיד <b>${esc(t.role)}</b>, ויבצע את המשימות הנובעות מהתפקיד לפי הוראות המעסיק והממונה הישיר – <b>${boss}</b>.`)}
@@ -296,7 +297,7 @@ function agreementBody(t, emp){
   ${H("ביטוח פנסיוני ופיצויים")}
   ${P(`המעסיק יבטח את העובד בביטוח פנסיוני בקופה שיבחר העובד${t.pensionFund ? ` (נכון למועד החתימה: ${esc(t.pensionFund)})` : ""}, ובהיעדר בחירה – בקרן ברירת המחדל לפי הדין. ההפרשות יחלו במועד הקבוע בצו ההרחבה לביטוח פנסיוני מקיף במשק; לעובד שיש לו ביטוח פנסיוני קודם – כקבוע בצו לגבי עובד כזה. העובד ימסור למעסיק את פרטי הקופה והביטוח הקיים.`)}
   ${P(`שיעורי ההפרשה מהשכר המבוטח: עובד <b>${esc(t.empPct||"6")}%</b>, מעסיק לתגמולים <b>${esc(t.erPct||"6.5")}%</b>, מעסיק לפיצויים <b>${esc(t.sevPct||"6")}%</b>.`)}
-  ${P(`<b>סעיף 14:</b> הצדדים מסכימים כי על ההפרשות לפיצויים יחול האישור הכללי בדבר תשלומי מעביד לקרן פנסיה ולקופת ביטוח במקום פיצויי פיטורים, לפי סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963. ${sev >= 8.33 ? "ההפרשות בשיעור 8.33% באות <b>במקום מלוא</b> פיצויי הפיטורים בעד השכר והתקופה שבעדם בוצעו." : `ההפרשות בשיעור ${esc(t.sevPct||"6")}% באות במקום <b>${(sev/8.33*100).toFixed(2)}%</b> מפיצויי הפיטורים בעד השכר והתקופה שבעדם בוצעו; את יתרת הפיצויים, ככל שתגיע לעובד לפי הדין, ישלים המעסיק בסיום העבודה.`} הכספים שנצברו ישוחררו לעובד בסיום העבודה, למעט אם נשללה זכאותו לפיצויים בפסק דין או בהסכם.`, !!t.sec14)}
+  ${P(`<b>סעיף 14:</b> הצדדים מסכימים כי על ההפרשות לפיצויים יחול האישור הכללי בדבר תשלומי מעביד לקרן פנסיה ולקופת ביטוח במקום פיצויי פיטורים, לפי סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963. ${sev >= 8.33 ? "ההפרשות בשיעור 8.33% באות <b>במקום מלוא</b> פיצויי הפיטורים בעד השכר והתקופה שבעדם בוצעו." : `ההפרשות בשיעור 6% באות במקום <b>72%</b> מפיצויי הפיטורים בעד השכר והתקופה שבעדם בוצעו. את היתרה ישלים המעסיק בסיום העבודה, ככל שתקום לעובד זכאות לפיצויי פיטורים לפי הדין.`} הכספים שנצברו ישוחררו לעובד בסיום העבודה, למעט אם נשללה זכאותו לפיצויים בפסק דין או בהסכם.${sev >= 8.33 ? " המעסיק ימסור לקופה הודעה בכתב על החלת סעיף 14 על מלוא ההפקדות לפיצויים, עם העתק לעובד." : ""}`, !!t.sec14)}
   ${P(`<b>קרן השתלמות</b> – החל מ${t.hishFrom ? esc(t.hishFrom) : "תחילת העבודה"}: הפרשות מעסיק ${esc(t.hishEr||"7.5")}% והפרשות עובד ${esc(t.hishEmp||"2.5")}% מהשכר הרגיל, בקרן שיבחר העובד.`, !!(t.hishEmp || t.hishEr))}
 
   ${t.cash ? `${H("כספים, קופה ומלאי")}
@@ -338,9 +339,41 @@ function agreementBody(t, emp){
 
   ${H("כללי")}
   ${P("הסכם זה ממצה את תנאי ההעסקה בין הצדדים. שינוי מהותי בתנאים ייעשה בכתב ויימסר לעובד כדין; שינויים ניהוליים שוטפים לפי סעיף 2 אינם מחייבים תיקון ההסכם.")}
-  ${P("אין בהסכם זה כדי לגרוע מזכות המוקנית לעובד לפי דין, צו הרחבה או הסכם קיבוצי החל עליו. במקרה של סתירה – תחול ההוראה המיטיבה עם העובד.")}
+  ${P("אין בהסכם זה כדי לגרוע מזכות המוקנית לעובד לפי דין, צו הרחבה או הסכם קיבוצי החל עליו, ואין בו כדי להקנות זכות שלא נקבעה בו במפורש או בדין. במקרה של סתירה בין הוראה בהסכם לבין הוראה מחייבת בדין – תחול ההוראה המחייבת.")}
   ${P("העובד מאשר כי קרא את ההסכם, הבין אותו, קיבל הזדמנות לשאול שאלות ולהיוועץ, והוא מסכים לתנאיו. ההסכם נחתם בחתימה אלקטרונית, וכל צד מקבל עותק חתום שלו.")}
   <p style="margin-top:10px"><b>ולראיה באו הצדדים על החתום.</b></p></div>`;
+}
+function fundNotice(t, empName, empId){
+  return `<div class="doc">
+    <div class="dh"><div><div class="t">הודעה לקופה</div><div class="s">החלת סעיף 14 לחוק פיצויי פיטורים · מזהה מסמך ${DOC_ID}</div></div><div class="c">${esc(t.company)}</div></div>
+    <p>תאריך: ${todayStr()}</p>
+    <p>לכבוד: <b>${t.pensionFund ? esc(t.pensionFund) : "החברה המנהלת של הביטוח הפנסיוני של העובד"}</b></p>
+    <p>העתק: ${esc(empName)}, ת"ז ${esc(empId)} (העובד)</p>
+    <h4>הנדון: הודעה על החלת סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963</h4>
+    <p>הננו להודיעכם כי על הפקדות המעסיק <b>${esc(t.company)}</b>${t.companyId ? ` (ח.פ/ע.מ ${esc(t.companyId)})` : ""} לרכיב הפיצויים בביטוח הפנסיוני של העובד <b>${esc(empName)}</b>, ת"ז ${esc(empId)}, בשיעור <b>8.33%</b> מהשכר המבוטח, יחול האישור הכללי בדבר תשלומי מעביד לקרן פנסיה ולקופת ביטוח במקום פיצויי פיטורים, לפי סעיף 14 לחוק – לרבות לגבי ההפקדות שמעבר ל-6% (השלמת הפיצויים).</p>
+    <p>כך שההפקדות באות במקום מלוא פיצויי הפיטורים בעד השכר והתקופה שבעדם בוצעו, החל מיום ${fmtDate(t.start)}.</p>
+    <p>שיעורי ההפרשה: עובד ${esc(t.empPct||"6")}%, מעסיק לתגמולים ${esc(t.erPct||"6.5")}%, מעסיק לפיצויים 8.33%.</p>
+    <div class="sigs"><div><b>בשם המעסיק</b> – ${esc(t.signer)}<img src="${sigSrc(t.empSig)}"><span style="color:#666">${esc(t.empSignedAt||"")}</span></div><div style="visibility:hidden"></div></div>
+  </div>`;
+}
+function changeBody(t, emp){
+  const name = emp && emp.fullName ? esc(emp.fullName) : "(שם העובד)";
+  return `
+  <div class="parties">
+    <div><small>המעסיק</small> <b>${esc(t.company)}</b>${t.companyId ? `<br>ח.פ/ע.מ ${esc(t.companyId)}` : ""}<br>${esc(t.address)}</div>
+    <div><small>העובד</small> <b>${name}</b>${emp && emp.idNum ? `<br>ת"ז ${esc(emp.idNum)}` : ""}</div>
+  </div>
+  <p>בהתאם לחוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002, הרינו להודיעך על שינוי בתנאי עבודתך, <b>בתוקף מיום ${fmtDate(t.effDate)}</b>:</p>
+  <div class="box" style="background:#fff8ec;border:1px solid #f1d2ad;border-radius:8px;padding:10px 12px;white-space:pre-wrap">${esc(t.changeText)}</div>
+  <h4>תנאי העבודה לאחר השינוי</h4>
+  <table class="kv">
+    <tr><td class="k">תפקיד</td><td>${esc(t.role)}</td><td class="k">היקף</td><td>${esc(t.weeklyHours)} שעות בשבוע · מנוחה ב${esc(t.restDay||"שבת")}</td></tr>
+    <tr><td class="k">שכר</td><td>${wageLine(t)}</td><td class="k">פנסיה</td><td>עובד ${esc(t.empPct||"6")}% · מעסיק ${esc(t.erPct||"6.5")}% · פיצויים ${esc(t.sevPct||"6")}%${t.sec14 ? " (סעיף 14)" : ""}</td></tr>
+    ${t.start ? `<tr><td class="k">תחילת העבודה</td><td colspan="3">${fmtDate(t.start)}</td></tr>` : ""}
+  </table>
+  ${t.days ? `<p>ימי ושעות העבודה:</p>${scheduleText(t)}` : ""}
+  <p>כל יתר תנאי העסקתך נותרים ללא שינוי. אין בהודעה זו כדי לגרוע מזכות המוקנית לך לפי דין.</p>
+  <p>העובד מאשר בחתימתו כי קיבל את ההודעה וקרא אותה.</p>`;
 }
 function termsGrid(t){
   return `<div class="terms">
@@ -353,21 +386,46 @@ function termsGrid(t){
 
 /* ================= employer setup ================= */
 let PRESET = null;
+const MINW_H = 35.40, MINW_M = 6443.85, FULL_WEEK = 42; // שכר מינימום מ-1.4.2026 (בגיר)
+const INDUSTRIES = [["general","כללי – אין צו הרחבה ענפי ידוע"],["construction","בנייה ותשתיות"],["cleaning","ניקיון"],["security","שמירה ואבטחה"],["transport","הובלה ומשאיות"],["food","מסעדנות, קייטרינג ומלונאות"],["retail","מסחר קמעונאי"],["agri","חקלאות"],["industry","תעשייה"],["other","אחר"]];
+function parseDay(v){ const mm = String(v||"").match(/(\d{1,2}):?(\d{2})?\s*-\s*(\d{1,2}):?(\d{2})?/); if(!mm) return 0; const st = +mm[1] + (+(mm[2]||0))/60, en = +mm[3] + (+(mm[4]||0))/60; return en > st ? en - st : 0; }
+function checkTerms(t){
+  const err = [], warn = [];
+  const days = (t.days||[]).map(parseDay);
+  const restIdx = {"ראשון":0,"שישי":5,"שבת":6}[t.restDay||"שבת"];
+  if(days[restIdx] > 0) err.push(`ביום המנוחה השבועי (${t.restDay||"שבת"}) רשומות שעות עבודה.`);
+  days.forEach((h,i) => { if(h > 12) err.push(`ביום ${DAYS[i]} רשומות ${h.toFixed(2)} שעות – יותר מ-12 שעות ביום, כולל שעות נוספות.`); });
+  const pres = days.reduce((a,b)=>a+b,0), brk = days.reduce((a,h)=>a + (h>=6 ? 0.75 : 0),0);
+  const net = t.breakPaid ? pres : pres - brk, w = Number(t.weeklyHours||0);
+  if(pres && w && Math.abs(net - w) > 0.01) warn.push(`לפי הימים והשעות יוצאות ${net.toFixed(2)} שעות עבודה בשבוע, ובהיקף המשרה כתוב ${w}.`);
+  if(w > FULL_WEEK) warn.push(`היקף של ${w} שעות בשבוע – מעל ${FULL_WEEK} שעות רגילות; השעות שמעבר הן שעות נוספות.`);
+  const wage = Number(t.wage||0);
+  if(t.wageType === "monthly" && wage && w){ const min = MINW_M * Math.min(w, FULL_WEEK) / FULL_WEEK; if(wage < min - 0.5) warn.push(`השכר החודשי (${wage} ₪) נמוך משכר המינימום היחסי להיקף המשרה (כ-${min.toFixed(0)} ₪).`); }
+  if(t.wageType !== "monthly" && wage && wage < MINW_H) warn.push(`השכר השעתי (${wage} ₪) נמוך משכר המינימום לבגיר (${MINW_H} ₪). לנוער – לפי שיעורי הנוער.`);
+  if(t.industry && t.industry !== "general") warn.push("נבחר ענף שעשוי לחול עליו צו הרחבה ענפי או הסכם קיבוצי (שכר, פנסיה, הבראה ותוספות). יש לבדוק עם משרד רו\"ח לפני השליחה.");
+  if(t.sec14 && Number(t.sevPct) >= 8.33) warn.push("נבחרו פיצויים 8.33% לפי סעיף 14 – יופק גם מכתב הודעה לקופה (העתק לעובד). יש לשלוח אותו לקופה.");
+  if(!t.harassContact) warn.push("לא הוגדר אחראי לטיפול בתלונות על הטרדה מינית – יירשם החותם מטעם המעסיק.");
+  // חוק הודעה לעובד – פרטים חובה
+  const need = [["company","זהות המעסיק"],["role","התפקיד"],["weeklyHours","היקף המשרה"],["restDay","יום המנוחה"],["wage","השכר"]];
+  if(t.mode !== "change") need.push(["start","מועד תחילת העבודה"]);
+  need.forEach(([k,n]) => { if(!t[k]) err.push(`חסר פרט חובה לפי חוק הודעה לעובד: ${n}.`); });
+  return {err, warn};
+}
 function renderSetup(){
-  header("למעסיק", "הכנת הסכם עבודה לעובד חדש", "ממלאים תנאים, חותמים, ושולחים לעובד קישור אישי");
+  header("למעסיק", "מסמכי עובד", "הסכם עבודה, טופס 101 והודעה על שינוי תנאים");
   dock(`<button class="btn wide" type="button" id="makeLink">צור קישור לעובד ←</button>`);
   const saved = Object.assign({}, store.get("employer") || {}, PRESET || {});
   const dayRows = DAYS.map((d,i) => `<b>${d}</b><input data-day="${i}" placeholder="למשל 09:00-17:00 · ריק = לא עובד">`).join("");
   $("#app").innerHTML = `
   <div class="card">
-    <h2><span class="n">1</span>איך זה עובד</h2>
-    <ul class="list">
-      <li><span>✍️</span><div>ממלאים את תנאי ההעסקה של העובד הזה וחותמים.</div></li>
-      <li><span>🔗</span><div>נוצר קישור אישי לעובד – שולחים לו בוואטסאפ.</div></li>
-      <li><span>📄</span><div>העובד ממלא פרטים, חותם על ההסכם וממלא טופס 101 עם הסברים.</div></li>
-      <li><span>📬</span><div>בסוף נוצר PDF חתום (הסכם + 101 רשמי + צילום ת"ז) שנשלח אליך ולמשרד רו"ח.</div></li>
-    </ul>
-    <p class="note">לכל עובד – קישור נפרד עם ההסכם שלו. פרטי העסק נשמרים במכשיר הזה כדי שלא תצטרך להקליד שוב.</p>
+    <h2><span class="n">1</span>מה מכינים?</h2>
+    ${radio("mode",[["new","עובד חדש – הסכם עבודה"],["change","עובד קיים – הודעה על שינוי תנאים"]],"new")}
+    <div id="f101Box">
+      <label>טופס 101</label>
+      ${radio("f101",[["print","העובד ממלא כאן, וחותם בכתב יד על הטופס המודפס"],["michpal","דרך פורטל מיכפל (101 אלקטרוני מאושר)"]],"print")}
+      <p class="note">טופס 101 נחתם בכתב יד או במערכת מאושרת על ידי רשות המסים. הכלי הזה ממלא את הטופס הרשמי, ואת החתימה עושים על הדף המודפס.</p>
+    </div>
+    <div class="help">ℹ️ הכלי מסייע בהכנת מסמכי העסקה לפי הנתונים שתזין/י, ואינו מחליף ייעוץ משפטי פרטני. בענפים עם צו הרחבה או הסכם קיבוצי ענפי – יש לבדוק התאמה.</div>
   </div>
 
   <div class="card">
@@ -382,12 +440,16 @@ function renderSetup(){
     </div>
     <label class="req">כתובת העסק</label><input id="address" value="${esc(saved.address||"")}">
     <div class="row">
+      <div><label class="req">ענף פעילות</label><select id="industry">${INDUSTRIES.map(([v,t]) => `<option value="${v}" ${saved.industry===v?"selected":""}>${t}</option>`).join("")}</select></div>
+      <div><label>הסכם קיבוצי / ארגון מעסיקים</label><input id="collective" value="${esc(saved.collective||"")}" placeholder="ריק = לא חל"></div>
+    </div>
+    <div class="row">
       <div><label class="req">שם החותם מטעם המעסיק</label><input id="signer" value="${esc(saved.signer||"")}"></div>
       <div><label>ממונה ישיר (אם אחר)</label><input id="manager"></div>
     </div>
     <label class="req">המייל שלך – לכאן יגיעו המסמכים החתומים</label><input id="ownerEmail" type="email" inputmode="email" value="${esc(saved.ownerEmail||"")}" placeholder="name@example.com">
     <p class="note">עותק נשלח גם ל${CPA_NAME} (${CPA_EMAIL}).</p>
-    <label>איש קשר לתלונות על הטרדה מינית</label><input id="harassContact" value="${esc(saved.harassContact||"")}" placeholder="שם ותפקיד">
+    <label>האחראי/ת לטיפול בתלונות על הטרדה מינית</label><input id="harassContact" value="${esc(saved.harassContact||"")}" placeholder="שם ודרך יצירת קשר">
   </div>
 
   <div class="card">
@@ -399,11 +461,21 @@ function renderSetup(){
     <p class="note">כך תדע/י לאיזה עובד שייך כל קישור. השם יופיע גם אצל העובד כשהוא פותח את הקישור.</p>
   </div>
 
+  <div class="card hidden" id="changeCard">
+    <h2><span class="n">★</span>השינוי</h2>
+    <div class="row">
+      <div><label class="req">השינוי בתוקף מיום</label><input id="effDate" type="date"></div>
+      <div><label>תחילת העבודה המקורית</label><input id="origStart" type="date"></div>
+    </div>
+    <label class="req">מה משתנה?</label><textarea id="changeText" placeholder="למשל: השכר השעתי עולה מ-40 ₪ ל-43 ₪; היקף המשרה עולה ל-42 שעות"></textarea>
+    <p class="note">התנאים שבהמשך הטופס מתארים את המצב <b>אחרי</b> השינוי. ההסכם המקורי נשאר בתוקף בכל מה שלא שונה.</p>
+  </div>
+
   <div class="card">
     <h2><span class="n">4</span>תפקיד ושעות</h2>
     <div class="row">
       <div><label class="req">תפקיד</label><input id="role" placeholder="למשל: עובד/ת דלפק"></div>
-      <div><label class="req">תאריך תחילת עבודה</label><input id="start" type="date"></div>
+      <div id="startBox"><label class="req">תאריך תחילת עבודה</label><input id="start" type="date"></div>
     </div>
     <h3>ימים ושעות</h3>
     <div class="days">${dayRows}</div>
@@ -412,7 +484,6 @@ function renderSetup(){
       <div><label class="req">היקף שעות שבועי</label><input id="weeklyHours" inputmode="decimal"></div>
       <div><label class="req">יום מנוחה שבועי</label><select id="restDay"><option>שבת</option><option>שישי</option><option>ראשון</option></select></div>
     </div>
-    <div class="warn hidden" id="hoursWarn"></div>
     <label class="opt"><input type="checkbox" id="breakPaid"><span class="t">ההפסקות משולמות (העובד לא יכול לצאת ממקום העבודה)</span></label>
     <label>מקום העבודה (אם שונה מכתובת העסק)</label><input id="workplace">
     <label>תקופת ניסיון</label>
@@ -445,11 +516,17 @@ function renderSetup(){
       <div><label>עובד %</label><input id="hishEmp" inputmode="decimal" placeholder="למשל 2.5"></div>
       <div><label>החל מ-</label><input id="hishFrom" placeholder="למשל: תחילת העבודה"></div>
     </div>
-    <label class="opt"><input type="checkbox" id="sec14" checked><span class="t">הפיצויים לפי סעיף 14<small>מומלץ – ההפרשות לפיצויים באות במקום פיצויי פיטורים.</small></span></label>
+    <label class="opt"><input type="checkbox" id="sec14" checked><span class="t">הפיצויים לפי סעיף 14<small>ההפרשות לפיצויים באות במקום פיצויי פיטורים (בשיעור שנבחר).</small></span></label>
   </div>
 
   <div class="card">
-    <h2><span class="n">6</span>חתימת המעסיק</h2>
+    <h2><span class="n">6</span>בדיקת תקינות</h2>
+    <div id="checks"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">7</span>אישור וחתימת המעסיק</h2>
+    <label class="opt"><input type="checkbox" id="confirm"><span class="t">אני מאשר/ת שתנאי ההעסקה והנתונים שהזנתי משקפים את ההסכמות בפועל עם העובד, וקראתי את האזהרות בבדיקת התקינות.</span></label>
     <p class="note">חותמים באצבע בתוך המסגרת.</p>
     <canvas class="sig" id="sigEmp"></canvas>
     <div class="btns"><button class="btn sec" type="button" id="sigClear">נקה חתימה</button></div>
@@ -461,51 +538,71 @@ function renderSetup(){
     <div class="btns"><a class="btn ok wide" id="waLink" target="_blank" rel="noopener">שלח לעובד בוואטסאפ</a></div>
     <div class="btns"><button class="btn sec" type="button" id="copyLink">העתק קישור</button><button class="btn sec" type="button" id="another">עובד נוסף</button></div>
     <div class="linkbox" id="linkTxt" style="margin-top:10px"></div>
-    <p class="note">הקישור מכיל רק את תנאי ההעסקה. פרטים אישיים של העובד לא עוברים בקישור ולא נשמרים בשום שרת.</p>
+    <p class="note">הקישור מכיל רק את תנאי ההעסקה. פרטים אישיים של העובד לא עוברים בקישור.</p>
   </div>
   <div class="card" id="histCard"></div>
   <p class="note" style="text-align:center"><a href="#" id="forget">מחק את פרטי העסק השמורים במכשיר הזה</a></p>`;
 
   const pad = sigPad($("#sigEmp"));
-  $("#sigClear").onclick = () => pad.clear();
-  $("#fillWeek").onclick = () => { $$("[data-day]").forEach((el,i)=> el.value = i<5 ? "09:00-17:00" : ""); if(!$("#weeklyHours").value) $("#weeklyHours").value = $("#breakPaid").checked ? "40" : "36.25"; checkHours(); };
-  $("#clearWeek").onclick = () => { $$("[data-day]").forEach(el => el.value = ""); checkHours(); };
-  const presence = () => $$("[data-day]").reduce((a, el) => { const mm = el.value.match(/(\d{1,2}):?(\d{2})?\s*-\s*(\d{1,2}):?(\d{2})?/); if(!mm) return a; const st = +mm[1] + (+(mm[2]||0))/60, en = +mm[3] + (+(mm[4]||0))/60; const h = en > st ? en - st : 0; return {h:a.h + h, brk:a.brk + (h >= 6 ? 0.75 : 0)}; }, {h:0, brk:0});
-  const checkHours = () => { const p = presence(), w = Number($("#weeklyHours").value), box = $("#hoursWarn");
-    if(!p.h || !w){ box.classList.add("hidden"); return; }
-    const net = $("#breakPaid").checked ? p.h : p.h - p.brk;
-    if(Math.abs(net - w) > 0.01){ box.innerHTML = `⚠️ לפי הימים והשעות: ${p.h.toFixed(2)} שעות נוכחות בשבוע${$("#breakPaid").checked ? "" : `, ובניכוי הפסקות (45 דק' ביום של 6 שעות ומעלה) ${net.toFixed(2)} שעות עבודה`}. בהיקף המשרה כתוב ${w}. כדאי ליישר כדי שלא תהיה סתירה בהסכם. <a href="#" id="fixHours">עדכן ל-${+net.toFixed(2)}</a>`; box.classList.remove("hidden"); $("#fixHours").onclick = e => { e.preventDefault(); $("#weeklyHours").value = +net.toFixed(2); checkHours(); }; }
-    else box.classList.add("hidden"); };
-  $$("[data-day]").forEach(el => el.addEventListener("input", checkHours)); $("#weeklyHours").addEventListener("input", checkHours); $("#breakPaid").addEventListener("change", checkHours);
-  $("#forget").onclick = e => { e.preventDefault(); store.del("employer"); store.del("links"); drawHist(); toast("הפרטים והקישורים השמורים נמחקו מהמכשיר"); };
-  $("#another").onclick = () => { location.hash = PRESET ? location.hash : ""; renderSetup(); window.scrollTo(0,0); };
-  $("#makeLink").onclick = async () => {
-    const v = id => $("#"+id).value.trim();
-    const need = [["company","שם העסק"],["address","כתובת העסק"],["signer","שם החותם"],["ownerEmail","המייל שלך"],["empName","שם העובד"],["role","תפקיד"],["start","תאריך תחילה"],["weeklyHours","היקף שעות"],["wage","סכום השכר"]];
-    for(const [k,n] of need){ if(!v(k)) return bad(k, "חסר: " + n); }
-    if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
-    if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
-    if(v("deductions") && !/^9\d{8}$/.test(v("deductions"))) return bad("deductions","תיק ניכויים: 9 ספרות שמתחילות ב-9");
-    if(pad.isEmpty()){ $("#sigEmp").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימת המעסיק"); }
+  const v = id => ($("#"+id)||{value:""}).value.trim();
+  const collect = () => {
     const t = {
-      v:2, ownerEmail:v("ownerEmail"), empName:v("empName"),
-      company:v("company"), companyId:v("companyId"), deductions:v("deductions"), ephone:v("ephone"), address:v("address"), signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
-      role:v("role"), start:v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:v("probation"),
+      v:3, mode:rv("mode"), f101:rv("mode")==="change" ? "" : rv("f101"), ownerEmail:v("ownerEmail"), empName:v("empName"),
+      company:v("company"), companyId:v("companyId"), deductions:v("deductions"), ephone:v("ephone"), address:v("address"), industry:v("industry"), collective:v("collective"),
+      signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
+      role:v("role"), start:rv("mode")==="change" ? v("origStart") : v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:rv("mode")==="change" ? "" : v("probation"),
       days:$$("[data-day]").map(el => el.value.trim()),
       wageType:v("wageType"), wage:v("wage"), globalOT:v("globalOT"), commission:v("commission"), travel:v("travel"), extras:v("extras"),
       pensionFund:v("pensionFund"), empPct:v("empPct"), erPct:v("erPct"), sevPct:v("sevPct"), sec14:$("#sec14").checked,
       workplace:v("workplace"), breakPaid:$("#breakPaid").checked, cash:$("#cash").checked, cameras:$("#cameras").checked, hishEr:v("hishEr"), hishEmp:v("hishEmp"), hishFrom:v("hishFrom"),
-      empSig: pad.compact(), empSignedAt: nowStamp()
+      effDate:v("effDate"), changeText:v("changeText")
     };
-    Object.keys(t).forEach(k => { if(t[k] === "") delete t[k]; }); if(t.days && !t.days.some(Boolean)) delete t.days;
-    store.set("employer", {ownerEmail:t.ownerEmail,company:t.company,companyId:t.companyId,deductions:t.deductions,ephone:t.ephone,address:t.address,signer:t.signer,harassContact:t.harassContact});
+    Object.keys(t).forEach(k => { if(t[k] === "" || t[k] === false) delete t[k]; }); if(t.days && !t.days.some(Boolean)) delete t.days;
+    return t;
+  };
+  const drawChecks = () => {
+    const t = collect(), {err, warn} = checkTerms(t);
+    $("#checks").innerHTML = (err.length || warn.length) ?
+      err.map(x => `<div class="warn" style="background:#fdecec;border-color:#f3b4b4;color:#a11;margin:6px 0">⛔ ${esc(x)}</div>`).join("") +
+      warn.map(x => `<div class="warn" style="margin:6px 0">⚠️ ${esc(x)}</div>`).join("") +
+      (warn.some(x => x.includes("שעות עבודה בשבוע")) ? `<div class="btns"><button class="btn sec" type="button" id="fixHours">עדכן היקף לפי הימים והשעות</button></div>` : "")
+      : `<div class="help" style="background:#e9f7ef;color:#15603f">✅ לא נמצאו בעיות בנתונים שהוזנו.</div>`;
+    const fx = $("#fixHours"); if(fx) fx.onclick = () => { const d = (collect().days||[]).map(parseDay); const net = d.reduce((a,h)=>a+h-(!$("#breakPaid").checked && h>=6 ? 0.75 : 0),0); $("#weeklyHours").value = +net.toFixed(2); drawChecks(); };
+  };
+  const modeShow = () => { const ch = rv("mode") === "change";
+    $("#changeCard").classList.toggle("hidden", !ch); $("#f101Box").classList.toggle("hidden", ch); $("#startBox").classList.toggle("hidden", ch);
+    header("למעסיק", ch ? "הודעה על שינוי תנאי עבודה" : "הכנת הסכם עבודה לעובד חדש", ch ? "לעובד קיים – העובד מאשר בחתימה" : "ממלאים תנאים, חותמים, ושולחים לעובד קישור אישי"); drawChecks(); };
+  $$('[name=mode]').forEach(r => r.onchange = modeShow);
+  $("#app").addEventListener("input", drawChecks);
+  $("#app").addEventListener("change", e => { if(e.target.matches("select, input[type=checkbox], input[type=radio], input[type=date]")) drawChecks(); });
+  $("#sigClear").onclick = () => pad.clear();
+  $("#fillWeek").onclick = () => { $$("[data-day]").forEach((el,i)=> el.value = i<5 ? "09:00-17:00" : ""); if(!$("#weeklyHours").value) $("#weeklyHours").value = $("#breakPaid").checked ? "40" : "36.25"; drawChecks(); };
+  $("#clearWeek").onclick = () => { $$("[data-day]").forEach(el => el.value = ""); drawChecks(); };
+  $("#forget").onclick = e => { e.preventDefault(); store.del("employer"); store.del("links"); drawHist(); toast("הפרטים והקישורים השמורים נמחקו מהמכשיר"); };
+  $("#another").onclick = () => { renderSetup(); window.scrollTo(0,0); };
+  modeShow();
+  $("#makeLink").onclick = async () => {
+    const ch = rv("mode") === "change";
+    const need = [["company","שם העסק"],["address","כתובת העסק"],["signer","שם החותם"],["ownerEmail","המייל שלך"],["empName","שם העובד"],["role","תפקיד"],["weeklyHours","היקף שעות"],["wage","סכום השכר"]];
+    if(ch) need.push(["effDate","מועד השינוי"],["changeText","מה משתנה"]); else need.push(["start","תאריך תחילה"]);
+    for(const [k,n] of need){ if(!v(k)) return bad(k, "חסר: " + n); }
+    if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
+    if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
+    if(v("deductions") && !/^9\d{8}$/.test(v("deductions"))) return bad("deductions","תיק ניכויים: 9 ספרות שמתחילות ב-9");
+    const t = collect(), {err} = checkTerms(t);
+    if(err.length){ $("#checks").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לתקן את השגיאות בבדיקת התקינות"); }
+    if(!$("#confirm").checked){ $("#confirm").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לאשר את נכונות הנתונים"); }
+    if(pad.isEmpty()){ $("#sigEmp").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימת המעסיק"); }
+    t.empSig = pad.compact(); t.empSignedAt = nowStamp(); t.employerConfirmed = true;
+    t.linkId = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2,"0")).join("");
+    store.set("employer", {ownerEmail:t.ownerEmail,company:t.company,companyId:t.companyId,deductions:t.deductions,ephone:t.ephone,address:t.address,signer:t.signer,harassContact:t.harassContact,industry:t.industry,collective:t.collective});
+    if(SEND_URL){ try{ await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({app:"office-forms-v2", action:"register", linkId:t.linkId, ownerEmail:t.ownerEmail, company:t.company, employee:t.empName, mode:t.mode||"new"})}); }catch(e){} }
     const url = location.origin + location.pathname + await packLink(t);
     $("#linkTxt").textContent = url;
-    const wa = waHref(v("empPhone"), t.empName, t.company, url);
-    $("#waLink").href = wa;
+    $("#waLink").href = waHref(v("empPhone"), t.empName, t.company, url, t.mode);
     $("#waLink").textContent = `שלח ל${t.empName} בוואטסאפ`;
-    $("#linkFor").innerHTML = `קישור אישי עבור <b>${esc(t.empName)}</b> · ${esc(t.role)} · מתחיל/ה ${fmtDate(t.start)}`;
-    const hist = store.get("links") || []; hist.unshift({name:t.empName, phone:v("empPhone"), role:t.role, start:t.start, at:new Date().toISOString(), url});
+    $("#linkFor").innerHTML = ch ? `הודעה על שינוי תנאים עבור <b>${esc(t.empName)}</b> · בתוקף מ-${fmtDate(t.effDate)}` : `קישור אישי עבור <b>${esc(t.empName)}</b> · ${esc(t.role)} · מתחיל/ה ${fmtDate(t.start)}`;
+    const hist = store.get("links") || []; hist.unshift({name:t.empName, phone:v("empPhone"), role:(ch ? "שינוי תנאים · " : "") + t.role, start:ch ? t.effDate : t.start, at:new Date().toISOString(), url, mode:t.mode});
     store.set("links", hist.slice(0, 40)); drawHist();
     $("#linkOut").classList.remove("hidden");
     $("#linkOut").scrollIntoView({behavior:"smooth"});
@@ -517,51 +614,66 @@ function renderSetup(){
   };
 }
 
-function waHref(phone, name, company, url){
+function waHref(phone, name, company, url, mode){
   let p = String(phone||"").replace(/\D/g,""); if(p.startsWith("0")) p = "972" + p.slice(1);
-  const msg = `היי ${name || ""}! 👋 שמחים שאת/ה מצטרף/ת ל${company}.\nבקישור ממלאים פרטים, חותמים על הסכם העבודה וממלאים טופס 101 – הכל מהטלפון, כ-10 דקות:\n${url}`;
+  const msg = mode === "change" ? `היי ${name || ""}, מצורפת הודעה על עדכון בתנאי העבודה שלך ב${company}. נא לעבור ולאשר בחתימה:\n${url}` : `היי ${name || ""}! 👋 שמחים שאת/ה מצטרף/ת ל${company}.\nבקישור ממלאים פרטים, חותמים על הסכם העבודה וממלאים טופס 101 – הכל מהטלפון, כ-10 דקות:\n${url}`;
   return "https://wa.me/" + (p.length >= 11 ? p : "") + "?text=" + encodeURIComponent(msg);
 }
 function drawHist(){
   const box = $("#histCard"); if(!box) return; const hist = store.get("links") || [];
   if(!hist.length){ box.classList.add("hidden"); return; }
   box.classList.remove("hidden");
-  box.innerHTML = `<h2>📋 קישורים ששלחת</h2><p class="note">נשמר רק במכשיר הזה.</p>` + hist.map((x,i) => `<div class="filechip"><span><b>${esc(x.name)}</b> · ${esc(x.role||"")}<br><small class="note">נוצר ${new Date(x.at).toLocaleDateString("he-IL")} · מתחיל/ה ${fmtDate(x.start)}</small></span><span style="display:flex;gap:6px"><a class="btn sec" style="padding:8px 10px" target="_blank" rel="noopener" href="${esc(waHref(x.phone, x.name, (store.get("employer")||{}).company||"", x.url))}">וואטסאפ</a><button type="button" class="btn sec" style="padding:8px 10px;color:#c62828" data-hdel="${i}">מחק</button></span></div>`).join("");
+  box.innerHTML = `<h2>📋 קישורים ששלחת</h2><p class="note">נשמר רק במכשיר הזה.</p>` + hist.map((x,i) => `<div class="filechip"><span><b>${esc(x.name)}</b> · ${esc(x.role||"")}<br><small class="note">נוצר ${new Date(x.at).toLocaleDateString("he-IL")} · מתחיל/ה ${fmtDate(x.start)}</small></span><span style="display:flex;gap:6px"><a class="btn sec" style="padding:8px 10px" target="_blank" rel="noopener" href="${esc(waHref(x.phone, x.name, (store.get("employer")||{}).company||"", x.url, x.mode))}">וואטסאפ</a><button type="button" class="btn sec" style="padding:8px 10px;color:#c62828" data-hdel="${i}">מחק</button></span></div>`).join("");
   $$("[data-hdel]", box).forEach(b => b.onclick = () => { const h = store.get("links") || []; h.splice(Number(b.dataset.hdel),1); store.set("links", h); drawHist(); });
 }
 
 /* ================= employee flow ================= */
 let T = null, E = {}, F = {}, sigE = null, ATT = [];
 const DOC_ID = Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase();
-const TOTAL = 4;
+const MODE = () => (T && T.mode === "change") ? "change" : (T && T.f101 === "michpal") ? "michpal" : "print";
+const STEPS = () => ({change:["פרטים","אישור השינוי","שליחה"], michpal:["פרטים","הסכם עבודה","שליחה"], print:["פרטים","הסכם עבודה","טופס 101","צילומים ושליחה"]})[MODE()];
+const stepOf = name => { const st = STEPS(); return progress(st.indexOf(name)+1, st.length, name); };
+function ask(msg, yes, no){ return new Promise(res => {
+  const o = document.createElement("div"); o.id = "askModal";
+  o.style.cssText = "position:fixed;inset:0;background:rgba(15,20,40,.45);z-index:20;display:grid;place-items:center;padding:16px";
+  o.innerHTML = `<div class="card" style="max-width:440px;width:100%"><p style="margin:0 0 12px">${msg}</p><div class="btns"><button class="btn" type="button" data-a="1">${yes}</button><button class="btn sec" type="button" data-a="0">${no}</button></div></div>`;
+  o.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { o.remove(); res(b.dataset.a === "1"); });
+  document.body.appendChild(o); }); }
 
 function renderWelcome(){
   header(T.company, T.empName ? `שלום ${T.empName.split(" ")[0]}! 👋` : "ברוך/ה הבא/ה! 👋", "עוד כמה דקות וסיימת את כל הניירת");
   if(T.empName && !E.first){ const parts = T.empName.trim().split(/\s+/); E.first = parts[0]; E.last = parts.slice(1).join(" "); }
   dock(`<button class="btn wide" type="button" id="go">בוא/י נתחיל ←</button>`);
+  const md = MODE();
+  if(md === "change"){
+    header(T.company, T.empName ? `שלום ${T.empName.split(" ")[0]}` : "שלום", "עדכון בתנאי העבודה שלך");
+    $("#app").innerHTML = `<div class="card hero"><div class="big">📝</div><h2>הודעה על שינוי בתנאי העבודה</h2><p>החל מ-${fmtDate(T.effDate)}. קוראים ומאשרים בחתימה – פחות מ-2 דקות.</p></div>`;
+  } else {
   $("#app").innerHTML = `
   <div class="card hero">
     <div class="big">🤝</div>
     <h2>שמחים שהצטרפת ל${esc(T.company)}</h2>
-    <p>כדי להתחיל לעבוד ולקבל שכר נכון, צריך שלושה דברים קצרים:</p>
+    <p>כדי להתחיל לעבוד ולקבל שכר נכון, צריך כמה דברים קצרים:</p>
   </div>
   <div class="card">
     <ul class="list">
       <li><span>1️⃣</span><div><b>פרטים אישיים וחשבון בנק</b><br><span class="note">לאן להעביר את המשכורת</span></div></li>
       <li><span>2️⃣</span><div><b>הסכם העבודה</b><br><span class="note">קוראים וחותמים באצבע</span></div></li>
-      <li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">הטופס שקובע כמה מס ינוכה לך. יש הסבר ליד כל שאלה.</span></div></li>
+      ${md === "print" ? `<li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">הטופס שקובע כמה מס ינוכה לך. ממלאים כאן עם הסברים, ואת החתימה עושים על הטופס המודפס במקום העבודה.</span></div></li>` : `<li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">תקבל/י בנפרד הודעה מפורטל מיכפל למילוי וחתימה דיגיטלית.</span></div></li>`}
     </ul>
-    <div class="help">💡 כדאי להכין: <b>תעודת זהות עם ספח</b> (לצילום), ופרטי חשבון הבנק.</div>
-    <p class="note">🔒 הפרטים שלך לא נשמרים בשום שרת. בסוף נוצר מסמך PDF חתום שנשלח רק למעסיק ולמשרד רואה החשבון.</p>
+    <div class="help">💡 כדאי להכין: ${md === "print" ? "<b>תעודת זהות עם ספח</b> (לצילום), ו" : ""}פרטי חשבון הבנק.</div>
+    <p class="note">🔒 הפרטים שלך לא נשמרים בשום שרת שלנו. בסוף נוצרים מסמכי PDF שנשלחים רק למעסיק ולמשרד רואה החשבון, ועותק אליך.</p>
   </div>`;
+  }
   $("#go").onclick = renderDetails;
 }
 
 function renderDetails(){
   window.scrollTo(0,0);
   header(T.company, "פרטים אישיים", "כפי שמופיעים בתעודת הזהות");
-  dock(`<button class="btn wide" type="button" id="next">המשך להסכם ←</button>`);
-  $("#app").innerHTML = progress(1, TOTAL, "פרטים אישיים") + `
+  const chg = MODE() === "change";
+  dock(`<button class="btn wide" type="button" id="next">${chg ? "המשך להודעה ←" : "המשך להסכם ←"}</button>`);
+  $("#app").innerHTML = stepOf("פרטים") + `
   <div class="card">
     <h2>👤 מי את/ה</h2>
     <div class="row">
@@ -570,15 +682,15 @@ function renderDetails(){
     </div>
     <div class="row">
       <div><label class="req">מספר תעודת זהות</label><input id="idNum" inputmode="numeric" maxlength="9" placeholder="9 ספרות"></div>
-      <div><label class="req">תאריך לידה</label><input id="birth" type="date"></div>
+      <div class="${chg ? "hidden" : ""}"><label class="req">תאריך לידה</label><input id="birth" type="date"></div>
     </div>
-    <label class="req">מין</label>${radio("gender",[["זכר","זכר"],["נקבה","נקבה"]],"")}
+    <div class="${chg ? "hidden" : ""}"><label class="req">מין</label>${radio("gender",[["זכר","זכר"],["נקבה","נקבה"]],"")}</div>
     <div class="row">
       <div><label class="req">טלפון נייד</label><input id="phone" inputmode="tel" autocomplete="tel"></div>
       <div><label>מייל</label><input id="email" type="email" inputmode="email" autocomplete="email"></div>
     </div>
   </div>
-  <div class="card">
+  <div class="card ${chg ? "hidden" : ""}">
     <h2>🏠 כתובת מגורים</h2>
     <div class="row">
       <div><label class="req">רחוב</label><input id="street" autocomplete="address-line1"></div>
@@ -589,7 +701,7 @@ function renderDetails(){
       <div><label>מיקוד</label><input id="zip" inputmode="numeric" maxlength="7"></div>
     </div>
   </div>
-  <div class="card">
+  <div class="card ${chg ? "hidden" : ""}">
     <h2>🏦 חשבון בנק למשכורת</h2>
     <div class="help">החשבון צריך להיות על שמך (או משותף איתך).</div>
     <div id="bankBox"></div>
@@ -599,10 +711,11 @@ function renderDetails(){
   for(const k of ["first","last","idNum","birth","phone","email","street","house","city","zip","account"]) if(E[k]) $("#"+k).value = E[k];
   if(E.gender) $$('[name=gender]').forEach(r => r.checked = r.value === E.gender);
   $("#next").onclick = () => {
-    const need = [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["birth","תאריך לידה"],["phone","טלפון"],["street","רחוב"],["house","מספר בית"],["city","יישוב"],["bank","בנק"],["branch","סניף"],["account","מספר חשבון"]];
+    const need = chg ? [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["phone","טלפון"]] : [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["birth","תאריך לידה"],["phone","טלפון"],["street","רחוב"],["house","מספר בית"],["city","יישוב"],["bank","בנק"],["branch","סניף"],["account","מספר חשבון"]];
     for(const [k,n] of need){ const el = $("#"+k); if(!el || !el.value.trim()) return bad(k, "חסר: " + n); }
     if(!validId($("#idNum").value)) return bad("idNum","מספר תעודת הזהות לא תקין – בדוק/י שוב");
-    if(!rv("gender")) return toast("יש לבחור מין");
+    if(!chg && !rv("gender")) return toast("יש לבחור מין");
+    if($("#email").value.trim() && !/^\S+@\S+\.\S+$/.test($("#email").value.trim())) return bad("email","המייל לא תקין");
     ["first","last","idNum","birth","phone","email","street","house","city","zip","bank","branch","account"].forEach(i => E[i] = $("#"+i).value.trim());
     E.idNum = E.idNum.padStart(9,"0"); E.gender = rv("gender");
     E.bankName = bankName(E.bank); E.branchName = branchName(E.bank, E.branch);
@@ -633,19 +746,21 @@ function bankFields(){
 
 function renderAgreement(){
   window.scrollTo(0,0);
-  header(T.company, "הסכם העבודה שלך", "קוראים, מאשרים וחותמים");
-  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">חתמתי, המשך ל-101 ←</button>`);
-  $("#app").innerHTML = progress(2, TOTAL, "הסכם עבודה") + `
-  <div class="card">
+  const md = MODE(), chg = md === "change";
+  header(T.company, chg ? "הודעה על שינוי תנאים" : "הסכם העבודה שלך", "קוראים, מאשרים וחותמים");
+  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">${md === "print" ? "חתמתי, המשך ל-101 ←" : "חתמתי, לסיום ←"}</button>`);
+  const emp = {fullName:`${E.first} ${E.last}`, idNum:E.idNum, address:E.street ? `${E.street} ${E.house}, ${E.city}` : ""};
+  $("#app").innerHTML = stepOf(chg ? "אישור השינוי" : "הסכם עבודה") + `
+  ${chg ? "" : `<div class="card">
     <h2>📋 בקצרה</h2>
     ${termsGrid(T)}
     <p class="note">ההסכם המלא למטה. גלול/י כדי לקרוא.</p>
-  </div>
+  </div>`}
   <div class="card">
-    <div class="agr"><div class="ah"><b>הסכם עבודה אישי</b><span>והודעה לעובד על תנאי עבודה</span></div>${agreementBody(T, {fullName:`${E.first} ${E.last}`, idNum:E.idNum, address:`${E.street} ${E.house}, ${E.city}`})}</div>
-    <label class="opt"><input type="checkbox" id="agree"><span class="t">קראתי את ההסכם ואני מסכים/ה לתנאיו${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}</span></label>
+    <div class="agr"><div class="ah"><b>${chg ? "הודעה על שינוי בתנאי העבודה" : "הסכם עבודה אישי"}</b><span>${chg ? "לפי חוק הודעה לעובד" : "והודעה לעובד על תנאי עבודה"}</span></div>${chg ? changeBody(T, emp) : agreementBody(T, emp)}</div>
+    <label class="opt"><input type="checkbox" id="agree"><span class="t">${chg ? "קיבלתי את ההודעה וקראתי אותה" : `קראתי את ההסכם ואני מסכים/ה לתנאיו${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}`}</span></label>
     <h3>✍️ החתימה שלך</h3>
-    <p class="note">חותמים באצבע בתוך המסגרת. אותה חתימה תופיע גם על טופס 101.</p>
+    <p class="note">חותמים באצבע בתוך המסגרת.</p>
     <canvas class="sig" id="sigE"></canvas>
     <div class="btns"><button class="btn sec" type="button" id="sigClear">נקה חתימה</button></div>
   </div>`;
@@ -655,7 +770,7 @@ function renderAgreement(){
     if(!$("#agree").checked){ $("#agree").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לסמן שקראת ואת/ה מסכים/ה להסכם"); }
     if(sigE.isEmpty()){ $("#sigE").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימה"); }
     E.sig = sigE.data(); E.signedAt = nowStamp();
-    render101();
+    if(md === "print") render101(); else renderSend();
   };
 }
 
@@ -695,7 +810,8 @@ function render101(){
   const Y = taxYear();
   header(T.company, "טופס 101 – כרטיס עובד", `לשנת המס ${Y} · קובע כמה מס ינוכה מהמשכורת`);
   dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">המשך לסיום ←</button>`);
-  $("#app").innerHTML = progress(3, TOTAL, "טופס 101") + `
+  $("#app").innerHTML = stepOf("טופס 101") + `
+  <div class="card"><div class="warn">✍️ את טופס 101 ממלאים כאן, ובסוף <b>חותמים בכתב יד על הטופס המודפס</b> (לפי דרישות רשות המסים). המעסיק ידפיס לך אותו.</div></div>
   <div class="card">
     <div class="help">💡 <b>למה זה חשוב?</b> לפי הטופס המעסיק יודע לאילו הקלות במס את/ה זכאי/ת. בלי טופס 101 חתום מנכים מס מקסימלי. ענה/י בכנות – אם משהו לא ברור, אפשר לשאול את המעסיק או את משרד רואה החשבון.</div>
   </div>
@@ -805,21 +921,29 @@ function render101(){
     el.innerHTML = months > 36 ? "⚠️ הזיכוי ניתן ל-36 חודשים מהחודש שאחרי השחרור. לפי התאריך, נראה שהתקופה הסתיימה לפני שנת המס – כדאי לבדוק לפני שמסמנים." : ""; };
   $("#c14e").addEventListener("change", c14chk); c14chk();
   $("#back").onclick = () => { collect101(); renderAgreement(); };
-  $("#next").onclick = () => {
+  $("#next").onclick = async () => {
     if(!rv("marital")) return toast("יש לבחור מצב משפחתי");
     if(!rv("hasKids")) return toast("יש לסמן אם יש לך ילדים מתחת לגיל 19");
     if(!rv("otherInc")) return toast("יש לסמן אם יש לך הכנסות אחרות");
     if(rv("otherInc") === "yes" && !rv("credHere")) return toast("יש לבחור היכן לקבל נקודות זיכוי");
-    if(rv("coord") === "more" && rv("otherInc") === "none") return toast("סימנת שאין לך הכנסות אחרות, אבל בתיאום מס ציינת הכנסות נוספות. תקן/י אחד מהם.");
     collect101();
     for(const k of F.kids){ if(!k.name) return toast("חסר שם לילד/ה"); if(!k.id || !validId(k.id)) return toast(`חסרה או לא תקינה ת"ז של ${k.name}`); if(!k.birth) return toast(`חסר תאריך לידה ל${k.name}`); }
-    const C = new Set(F.credits);
-    if(E.gender === "זכר" && C.has("c7") && !C.has("c6") && !C.has("c9")){
-      const el = $('[data-cr="c7"]'), el8 = $('[data-cr="c8"]'); el.checked = false; el8.checked = true; collect101();
-      el8.closest(".opt").scrollIntoView({behavior:"smooth",block:"center"});
-      return toast("לגבר נשוי נקודות הזיכוי בעד ילדים מבוקשות בסעיף 8 ולא בסעיף 7. העברתי את הסימון – בדוק/י והמשך/י.");
-    }
     if(F.hasKids === "yes" && !F.kids.length) return toast("הוסף/י לפחות ילד/ה אחד/ת, או סמן/י שאין ילדים");
+    const C = new Set(F.credits);
+    // בדיקות עקביות – העובד מחליט, המערכת לא משנה הצהרה בעצמה
+    if(E.gender === "זכר" && F.marital === "נשוי/אה" && C.has("c7") && !C.has("c6") && !C.has("c9")){
+      const move = await ask("סימנת את סעיף 7. לפי הטופס, סעיף 7 מיועד לאישה, להורה במשפחה חד-הורית שמקבל את קצבת הילדים או להורה יחיד. גבר נשוי מבקש בדרך כלל בסעיף 8. להעביר את הסימון לסעיף 8?", "כן, העבר לסעיף 8", "לא, ההצהרה שלי נכונה");
+      if(move){ $('[data-cr="c7"]').checked = false; $('[data-cr="c8"]').checked = true; collect101(); $('[data-cr="c8"]').closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("הסימון הועבר לסעיף 8. בדוק/י והמשך/י."); }
+      F.c7confirmed = true;
+    }
+    if(F.coord === "more" && F.otherInc === "none"){
+      const ok = await ask("בחלק ה' סימנת שאין לך הכנסות אחרות, ובחלק ט' פירטת הכנסות נוספות. זה תקין אם מדובר בעבודה קודמת שהסתיימה השנה. האם זה המצב?", "כן, זו עבודה קודמת", "אחזור לתקן");
+      if(!ok) return;
+    }
+    if(F.otherInc === "yes" && (!F.coord || F.coord === "none")){
+      const ok = await ask("סימנת שיש לך הכנסות אחרות, ולא ביקשת תיאום מס. בלי תיאום, ייתכן שינוכה ממך מס מרבי באחת ההכנסות. להמשיך בכל זאת?", "להמשיך", "אחזור לתקן");
+      if(!ok) return;
+    }
     renderAttach();
   };
 }
@@ -848,7 +972,7 @@ function renderAttach(){
   const map = {c2a:"אישור נכות/עיוורון",c2b:"אישור תגמול חודשי",c3:"אישור תושב מהרשות (1312א)",c4:"תעודת עולה",c11:"אישור גמלת ילד נכה",c12:"פסק דין למזונות",c14:"תעודת שחרור / סיום שירות",c15:"טופס 119",c16:"אישור צה\"ל על שירות מילואים כלוחם"};
   (F.credits||[]).forEach(k => map[k] && needs.push(map[k]));
   if(F.coord === "approved") needs.push("אישור תיאום מס מפקיד השומה");
-  $("#app").innerHTML = progress(4, TOTAL, "צילומים") + `
+  $("#app").innerHTML = stepOf("צילומים ושליחה") + `
   <div class="card">
     <h2>🪪 צילום תעודת זהות עם ספח</h2>
     <div class="help">צלם/י את הת"ז ואת הספח הפתוח (שבו מופיעים הילדים והכתובת). צילום ברור, בלי השתקפות.</div>
@@ -981,11 +1105,22 @@ function page101_2(Y){
   if(F.coord === "approved") h += ck(512.4, 589.0);
   // י declaration
   h += num(142, 226, 644, todayStr(), 12);
-  h += `<img src="${E.sig}" style="position:absolute;left:${px(40)};top:${py(637)};width:${px(70)};height:${px(19)}">`;
   return h + `</div>`;
+}
+function sigBlock(){
+  const name = `${E.first} ${E.last}`;
+  return `<div class="sigs">
+      <div><b>המעסיק</b> – ${esc(T.company)}<br>חותם: ${esc(T.signer)}<img src="${sigSrc(T.empSig)}"><span style="color:#666">${esc(T.empSignedAt||"")}</span></div>
+      <div><b>העובד</b> – ${esc(name)}<br>ת"ז ${esc(E.idNum)}<img src="${E.sig}"><span style="color:#666">${esc(E.signedAt)}</span></div>
+    </div>`;
 }
 function agreementPages(){
   const name = `${E.first} ${E.last}`;
+  if(MODE() === "change") return `<div class="doc">
+    <div class="dh"><div><div class="t">הודעה על שינוי בתנאי העבודה</div><div class="s">לפי חוק הודעה לעובד · נחתם דיגיטלית · מזהה מסמך ${DOC_ID}</div></div><div class="c">${esc(T.company)}</div></div>
+    ${changeBody(T, {fullName:name, idNum:E.idNum}).replace('class="parties"','class="two"')}
+    ${sigBlock()}
+  </div>`;
   return `<div class="doc">
     <div class="dh"><div><div class="t">הסכם עבודה אישי</div><div class="s">והודעה לעובד על תנאי עבודה · נחתם דיגיטלית · גרסה ${AGR_VER} · מזהה מסמך ${DOC_ID}</div></div><div class="c">${esc(T.company)}</div></div>
     <div class="box"><table class="kv">
@@ -999,19 +1134,29 @@ function agreementPages(){
       <tr><td class="k">כתובת</td><td>${esc(E.street)} ${esc(E.house)}, ${esc(E.city)} ${esc(E.zip)}</td><td class="k">טלפון</td><td>${esc(E.phone)}</td></tr>
       <tr><td class="k">בנק</td><td colspan="3">${esc(E.bankName || "בנק " + E.bank)} (${esc(E.bank)}) · סניף ${esc(E.branch)}${E.branchName ? " " + esc(E.branchName) : ""} · חשבון ${esc(E.account)}</td></tr>
     </table>
-    <div class="sigs">
-      <div><b>המעסיק</b> – ${esc(T.company)}<br>חותם: ${esc(T.signer)}<img src="${sigSrc(T.empSig)}"><span style="color:#666">${esc(T.empSignedAt||"")}</span></div>
-      <div><b>העובד</b> – ${esc(name)}<br>ת"ז ${esc(E.idNum)}<img src="${E.sig}"><span style="color:#666">${esc(E.signedAt)}</span></div>
-    </div>
-  </div>`;
+    <p class="s" style="font-size:11px;color:#666">תאריך מסירת ההודעה לעובד: ${esc(E.signedAt)}</p>
+    ${sigBlock()}
+  </div>
+  ${T.sec14 && Number(T.sevPct) >= 8.33 ? `<div class="pb" style="page-break-before:always">${fundNotice(T, name, E.idNum)}</div>` : ""}`;
 }
 function attachPages(){
   return ATT.map(a => `<div class="pg pb"><div class="att"><h3>${a.kind==="id" ? "צילום תעודת זהות וספח" : "אישור מצורף"} – ${esc(E.first)} ${esc(E.last)}, ת"ז ${esc(E.idNum)}</h3><img src="${a.src}"></div></div>`).join("");
 }
-function buildPdf(){
-  const Y = taxYear();
-  return `<div class="agrwrap">${agreementPages()}</div>${page101_1(Y)}${page101_2(Y)}${attachPages()}`;
+function cover101(){
+  return `<div class="doc">
+    <div class="dh"><div><div class="t">טופס 101 – להדפסה וחתימה</div><div class="s">מזהה ${DOC_ID} · הוכן על סמך הצהרת העובד בטופס המקוון</div></div><div class="c">${esc(T.company)}</div></div>
+    <div class="box"><b>הוראות למעסיק:</b>
+      <p>1. להדפיס את שני עמודי הטופס הרשמי שבהמשך.</p>
+      <p>2. לבקש מהעובד/ת ${esc(E.first)} ${esc(E.last)} לעבור על הפרטים ו<b>לחתום בכתב יד</b> בחלק י' (עמוד 2).</p>
+      <p>3. לצרף את האישורים שבסוף הקובץ ולשמור בתיק העובד. עותק סרוק – ל${CPA_NAME}.</p>
+      <p>4. טופס 101 ממולא מחדש בתחילת כל שנת מס, ובכל שינוי בפרטים.</p>
+    </div>
+    <p style="font-size:11.5px;color:#555">טופס 101 נחתם בכתב יד או באמצעות מערכת שאושרה על ידי רשות המסים. מסמך זה אינו טופס 101 אלקטרוני מאושר.</p>
+  </div>`;
 }
+function buildAgreementHtml(){ return agreementPages(); }
+function build101Html(){ const Y = taxYear(); return `${cover101()}${page101_1(Y)}${page101_2(Y)}${attachPages()}`; }
+function buildPdf(){ return buildAgreementHtml(); }
 
 
 /* html2canvas loses spaces / misplaces punctuation in Hebrew. Wrap every word in an inline-block span. */
@@ -1035,47 +1180,55 @@ function prepRTL(root){
 }
 
 /* ================= send + thanks ================= */
-let pdfBlob = null, fname = "";
+let DOCS = []; // [{blob, fname, title}]
+async function renderPdf(html){
+  const box = $("#pdf"); box.innerHTML = html; prepRTL(box);
+  const imgs = $$("#pdf img");
+  await Promise.all(imgs.map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; })));
+  while(typeof html2pdf === "undefined") await new Promise(r => setTimeout(r, 300));
+  return html2pdf().set({ margin:0, image:{type:"jpeg",quality:0.86}, html2canvas:{scale:1.6,useCORS:true,backgroundColor:"#fff"}, jsPDF:{unit:"px",format:[794,1122],orientation:"portrait",hotfixes:["px_scaling"],compress:true}, pagebreak:{mode:["css","avoid-all"],before:".pb",avoid:["tr",".sigs",".sec",".kv"]} }).from(box).outputPdf("blob");
+}
+const clean = s => s.replace(/[\\/:*?"<>|]/g,"");
 function renderSend(){
   window.scrollTo(0,0);
-  header(T.company, "כמעט סיימנו! ✨", "המסמך החתום שלך נוצר עכשיו");
+  const md = MODE(), who = `${E.first} ${E.last}`;
+  header(T.company, "כמעט סיימנו! ✨", "המסמכים שלך נוצרים עכשיו");
   dock("");
-  fname = `הסכם עבודה ו-101 - ${E.first} ${E.last}.pdf`.replace(/[\\/:*?"<>|]/g,"");
-  $("#app").innerHTML = progress(4, TOTAL, "שליחה") + `
+  const plan = md === "change" ? [{title:"הודעה על שינוי תנאים (חתומה)", fname:clean(`הודעה על שינוי תנאים - ${who}.pdf`), html:buildAgreementHtml}]
+    : md === "michpal" ? [{title:"הסכם עבודה חתום", fname:clean(`הסכם עבודה - ${who}.pdf`), html:buildAgreementHtml}]
+    : [{title:"הסכם עבודה חתום", fname:clean(`הסכם עבודה - ${who}.pdf`), html:buildAgreementHtml}, {title:"טופס 101 להדפסה וחתימה + צילומים", fname:clean(`טופס 101 להדפסה - ${who}.pdf`), html:build101Html}];
+  $("#app").innerHTML = (md === "print" ? stepOf("צילומים ושליחה") : stepOf("שליחה")) + `
   <div class="card hero">
     <div class="big" id="pdfIcon">⏳</div>
-    <h2 id="pdfState">מכין את המסמך…</h2>
-    <p class="note">הסכם עבודה חתום · טופס 101 רשמי · צילומים</p>
+    <h2 id="pdfState">מכין את המסמכים…</h2>
+    <ul class="list" style="text-align:right">${plan.map((d,i) => `<li><span id="st${i}">⏳</span><div>${esc(d.title)}</div></li>`).join("")}</ul>
   </div>
   <div class="card">
     <button class="btn ok wide" type="button" id="share" disabled>📤 שליחה למעסיק ולמשרד רו"ח</button>
     <p class="note" style="margin-top:10px" id="sendNote">ייפתח חלון השיתוף של הטלפון. בחר/י <b>Gmail</b> או אפליקציית מייל, ושלח/י אל:<br><span dir="ltr">${esc(T.ownerEmail)}</span> · <span dir="ltr">${CPA_EMAIL}</span></p>
-    <div class="btns"><button class="btn sec" type="button" id="dl" disabled>⬇️ הורד PDF</button><a class="btn sec" id="mail">✉️ פתח מייל מוכן</a></div>
+    <div class="btns"><button class="btn sec" type="button" id="dl" disabled>⬇️ עותק לעצמי</button><a class="btn sec" id="mail">✉️ פתח מייל מוכן</a></div>
   </div>`;
-  const subject = `הסכם עבודה וטופס 101 – ${E.first} ${E.last} – ${T.company}`;
-  $("#mail").href = `mailto:${T.ownerEmail}?cc=${CPA_EMAIL}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("שלום,\nמצורף ההסכם החתום וטופס 101 (קובץ PDF).\n\n" + E.first + " " + E.last + ", " + E.phone)}`;
-  $("#mail").onclick = () => { if(pdfBlob) download(); setTimeout(() => renderThanks(false), 600); };
-  $("#pdf").innerHTML = buildPdf(); prepRTL($("#pdf"));
-  const imgs = $$("#pdf img");
-  const ready = Promise.all(imgs.map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; })));
-  const go = () => {
-    if(typeof html2pdf === "undefined"){ setTimeout(go, 300); return; }
-    ready.then(() => html2pdf().set({ margin:0, filename:fname, image:{type:"jpeg",quality:0.86}, html2canvas:{scale:1.6,useCORS:true,backgroundColor:"#fff",letterRendering:true}, jsPDF:{unit:"px",format:[794,1122],orientation:"portrait",hotfixes:["px_scaling"],compress:true}, pagebreak:{mode:["css","avoid-all"],before:".pb",avoid:["tr",".sigs",".sec",".kv"]} })
-      .from($("#pdf")).outputPdf("blob")).then(b => {
-        pdfBlob = b; $("#pdfIcon").textContent = "✅"; $("#pdfState").textContent = "המסמך מוכן";
-        $("#share").disabled = false; $("#dl").disabled = false;
-      }).catch(err => { $("#pdfIcon").textContent = "⚠️"; $("#pdfState").textContent = "לא הצלחתי ליצור את המסמך בטלפון הזה. נסה/י בדפדפן Chrome."; console.error(err); });
-  };
-  go();
-  $("#dl").onclick = download;
-  if(SEND_URL){ $("#share").textContent = "📤 שליחה"; $("#sendNote").textContent = `המסמך יישלח ישירות אל ${T.company} ואל ${CPA_NAME}${E.email ? ", ועותק אליך במייל" : ""}.`; }
+  const subject = (md === "change" ? "הודעה על שינוי תנאי עבודה – " : "הסכם עבודה" + (md === "print" ? " וטופס 101 – " : " – ")) + `${who} – ${T.company}`;
+  $("#mail").href = `mailto:${T.ownerEmail}?cc=${CPA_EMAIL}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("שלום,\nמצורפים המסמכים (PDF).\n\n" + who + ", " + E.phone)}`;
+  $("#mail").onclick = () => { if(DOCS.length) downloadAll(); setTimeout(() => renderThanks(false), 600); };
+  DOCS = [];
+  (async () => {
+    try{
+      for(let i = 0; i < plan.length; i++){ const blob = await renderPdf(plan[i].html()); DOCS.push({blob, fname:plan[i].fname, title:plan[i].title}); $("#st"+i).textContent = "✅"; }
+      $("#pdfIcon").textContent = "✅"; $("#pdfState").textContent = plan.length > 1 ? "המסמכים מוכנים" : "המסמך מוכן";
+      $("#share").disabled = false; $("#dl").disabled = false;
+    }catch(err){ $("#pdfIcon").textContent = "⚠️"; $("#pdfState").textContent = "לא הצלחתי ליצור את המסמכים בטלפון הזה. נסה/י בדפדפן Chrome."; console.error(err); }
+  })();
+  $("#dl").onclick = downloadAll;
+  if(SEND_URL){ $("#share").textContent = "📤 שליחה"; $("#sendNote").textContent = `המסמכים יישלחו ישירות אל ${T.company} ואל ${CPA_NAME}${E.email ? ", ועותק אליך במייל" : ""}.`; }
   $("#share").onclick = async () => {
     if(SEND_URL){
       const btn = $("#share"); btn.disabled = true; btn.textContent = "שולח…";
       try{
-        const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(pdfBlob); });
+        const files = [];
+        for(const d of DOCS){ files.push({fname:d.fname, pdf: await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(d.blob); })}); }
         const resp = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({
-          app:"office-forms-v2", pdf:b64, fname, docId:DOC_ID, agrVer:AGR_VER, taxYear:taxYear(), company:T.company, employee:`${E.first} ${E.last}`, role:T.role, start:fmtDate(T.start),
+          app:"office-forms-v2", action:"submit", linkId:T.linkId||"", files, docId:DOC_ID, agrVer:AGR_VER, mode:md, taxYear:taxYear(), company:T.company, employee:who, role:T.role, start:fmtDate(T.start),
           ownerEmail:T.ownerEmail, employeeEmail:E.email || "" })});
         const j = await resp.json();
         if(j && j.ok){ renderThanks(true); return; }
@@ -1085,39 +1238,42 @@ function renderSend(){
         toast("השליחה האוטומטית לא הצליחה. נשלח דרך הטלפון.");
       }
     }
-    const file = new File([pdfBlob], fname, {type:"application/pdf"});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file], title:subject, text:`${subject}\nלשליחה אל: ${T.ownerEmail}, ${CPA_EMAIL}`}); renderThanks(true); return; }
+    const files = DOCS.map(d => new File([d.blob], d.fname, {type:"application/pdf"}));
+    if(navigator.canShare && navigator.canShare({files})){
+      try{ await navigator.share({files, title:subject, text:`${subject}\nלשליחה אל: ${T.ownerEmail}, ${CPA_EMAIL}`}); renderThanks(true); return; }
       catch(e){ if(e && e.name === "AbortError") return; }
     }
-    // fallback: download + open ready mail
-    download(); toast("הקובץ ירד לטלפון. צרף/י אותו למייל שנפתח.");
+    downloadAll(); toast("הקבצים ירדו לטלפון. צרף/י אותם למייל שנפתח.");
     setTimeout(() => { location.href = $("#mail").href; renderThanks(false); }, 700);
   };
 }
-function download(){ const a = document.createElement("a"); a.href = URL.createObjectURL(pdfBlob); a.download = fname; document.body.appendChild(a); a.click(); a.remove(); }
+function downloadAll(){ DOCS.forEach((d, i) => setTimeout(() => { const a = document.createElement("a"); a.href = URL.createObjectURL(d.blob); a.download = d.fname; document.body.appendChild(a); a.click(); a.remove(); }, i*400)); }
 function renderThanks(shared){
   window.scrollTo(0,0);
-  header(T.company, `תודה, ${E.first}! 🎉`, "ברוך/ה הבא/ה לצוות");
+  const md = MODE();
+  header(T.company, `תודה, ${E.first}! ${md === "change" ? "✅" : "🎉"}`, md === "change" ? "האישור התקבל" : "ברוך/ה הבא/ה לצוות");
   dock("");
+  const sentLine = shared ? (SEND_URL ? `המסמכים נשלחו ל${esc(T.company)} ולמשרד רואה החשבון${E.email ? ", ועותק נשלח למייל שלך" : ""}. ` : "המסמכים נשלחו. ") : "";
   $("#app").innerHTML = `
   <div class="card hero">
-    <div class="big">🎉</div>
-    <h2>ברוך/ה הבא/ה ל${esc(T.company)}!</h2>
-    <p>${shared ? (SEND_URL ? `המסמכים נשלחו ל${esc(T.company)} ולמשרד רואה החשבון${E.email ? ", ועותק נשלח למייל שלך" : ""}. ` : "המסמכים נשלחו. ") : ""}שמחים מאוד שהצטרפת, ומאחלים לך התחלה מוצלחת.</p>
+    <div class="big">${md === "change" ? "✅" : "🎉"}</div>
+    <h2>${md === "change" ? "תודה על האישור" : `ברוך/ה הבא/ה ל${esc(T.company)}!`}</h2>
+    <p>${sentLine}${md === "change" ? "" : "שמחים מאוד שהצטרפת, ומאחלים לך התחלה מוצלחת."}</p>
   </div>
-  ${shared ? "" : `<div class="card"><div class="warn">📎 רק לוודא: המייל אל <span dir="ltr">${esc(T.ownerEmail)}</span> ו-<span dir="ltr">${CPA_EMAIL}</span> נשלח <b>עם הקובץ המצורף</b>. אם לא – לחצ/י "הורד שוב" ושלח/י.</div><div class="btns"><button class="btn sec wide" type="button" id="again">⬇️ הורד שוב</button></div></div>`}
+  ${shared ? "" : `<div class="card"><div class="warn">📎 רק לוודא: המייל אל <span dir="ltr">${esc(T.ownerEmail)}</span> ו-<span dir="ltr">${CPA_EMAIL}</span> נשלח <b>עם הקבצים המצורפים</b>. אם לא – לחצ/י "הורד שוב" ושלח/י.</div><div class="btns"><button class="btn sec wide" type="button" id="again">⬇️ הורד שוב</button></div></div>`}
   <div class="card">
     <h2>מה הלאה?</h2>
     <ul class="list">
-      <li><span>💰</span><div>המשכורת תועבר לחשבון שמסרת, עד ה-9 בחודש שאחרי חודש העבודה.</div></li>
+      ${md === "print" ? `<li><span>✍️</span><div>המעסיק ידפיס לך את טופס 101 – עובר/ת על הפרטים וחותם/ת בכתב יד.</div></li>` : ""}
+      ${md === "michpal" ? `<li><span>📱</span><div>בקרוב תגיע אליך הודעה מפורטל מיכפל למילוי וחתימה על טופס 101.</div></li>` : ""}
+      ${md === "change" ? "" : `<li><span>💰</span><div>המשכורת תועבר לחשבון שמסרת, עד ה-9 בחודש שאחרי חודש העבודה.</div></li>`}
       <li><span>🔄</span><div>אם משהו משתנה – כתובת, מצב משפחתי, ילדים, חשבון בנק או עבודה נוספת – עדכן/י את ${esc(T.signer)} בתוך שבוע, כדי שהמס יחושב נכון.</div></li>
       <li><span>❓</span><div>שאלה על התלוש או על המס? פנה/י ל${esc(T.signer)}${T.ephone ? ` (${esc(T.ephone)})` : ""} או ל${CPA_NAME}: <span dir="ltr">${CPA_EMAIL}</span>.</div></li>
-      <li><span>📄</span><div>שמור/י לעצמך עותק של המסמך.</div></li>
+      <li><span>📄</span><div>שמור/י לעצמך עותק חתום של ${md === "change" ? "ההודעה" : "ההסכם"}.</div></li>
     </ul>
     <div class="btns"><button class="btn sec wide" type="button" id="mine">⬇️ עותק לעצמי</button></div>
   </div>`;
-  $("#mine").onclick = download; $("#again") && ($("#again").onclick = download);
+  $("#mine").onclick = downloadAll; $("#again") && ($("#again").onclick = downloadAll);
 }
 
 /* ================= routing ================= */
@@ -1134,6 +1290,7 @@ async function route(){
   renderSetup();
 }
 route();
+window.addEventListener("hashchange", () => location.reload());
 </script>
 </body>
 </html>
