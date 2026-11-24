@@ -5,65 +5,134 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
-<meta name="theme-color" content="#1f2a44">
+<meta name="theme-color" content="#15224d">
 <title>קליטת עובד – הסכם עבודה וטופס 101</title>
+<link rel="icon" href="data:,">
 <style>
-  :root{--ink:#1c2333;--mute:#5d6678;--line:#d9dde5;--bg:#f5f6f8;--card:#fff;--acc:#1f2a44;--ok:#1d7a4a;--warn:#a5520c}
+  :root{--ink:#18203a;--mute:#5f6880;--line:#dfe3ec;--bg:#f3f5fa;--card:#fff;--acc:#15224d;--acc2:#2b4fb8;--ok:#15805a;--warn:#9a4d07;--soft:#eef2fb}
   *{box-sizing:border-box}
-  body{margin:0;font-family:"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5}
-  header{background:var(--acc);color:#fff;padding:14px 18px}
-  header h1{margin:0;font-size:19px}
-  header p{margin:2px 0 0;font-size:13px;opacity:.85}
-  main{max-width:760px;margin:0 auto;padding:14px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
-  .card h2{margin:0 0 10px;font-size:17px}
-  .card h3{margin:14px 0 6px;font-size:15px}
-  label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
-  input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
-  textarea{min-height:70px}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Arial,"Noto Sans Hebrew",sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.55}
+  header{background:linear-gradient(135deg,#15224d 0%,#24408f 100%);color:#fff;padding:20px 18px 26px}
+  header .in{max-width:720px;margin:0 auto}
+  header .kicker{font-size:13px;opacity:.8;letter-spacing:.3px}
+  header h1{margin:2px 0 0;font-size:22px;font-weight:700}
+  header p{margin:4px 0 0;font-size:14px;opacity:.85}
+  main{max-width:720px;margin:-14px auto 0;padding:0 12px 110px}
+  .progress{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(20,30,60,.08)}
+  .progress .bar{height:6px;background:#e6eaf3;border-radius:6px;overflow:hidden;margin-top:8px}
+  .progress .bar i{display:block;height:100%;background:linear-gradient(90deg,#2b4fb8,#4d7cf2);border-radius:6px;transition:width .4s}
+  .progress .lbl{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+  .progress .lbl b{color:var(--ink)}
+  .card{background:var(--card);border-radius:16px;padding:18px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(20,30,60,.08)}
+  .card h2{margin:0 0 4px;font-size:18px;display:flex;align-items:center;gap:8px}
+  .card h2 .n{display:inline-grid;place-items:center;min-width:26px;height:26px;border-radius:8px;background:var(--soft);color:var(--acc2);font-size:14px}
+  .card h3{margin:16px 0 6px;font-size:15.5px}
+  .help{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:14px;color:#33405f;margin:8px 0 6px}
+  .help b{color:var(--acc)}
+  label{display:block;font-size:14px;color:var(--mute);margin:12px 0 5px}
+  input,select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink);outline:none;transition:border-color .2s}
+  input:focus,select:focus,textarea:focus{border-color:var(--acc2)}
+  input.bad,select.bad{border-color:#c62828;background:#fff7f7}
+  textarea{min-height:76px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media(max-width:520px){.row{grid-template-columns:1fr}}
-  .chk{display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:15px;color:var(--ink)}
-  .chk input{width:20px;height:20px;flex:none;margin-top:2px}
-  .req::after{content:" *";color:#b3261e}
-  .btn{display:inline-block;border:0;border-radius:10px;padding:12px 18px;font:inherit;font-weight:600;cursor:pointer;background:var(--acc);color:#fff;text-decoration:none;text-align:center}
-  .btn.sec{background:#e7eaf0;color:var(--ink)}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:520px){.row{grid-template-columns:1fr}.row3{grid-template-columns:1fr 1fr}}
+  .req::after{content:" *";color:#c62828}
+  .opt{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:12px;margin:8px 0;cursor:pointer;background:#fff;transition:all .15s}
+  .opt:has(input:checked){border-color:var(--acc2);background:#f4f7ff}
+  .opt input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--acc2)}
+  .opt .t{font-size:15px}
+  .opt .t small{display:block;color:var(--mute);font-size:13px;margin-top:2px}
+  .sub{margin:6px 32px 4px 0;padding:10px;border-right:3px solid #c9d5f5;background:#fafbff;border-radius:6px}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg label{margin:0;flex:1;min-width:90px;text-align:center;border:1.5px solid var(--line);border-radius:10px;padding:11px 8px;color:var(--ink);font-size:15px;cursor:pointer;background:#fff}
+  .seg input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;margin:0}
+  .seg label{position:relative}
+  .seg label:has(input:checked){border-color:var(--acc2);background:#f4f7ff;color:var(--acc);font-weight:600}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:14px 20px;font:inherit;font-weight:650;cursor:pointer;background:var(--acc2);color:#fff;text-decoration:none;text-align:center}
+  .btn.sec{background:#e9edf6;color:var(--ink)}
   .btn.ok{background:var(--ok)}
+  .btn.wide{width:100%}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .dock{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));z-index:5}
+  .dock .in{max-width:720px;margin:0 auto;display:flex;gap:10px}
+  .dock .btn{flex:1}
   .note{font-size:13px;color:var(--mute)}
-  .warn{background:#fff6ea;border:1px solid #f1d2ad;color:var(--warn);padding:10px;border-radius:8px;font-size:14px}
-  .steps{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
-  .steps span{font-size:13px;padding:4px 10px;border-radius:20px;background:#e7eaf0;color:var(--mute)}
-  .steps span.on{background:var(--acc);color:#fff}
-  .sig{border:1.5px dashed #9aa3b5;border-radius:8px;background:#fff;touch-action:none;width:100%;height:150px;display:block}
-  .days{display:grid;grid-template-columns:70px 1fr;gap:6px 10px;align-items:center}
+  .warn{background:#fff6ea;border:1px solid #f1d2ad;color:var(--warn);padding:12px;border-radius:10px;font-size:14px}
+  .sig{border:1.5px dashed #9aa6c4;border-radius:12px;background:#fcfdff;touch-action:none;width:100%;height:160px;display:block}
+  .days{display:grid;grid-template-columns:64px 1fr;gap:6px 10px;align-items:center}
   .days b{font-weight:500;font-size:14px}
-  .doc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;max-height:420px;overflow:auto;font-size:14.5px}
-  .doc h4{margin:12px 0 4px;font-size:15px}
-  .doc p,.doc li{margin:4px 0}
-  table.kids{width:100%;border-collapse:collapse;font-size:14px}
-  table.kids td,table.kids th{border:1px solid var(--line);padding:4px}
-  table.kids input{padding:6px}
+  .kidcard{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;position:relative}
+  .kidcard .x{position:absolute;left:8px;top:6px;background:none;border:0;color:#c62828;font-size:14px;cursor:pointer}
   .hidden{display:none!important}
-  .linkbox{word-break:break-all;background:#f0f2f6;border-radius:8px;padding:10px;font-size:13px;direction:ltr;text-align:left}
-  /* PDF output */
-  #pdf{width:794px;padding:36px 44px;background:#fff;color:#000;font-size:13px;line-height:1.45;direction:rtl}
-  #pdf h1{font-size:18px;margin:0 0 6px;text-align:center}
-  #pdf h2{font-size:15px;margin:16px 0 6px;border-bottom:1px solid #000;padding-bottom:2px}
-  #pdf table{width:100%;border-collapse:collapse;margin:4px 0}
-  #pdf td,#pdf th{border:1px solid #888;padding:3px 6px;vertical-align:top;font-size:12.5px}
-  #pdf .sigimg{height:60px}
-  #pdf .pb{page-break-before:always}
-  #pdf .meta{font-size:11px;color:#333;text-align:center}
+  .linkbox{word-break:break-all;background:#f0f3fa;border-radius:10px;padding:10px;font-size:12.5px;direction:ltr;text-align:left;max-height:90px;overflow:auto}
+  .terms{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .terms div{background:var(--soft);border-radius:12px;padding:10px 12px}
+  .terms small{display:block;color:var(--mute);font-size:12.5px}
+  .terms b{font-size:15.5px}
+  .agr{border:1px solid var(--line);border-radius:12px;padding:16px;max-height:430px;overflow:auto;font-size:14.5px;background:#fff}
+  .agr .ah{text-align:center;border-bottom:2px solid var(--acc);padding-bottom:10px;margin-bottom:10px}
+  .agr .ah b{display:block;font-size:17px;color:var(--acc)}
+  .agr .ah span{font-size:12.5px;color:var(--mute)}
+  .agr h4{margin:14px 0 4px;font-size:15px;color:var(--acc)}
+  .sn{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;background:#15224d;color:#fff;font-size:12.5px;margin-left:6px}
+  .agr p{margin:4px 0}
+  .agr ul{margin:4px 0;padding-right:20px}
+  .dayl .dayc{display:inline-block;background:#f3f6fd;border-radius:6px;padding:2px 8px;margin:2px 0 2px 6px;font-size:13.5px}
+  .agr .parties{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+  .agr .parties div{background:#f6f8fc;border-radius:8px;padding:8px 10px;font-size:13.5px}
+  .agr .parties small{display:block;color:var(--mute)}
+  .hero{text-align:center;padding:26px 16px}
+  .hero .big{font-size:54px;line-height:1}
+  .hero h2{justify-content:center;font-size:22px;margin-top:10px}
+  .list{margin:8px 0;padding:0;list-style:none}
+  .list li{padding:8px 0 8px 0;border-bottom:1px solid #eef0f5;display:flex;gap:10px}
+  .list li:last-child{border:0}
+  .list li span{flex:none}
+  .filechip{display:flex;justify-content:space-between;align-items:center;background:#f3f6fd;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:14px}
+  .filechip button{background:none;border:0;color:#c62828;cursor:pointer}
+  #toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);background:#18203a;color:#fff;padding:12px 16px;border-radius:12px;max-width:92%;z-index:9;font-size:15px;display:none;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  /* ===== PDF output ===== */
+  #pdf{width:794px;background:#fff;color:#000;direction:rtl;font-family:Arial,"Noto Sans Hebrew",sans-serif}
+  #pdf .pg{position:relative;width:794px;height:1118px;overflow:hidden}
+  #pdf .bgimg{position:absolute;left:0;top:0;width:794px;height:1118px}
+  #pdf .f{position:absolute;font-size:12px;line-height:1;white-space:nowrap;color:#0a2a8a;font-weight:600}
+  #pdf .ck{position:absolute;font-size:15px;line-height:1;color:#0a2a8a;font-weight:700}
+  #pdf .doc{padding:48px 56px;font-size:13px;line-height:1.55;color:#111}
+  #pdf .dh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #15224d;padding-bottom:10px;margin-bottom:14px}
+  #pdf .dh .t{font-size:22px;font-weight:700;color:#15224d}
+  #pdf .dh .s{font-size:11.5px;color:#555}
+  #pdf .dh .c{font-size:13px;text-align:left;color:#15224d;font-weight:700}
+  #pdf .box{border:1px solid #cfd6e6;border-radius:8px;padding:8px 12px;margin:8px 0;background:#f7f9fd}
+  #pdf .two{display:flex;gap:10px}
+  #pdf .two>div{flex:1}
+  #pdf .kv{width:100%;border-collapse:collapse;margin:6px 0}
+  #pdf .kv td{border-bottom:1px solid #e3e7f0;padding:4px 6px;font-size:12.5px;vertical-align:top}
+  #pdf .kv td.k{color:#555;width:26%}
+  #pdf h4{margin:12px 0 3px;font-size:13.5px;color:#15224d}
+  #pdf p{margin:3px 0}
+  #pdf ul{margin:3px 0;padding-right:18px}
+  #pdf .dayl .dayc{display:inline-block;border:1px solid #dde3ef;border-radius:5px;padding:1px 7px;margin:2px 0 2px 6px;font-size:12px}
+  #pdf .sigs{display:flex;gap:16px;margin-top:16px}
+  #pdf .sigs>div{flex:1;border:1px solid #cfd6e6;border-radius:8px;padding:10px 12px;font-size:12px}
+  #pdf .sigs img{height:62px;display:block;margin:6px 0}
+  #pdf .foot{position:absolute;bottom:22px;left:56px;right:56px;border-top:1px solid #cfd6e6;padding-top:5px;font-size:10px;color:#777;display:flex;justify-content:space-between}
+  #pdf .att{padding:40px 50px}
+  #pdf .att h3{margin:0 0 12px;font-size:16px;color:#15224d}
+  #pdf .att img{max-width:694px;max-height:960px;display:block;margin:0 auto;border:1px solid #ddd}
 </style>
 </head>
 <body>
-<header>
-  <h1 id="hdr">קליטת עובד חדש</h1>
-  <p id="sub">הסכם עבודה וטופס 101 – בחתימה דיגיטלית</p>
-</header>
+<header><div class="in">
+  <div class="kicker" id="kick">קליטת עובד חדש</div>
+  <h1 id="hdr">הסכם עבודה וטופס 101</h1>
+  <p id="sub">בחתימה דיגיטלית, מהטלפון</p>
+</div></header>
 <main id="app"></main>
+<div class="dock hidden" id="dock"><div class="in" id="dockIn"></div></div>
+<div id="toast"></div>
 
 <!-- PDF render target (offscreen) -->
 <div style="position:fixed;left:-10000px;top:0"><div id="pdf"></div></div>
@@ -71,164 +140,249 @@
 <script src="vendor/html2pdf.bundle.min.js" defer></script>
 <script>
 "use strict";
-/* ============ helpers ============ */
+/* ================= helpers ================= */
 const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CPA_EMAIL = "cpa.snir@gmail.com";
+const CPA_NAME = "משרד רו\"ח שניר טרמצ'י";
 const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
 const store = {
   get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } },
-  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
-function b64urlEncode(obj){
-  const bytes = new TextEncoder().encode(JSON.stringify(obj));
-  let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
-  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+function toB64url(bytes){ let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b)); return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+function fromB64url(s){ s = s.replace(/[^A-Za-z0-9_\-]/g,"").replace(/-/g,"+").replace(/_/g,"/"); while(s.length % 4) s += "="; const bin = atob(s); const b = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i] = bin.charCodeAt(i); return b; }
+function b64urlEncode(obj){ return toB64url(new TextEncoder().encode(JSON.stringify(obj))); }
+function b64urlDecode(s){ return JSON.parse(new TextDecoder().decode(fromB64url(s))); }
+async function packLink(obj){
+  const json = JSON.stringify(obj);
+  if("CompressionStream" in window){
+    try{
+      const buf = await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer();
+      return "#k=" + toB64url(new Uint8Array(buf));
+    }catch(e){}
+  }
+  return "#e=" + b64urlEncode(obj);
 }
-function b64urlDecode(s){
-  s = s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length % 4) s += "=";
-  const bin = atob(s); const bytes = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
-  return JSON.parse(new TextDecoder().decode(bytes));
+async function unpackK(s){
+  if(!("DecompressionStream" in window)) throw new Error("nodecomp");
+  const txt = await new Response(new Blob([fromB64url(s)]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+  return JSON.parse(txt);
 }
 function fmtDate(d){ if(!d) return ""; const [y,m,dd] = d.split("-"); return dd && m && y ? `${dd}/${m}/${y}` : d; }
-function nowStamp(){ const d = new Date(); return d.toLocaleString("he-IL",{timeZone:"Asia/Jerusalem"}); }
+function nowStamp(){ const d = new Date(); const o = {timeZone:"Asia/Jerusalem"}; return d.toLocaleDateString("en-GB",o) + " בשעה " + d.toLocaleTimeString("en-GB",Object.assign({hour:"2-digit",minute:"2-digit"},o)); }
+function todayStr(){ return new Date().toLocaleDateString("he-IL",{timeZone:"Asia/Jerusalem",day:"2-digit",month:"2-digit",year:"numeric"}).replace(/\./g,"/"); }
 function validId(id){
   id = String(id||"").trim(); if(!/^\d{5,9}$/.test(id)) return false;
   id = id.padStart(9,"0"); let sum = 0;
   for(let i=0;i<9;i++){ let n = Number(id[i]) * ((i%2)+1); sum += n>9 ? n-9 : n; }
   return sum % 10 === 0;
 }
+function toast(msg){ const el = $("#toast"); el.textContent = msg; el.style.display = "block"; clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", 4200); }
+function bad(id, msg){ const el = $("#"+id); if(el){ el.classList.add("bad"); el.scrollIntoView({behavior:"smooth",block:"center"}); el.addEventListener("input", () => el.classList.remove("bad"), {once:true}); el.addEventListener("change", () => el.classList.remove("bad"), {once:true}); } toast(msg); return false; }
+function header(kick, h, sub){ $("#kick").textContent = kick; $("#hdr").textContent = h; $("#sub").textContent = sub; }
+function progress(step, total, label){ return `<div class="progress"><div class="lbl"><b>${label}</b><span>שלב ${step} מתוך ${total}</span></div><div class="bar"><i style="width:${Math.round(step/total*100)}%"></i></div></div>`; }
+function dock(html){ const d = $("#dock"); if(!html){ d.classList.add("hidden"); return; } $("#dockIn").innerHTML = html; d.classList.remove("hidden"); }
+function radio(name, opts, val){ return `<div class="seg">${opts.map(([v,t]) => `<label><input type="radio" name="${name}" value="${esc(v)}" ${v===val?"checked":""}>${t}</label>`).join("")}</div>`; }
+const rv = name => (document.querySelector(`[name="${name}"]:checked`)||{}).value || "";
+function taxYear(){ const y = T && T.start ? Number(String(T.start).slice(0,4)) : 0; const now = new Date().getFullYear(); return y && y >= now ? y : now; }
 
-/* signature pad */
+/* ================= signature pad ================= */
 function sigPad(canvas){
   const ctx = canvas.getContext("2d"); let drawing = false, dirty = false, last = null, strokes = [], cur = null;
   const norm = p => { const r = canvas.getBoundingClientRect(); return [Math.round(p.x*400/r.width), Math.round(p.y*130/r.height)]; };
   function fit(){ const r = canvas.getBoundingClientRect(); const dpr = Math.max(1, window.devicePixelRatio||1);
     canvas.width = r.width*dpr; canvas.height = r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b1b4a"; dirty = false; }
+    ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b1b4a"; dirty = false; }
   fit();
   const pos = e => { const r = canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; };
   canvas.addEventListener("pointerdown", e => { drawing = true; last = pos(e); cur = [norm(last)]; strokes.push(cur); try{ canvas.setPointerCapture(e.pointerId); }catch(_){} });
   canvas.addEventListener("pointermove", e => { if(!drawing) return; const p = pos(e);
     ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last = p; dirty = true;
-    const n = norm(p), q = cur[cur.length-1]; if(Math.abs(n[0]-q[0]) + Math.abs(n[1]-q[1]) >= 3) cur.push(n); });
+    const n = norm(p), q = cur[cur.length-1]; if(Math.abs(n[0]-q[0]) + Math.abs(n[1]-q[1]) >= 4) cur.push(n); });
   ["pointerup","pointercancel","pointerleave"].forEach(t => canvas.addEventListener(t, () => drawing = false));
   return {
     clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); dirty = false; strokes = []; },
     compact(){ return "s:" + strokes.filter(st => st.length).map(st => st.map(([x,y]) => x.toString(36)+"."+y.toString(36)).join(" ")).join("|"); },
     isEmpty(){ return !dirty; },
-    data(){ // small PNG: trim to a 400x130 copy
-      const c = document.createElement("canvas"); c.width = 400; c.height = 130;
-      const x = c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,400,130);
-      x.drawImage(canvas,0,0,400,130); return c.toDataURL("image/jpeg",0.6);
-    }
+    data(){ const c = document.createElement("canvas"); c.width = 400; c.height = 130; const x = c.getContext("2d");
+      x.drawImage(canvas,0,0,400,130); return c.toDataURL("image/png"); }
   };
 }
-
 function sigSrc(sig){
   if(!sig || sig.startsWith("data:")) return sig || "";
   const c = document.createElement("canvas"); c.width = 400; c.height = 130; const x = c.getContext("2d");
-  x.fillStyle = "#fff"; x.fillRect(0,0,400,130); x.strokeStyle = "#0b1b4a"; x.lineWidth = 2.4; x.lineCap = "round"; x.lineJoin = "round";
+  x.strokeStyle = "#0b1b4a"; x.lineWidth = 2.6; x.lineCap = "round"; x.lineJoin = "round";
   sig.slice(2).split("|").forEach(st => { const pts = st.split(" ").map(p => p.split(".").map(v => parseInt(v,36)));
     x.beginPath(); pts.forEach(([a,b],i) => i ? x.lineTo(a,b) : x.moveTo(a,b)); if(pts.length===1) x.lineTo(pts[0][0]+1,pts[0][1]); x.stroke(); });
   return c.toDataURL("image/png");
 }
 
-/* ============ agreement text ============ */
-function wageText(t){
-  if(t.wageType === "monthly") return `שכר חודשי ברוטו בסך ${esc(t.wage)} ₪ למשרה בהיקף המפורט לעיל.`;
-  return `שכר שעתי ברוטו בסך ${esc(t.wage)} ₪ לשעת עבודה.`;
-}
+/* ================= agreement ================= */
+function wageLine(t){ return t.wageType === "monthly" ? `${esc(t.wage)} ₪ ברוטו לחודש` : `${esc(t.wage)} ₪ ברוטו לשעה`; }
 function scheduleText(t){
-  const rows = DAYS.map((d,i) => t.days && t.days[i] ? `<li>יום ${d}: ${esc(t.days[i])}</li>` : "").join("");
-  return rows ? `<ul>${rows}</ul>` : "<p>לפי סידור עבודה שיימסר לעובד מראש.</p>";
+  const rows = DAYS.map((d,i) => t.days && t.days[i] ? `<span class="dayc">יום ${d}: <b dir="ltr">${esc(t.days[i])}</b></span>` : "").join("");
+  return rows ? `<p class="dayl">${rows}</p>` : "<p>לפי סידור עבודה שיימסר לעובד מראש.</p>";
 }
-function agreementHTML(t, emp){
-  const name = emp && emp.fullName ? esc(emp.fullName) : "__________";
-  const id = emp && emp.idNum ? esc(emp.idNum) : "__________";
-  const pension = t.pensionFund ? `בקופה: ${esc(t.pensionFund)}` : "בקופה שיבחר העובד, ובהיעדר בחירה – בקרן ברירת המחדל שנבחרה על ידי המעסיק";
+function probationText(t){
+  if(!t.probation) return "";
+  const n = Number(t.probation);
+  const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
+  return ` ${words} להעסקה הם תקופת ניסיון.`;
+}
+function agreementBody(t, emp){
+  const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
+  const id = emp && emp.idNum ? esc(emp.idNum) : "<span style='color:#999'>(ת\"ז)</span>";
+  const addr = emp && emp.address ? esc(emp.address) : "";
+  const boss = esc(t.manager || t.signer);
+  const place = esc(t.workplace || t.address);
+  const pension = t.pensionFund ? `בקופה: ${esc(t.pensionFund)}` : "בקופה שיבחר העובד ותימסר למעסיק בכתב, ובהיעדר בחירה – בקרן ברירת המחדל לפי הדין";
+  const sev = Number(t.sevPct||6);
+  const hourly = t.wageType !== "monthly";
+  let n = 0; const H = title => `<h4><span class="sn">${++n}</span> ${title}</h4>`;
   return `
-  <p><b>הסכם עבודה אישי והודעה לעובד על תנאי עבודה</b><br>
-  לפי חוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002</p>
-  <p><b>בין:</b> ${esc(t.company)}${t.companyId ? `, ח.פ/ע.מ ${esc(t.companyId)}` : ""}, ${esc(t.address)} (להלן: "המעסיק")<br>
-  <b>לבין:</b> ${name}, ת"ז ${id} (להלן: "העובד")</p>
+  <div class="parties">
+    <div><small>המעסיק</small> <b>${esc(t.company)}</b>${t.companyId ? `<br>ח.פ/ע.מ ${esc(t.companyId)}` : ""}<br>${esc(t.address)}<br>(להלן: "המעסיק")</div>
+    <div><small>העובד</small> <b>${name}</b><br>ת"ז ${id}${addr ? `<br>${addr}` : ""}<br>(להלן: "העובד")</div>
+  </div>
+  <p><b>הואיל</b> והמעסיק מעוניין להעסיק את העובד, והעובד מעוניין לעבוד אצל המעסיק, בתנאים המפורטים בהסכם זה;</p>
+  <p><b>והואיל</b> והעובד מצהיר כי הוא בעל הכישורים הנדרשים לביצוע התפקיד, וכי אין כל מניעה חוקית, חוזית או אחרת להעסקתו;</p>
+  <p><b>לפיכך הוסכם בין הצדדים כדלקמן:</b></p>
 
-  <h4>1. התפקיד ותחילת העבודה</h4>
-  <p>העובד יועסק בתפקיד <b>${esc(t.role)}</b> החל מיום <b>${fmtDate(t.start)}</b>. הממונה הישיר: ${esc(t.manager || t.signer)}.
-  ${t.probation ? `שלושת החודשים הראשונים${t.probation!=="3"?` (${esc(t.probation)} חודשים)`:""} הם תקופת ניסיון, שבמהלכה רשאי כל צד לסיים את ההעסקה בהודעה מוקדמת כדין.` : ""}
-  ההעסקה היא לתקופה בלתי קצובה, אלא אם צוין אחרת בכתב.</p>
+  ${H("מבוא ופרשנות")}
+  <p>${n}.1 המבוא להסכם זה מהווה חלק בלתי נפרד ממנו. כותרות הסעיפים נועדו לנוחות בלבד.</p>
+  <p>${n}.2 הסכם זה מהווה גם הודעה לעובד על תנאי עבודתו לפי חוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002. על יחסי העבודה יחולו, בנוסף להסכם זה, דיני העבודה וצווי ההרחבה הכלליים החלים על כלל העובדים במשק.</p>
+  <p>${n}.3 האמור בהסכם בלשון זכר או נקבה – אחד הוא.</p>
 
-  <h4>2. ימי עבודה ושעות עבודה</h4>
-  <p>היקף המשרה: <b>${esc(t.weeklyHours)}</b> שעות שבועיות. יום המנוחה השבועי: <b>${esc(t.restDay)}</b>.</p>
-  ${scheduleText(t)}
-  <p>העבודה בשעות נוספות תיעשה רק לפי דרישת המעסיק או באישורו מראש, ותשולם לפי חוק שעות עבודה ומנוחה, התשי"א-1951.
-  העובד ידווח על שעות עבודתו באמצעי הרישום שיקבע המעסיק.</p>
+  ${H("התפקיד ומקום העבודה")}
+  <p>${n}.1 העובד יועסק בתפקיד <b>${esc(t.role)}</b>, וימלא את המשימות הנובעות מהתפקיד ואת ההוראות שיקבל מעת לעת מהמעסיק או מהממונה הישיר – <b>${boss}</b>.</p>
+  <p>${n}.2 מקום העבודה: <b>${place}</b>, או כל מקום אחר שיקבע המעסיק בהתאם לצורכי העבודה ובמסגרת הסבירות.</p>
+  <p>${n}.3 העובד יבצע את עבודתו במסירות, בנאמנות, ביושר ובמיומנות, יקפיד על נהלי המעסיק ועל כללי הבטיחות, ויודיע למעסיק ללא דיחוי על כל עניין שבו יש לו עניין אישי או שעלול להעמיד אותו בניגוד עניינים.</p>
 
-  <h4>3. שכר</h4>
-  <p>${wageText(t)} השכר ישולם לא יאוחר מה-9 בחודש שלאחר החודש שבעדו הוא משתלם, בהעברה לחשבון הבנק של העובד.</p>
-  ${t.globalOT ? `<p>גמול שעות נוספות גלובלי: ${esc(t.globalOT)} שעות נוספות בחודש ישולמו כתוספת נפרדת בתלוש. תוספת זו היא תמורה עבור שעות נוספות בלבד ואינה חלק מהשכר הרגיל. ככל שהעובד יעבוד בפועל יותר מכך – ישולם לו ההפרש כדין.</p>` : ""}
-  ${t.commission ? `<p>עמלות: ${esc(t.commission)}. העמלות משולמות כתוספת לשכר היסוד ואינן מהוות חלק ממנו, למעט ככל שהדין קובע אחרת.</p>` : ""}
-  ${t.extras ? `<p>תנאים נוספים: ${esc(t.extras)}</p>` : ""}
+  ${H("תקופת ההעסקה" + (t.probation ? " ותקופת ניסיון" : ""))}
+  <p>${n}.1 ההעסקה תחל ביום <b>${fmtDate(t.start)}</b> והיא לתקופה בלתי קצובה, עד לסיומה בהתאם להסכם זה ולדין.</p>
+  ${t.probation ? `<p>${n}.2 ${probationText(t).trim().replace(/\.$/,"")} (להלן: "תקופת הניסיון"). במהלכה יבחנו הצדדים את התאמת העובד לתפקיד, וכל צד יהיה רשאי להביא את ההעסקה לסיום בהודעה מוקדמת כקבוע בדין.</p>` : ""}
 
-  <h4>4. נסיעות, הבראה וחופשה</h4>
-  <p>החזר הוצאות נסיעה לעבודה וממנה, דמי הבראה, ימי חופשה שנתית, דמי מחלה ותשלום חגים – לפי הדין, צו ההרחבה הכללי ובהתאם לוותק.
-  ${t.travel ? `החזר נסיעות: ${esc(t.travel)}.` : ""}</p>
+  ${H("שעות עבודה, מנוחה ושעות נוספות")}
+  <p>${n}.1 היקף המשרה: <b>${esc(t.weeklyHours)}</b> שעות עבודה בשבוע. יום המנוחה השבועי: <b>${esc(t.restDay||"שבת")}</b>.</p>
+  <p>${n}.2 ימי העבודה ושעותיה:</p>${scheduleText(t)}
+  <p>${n}.3 העובד זכאי להפסקות לפי חוק שעות עבודה ומנוחה, התשי"א-1951. בעבודה של 6 שעות ומעלה ביום תינתן הפסקה של 45 דקות לפחות, מהן 30 דקות רצופות. ההפסקה אינה חלק משעות העבודה, אלא אם העובד נדרש להישאר במקום העבודה במהלכה.</p>
+  <p>${n}.4 עבודה בשעות נוספות תיעשה <b>רק לפי דרישת המעסיק או באישורו מראש</b>. גמול שעות נוספות ישולם לפי החוק: 125% מהשכר הרגיל בעד שתי השעות הנוספות הראשונות ביום, ו-150% בעד כל שעה נוספת שלאחריהן. עבודה ביום המנוחה השבועי תיעשה רק בהיתר ותשולם בגמול לפי החוק.</p>
+  ${t.globalOT ? `<p>${n}.5 גמול שעות נוספות גלובלי: בעד ${esc(t.globalOT)} שעות נוספות בחודש ישולם גמול קבוע כרכיב נפרד בתלוש השכר. רכיב זה הוא תמורה לשעות נוספות בלבד ואינו חלק מהשכר הרגיל לכל דבר ועניין; עבודה בפועל מעבר לכך תשולם לפי החוק.</p>` : ""}
+  <p>${n}.${t.globalOT?6:5} העובד ידווח על שעות עבודתו באופן מלא ומדויק באמצעי רישום הנוכחות שיקבע המעסיק.</p>
 
-  <h4>5. פנסיה ופיצויים</h4>
-  <p>המעסיק יבטח את העובד בביטוח פנסיוני ${pension}, החל מהמועד הקבוע בצו ההרחבה לביטוח פנסיוני מקיף במשק (לרבות רטרואקטיבית ככל שנדרש):
-  הפרשות עובד ${esc(t.empPct||"6")}%, הפרשות מעסיק לתגמולים ${esc(t.erPct||"6.5")}%, והפרשות מעסיק לפיצויים ${esc(t.sevPct||"6")}%${t.sevPct && Number(t.sevPct) >= 8.33 ? "" : " (או בשיעור גבוה יותר שיוסכם)"}.</p>
-  ${t.sec14 ? `<p><b>סעיף 14:</b> הצדדים מסכימים כי על ההפרשות לפיצויים יחול האישור הכללי בדבר תשלומי מעביד לקרן פנסיה ולקופת ביטוח במקום פיצויי פיטורים, לפי סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963. ההפרשות ייעשו במקום פיצויי פיטורים בשיעור ההפרשה${Number(t.sevPct||6) >= 8.33 ? " (100%)" : ` (${esc(t.sevPct||"6")}/8.33 מהפיצויים, וההשלמה – לפי הדין)`}, וכספי הפיצויים שנצברו ישוחררו לעובד בסיום העבודה, למעט במקרים שבהם נשללה זכאות לפיצויים בפסק דין או בהסכם.</p>` : ""}
+  ${H("השכר")}
+  <p>${n}.1 בתמורה לעבודתו ישולם לעובד ${hourly ? `<b>שכר שעתי בסך ${esc(t.wage)} ₪ ברוטו</b> לכל שעת עבודה בפועל` : `<b>שכר חודשי בסך ${esc(t.wage)} ₪ ברוטו</b> למשרה בהיקף המפורט בסעיף 4`} (להלן: "השכר").</p>
+  <p>${n}.2 השכר ישולם לא יאוחר מה-9 בחודש שלאחר החודש שבעדו הוא משתלם, בהעברה לחשבון הבנק של העובד, בצירוף תלוש שכר כדין.</p>
+  <p>${n}.3 מהשכר ינוכו מס הכנסה, דמי ביטוח לאומי, דמי ביטוח בריאות, חלק העובד בהפרשות לביטוח הפנסיוני וכל ניכוי אחר המותר לפי חוק הגנת השכר, התשי"ח-1958.</p>
+  ${t.commission ? `<p>${n}.4 עמלות: ${esc(t.commission)}. העמלות משולמות כתוספת לשכר היסוד ואינן חלק ממנו, למעט ככל שהדין קובע אחרת.</p>` : ""}
+  ${t.extras ? `<p>${n}.${t.commission?5:4} תנאים נוספים: ${esc(t.extras)}</p>` : ""}
 
-  <h4>6. סודיות, ציוד ומערכות</h4>
-  <p>העובד ישמור בסוד כל מידע עסקי, מסחרי או אישי על המעסיק, לקוחותיו וספקיו, ולא ישתמש בו אלא לצורך עבודתו – גם לאחר סיום ההעסקה.
-  ציוד, מסמכים ומערכות שנמסרו לעובד הם רכוש המעסיק ויוחזרו בסיום העבודה.
-  תיבת דואר אלקטרוני ומערכות שהעמיד המעסיק נועדו לשימוש לצורכי עבודה. המעסיק רשאי לנטר את השימוש בהן בהתאם למדיניות שתימסר לעובד ובכפוף לדין, ולא יעיין בתכנים אישיים אלא בהסכמת העובד או לפי הדין.</p>
+  ${H("חופשה, מחלה, חגים והבראה")}
+  <p>${n}.1 <b>חופשה שנתית</b> – לפי חוק חופשה שנתית, התשי"א-1951, בהתאם לוותק ולהיקף המשרה. מועדי החופשה יתואמו מראש עם המעסיק.</p>
+  <p>${n}.2 <b>דמי מחלה</b> – לפי חוק דמי מחלה, התשל"ו-1976: צבירה של יום וחצי לכל חודש עבודה מלא, עד 90 ימים. התשלום: ללא תשלום ביום המחלה הראשון, 50% מהשכר בימים השני והשלישי, ו-100% מהיום הרביעי ואילך. היעדרות בשל מחלה תאושר בתעודה רפואית.</p>
+  <p>${n}.3 <b>חגים</b> – תשלום בעד ימי חג לפי צו ההרחבה הכללי, לאחר שלושה חודשי עבודה.</p>
+  <p>${n}.4 <b>דמי הבראה</b> – לפי צו ההרחבה הכללי, לאחר שנת עבודה, בהתאם לוותק ולהיקף המשרה.</p>
+  <p>${n}.5 <b>נסיעות</b> – החזר הוצאות נסיעה לעבודה וממנה לפי צו ההרחבה${t.travel ? `: ${esc(t.travel)}` : ""}.</p>
+  <p>${n}.6 <b>שירות מילואים</b> – זכויות העובד בתקופת שירות מילואים יהיו לפי הדין.</p>
 
-  <h4>7. מניעת הטרדה מינית</h4>
-  <p>העובד מאשר כי הובא לידיעתו שהמעסיק פועל לפי החוק למניעת הטרדה מינית, התשנ"ח-1998, וכי ידוע לו למי לפנות בתלונה${t.harassContact ? ` (${esc(t.harassContact)})` : ""}. ככל שהמעסיק מחויב בתקנון – התקנון נמסר לעובד או הוצג לו.</p>
+  ${H("ביטוח פנסיוני ופיצויים")}
+  <p>${n}.1 המעסיק יבטח את העובד בביטוח פנסיוני ${pension}, החל מהמועד הקבוע בצו ההרחבה לביטוח פנסיוני מקיף במשק (לרבות רטרואקטיבית ככל שהדין מחייב). שיעורי ההפרשה מהשכר המבוטח: עובד <b>${esc(t.empPct||"6")}%</b>, מעסיק לתגמולים <b>${esc(t.erPct||"6.5")}%</b>, מעסיק לפיצויים <b>${esc(t.sevPct||"6")}%</b>.</p>
+  ${t.sec14 ? `<p>${n}.2 <b>סעיף 14:</b> הצדדים מסכימים כי על ההפרשות לפיצויים יחול האישור הכללי בדבר תשלומי מעביד לקרן פנסיה ולקופת ביטוח במקום פיצויי פיטורים, לפי סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963. ההפרשות ייעשו במקום פיצויי פיטורים${sev >= 8.33 ? " במלואם (100%)" : ` בשיעור של ${esc(t.sevPct||"6")}/8.33 מהפיצויים, וההשלמה – לפי הדין`}. הכספים שנצברו ישוחררו לעובד בסיום העבודה, למעט אם נשללה זכאותו לפיצויים בפסק דין או בהסכם.</p>` : ""}
+  ${t.hishEmp || t.hishEr ? `<p>${n}.${t.sec14?3:2} <b>קרן השתלמות</b> – החל מ${t.hishFrom ? esc(t.hishFrom) : "תחילת העבודה"}: הפרשות מעסיק ${esc(t.hishEr||"7.5")}% והפרשות עובד ${esc(t.hishEmp||"2.5")}% מהשכר הרגיל, בקרן שיבחר העובד.</p>` : ""}
 
-  <h4>8. סיום העבודה</h4>
-  <p>כל צד רשאי לסיים את ההעסקה בהודעה מוקדמת כקבוע בחוק הודעה מוקדמת לפיטורים ולהתפטרות, התשס"א-2001. פיטורים ייעשו לאחר שימוע כדין.</p>
+  ${H("סודיות וקניין רוחני")}
+  <p>${n}.1 העובד ישמור בסודיות מוחלטת כל מידע שיגיע אליו בקשר לעבודתו – לרבות מידע עסקי, מסחרי, כספי ואישי על המעסיק, לקוחותיו, ספקיו ועובדיו – לא יעביר אותו לאחר ולא ישתמש בו אלא לצורך ביצוע עבודתו. חובה זו חלה גם לאחר סיום ההעסקה, ואינה חלה על מידע שהוא נחלת הכלל.</p>
+  <p>${n}.2 כל תוצר, מסמך, רעיון או המצאה שהעובד יצר במסגרת עבודתו ובקשר אליה – יהיו קניינו של המעסיק, בכפוף לדין.</p>
 
-  <h4>9. כללי</h4>
-  <p>הסכם זה מהווה גם הודעה לעובד על תנאי עבודתו. שינוי בתנאים יימסר לעובד בכתב. אין בהסכם כדי לגרוע מזכות המוקנית לעובד לפי דין, צו הרחבה או הסכם קיבוצי החל עליו.
-  העובד מצהיר כי קרא את ההסכם, הבין אותו והוא מסכים לתנאיו. חתימה אלקטרונית על הסכם זה כמוה כחתימה בכתב יד.</p>`;
+  ${H("עבודה נוספת וניגוד עניינים")}
+  <p>${n}.1 במהלך תקופת העבודה לא יעבוד העובד אצל מתחרה של המעסיק ולא יעסוק בעיסוק שיש בו ניגוד עניינים עם עבודתו, אלא בהסכמת המעסיק מראש ובכתב.</p>
+  <p>${n}.2 עבודה נוספת שאינה מתחרה ואינה פוגעת בעבודה – מותרת, ובלבד שהעובד יודיע עליה למעסיק מראש (גם לצורך תיאום מס).</p>
+
+  ${H("ציוד, מערכות ופרטיות")}
+  <p>${n}.1 ציוד, מסמכים, מפתחות ואמצעים שנמסרו לעובד הם רכוש המעסיק, ישמשו לצורכי העבודה בלבד, ויוחזרו במלואם ובמצב תקין בסיום העבודה או לפי דרישה.</p>
+  <p>${n}.2 מערכות מחשוב ותיבות דואר שהעמיד המעסיק נועדו לצורכי עבודה. ניטור ייעשה רק בהתאם למדיניות שתימסר לעובד ובכפוף לדין, והמעסיק לא יעיין בתכנים אישיים אלא בהסכמת העובד או לפי הדין.</p>
+
+  ${H("מניעת הטרדה מינית ופגיעה")}
+  <p>${n}.1 המעסיק פועל לפי החוק למניעת הטרדה מינית, התשנ"ח-1998, ומצפה מכל עובד לשמור על סביבת עבודה מכבדת. תלונה ניתן להגיש ל${t.harassContact ? esc(t.harassContact) : `ממונה הישיר או ל${esc(t.signer)}`}. ככל שהמעסיק מחויב בתקנון – התקנון נמסר לעובד או הוצג לו.</p>
+
+  ${H("סיום העבודה")}
+  <p>${n}.1 כל צד רשאי להביא את ההעסקה לסיום בהודעה מוקדמת בכתב, כקבוע בחוק הודעה מוקדמת לפיטורים ולהתפטרות, התשס"א-2001. המעסיק רשאי לוותר על עבודת העובד בתקופת ההודעה המוקדמת ולשלם לו תמורתה.</p>
+  <p>${n}.2 פיטורים ייעשו לאחר שימוע כדין.</p>
+  <p>${n}.3 בסיום העבודה יחזיר העובד את כל רכוש המעסיק, וישולמו לו כל הזכויות המגיעות לו לפי הדין והסכם זה, בצירוף תלוש גמר חשבון, טופס 161 (במקרה של פרישה) ומכתב שחרור לקופה.</p>
+
+  ${H("הצהרות העובד")}
+  <p>${n}.1 העובד מצהיר כי הפרטים שמסר נכונים ומלאים, כי אינו כבול בהתחייבות המונעת ממנו לעבוד אצל המעסיק, ויודיע למעסיק בתוך 7 ימים על כל שינוי בפרטיו (כתובת, מצב משפחתי, חשבון בנק, עבודה נוספת).</p>
+
+  ${H("כללי")}
+  <p>${n}.1 הסכם זה ממצה את תנאי ההעסקה בין הצדדים. כל שינוי בו ייעשה בכתב, ויימסר לעובד כדין.</p>
+  <p>${n}.2 אין בהסכם זה כדי לגרוע מזכות המוקנית לעובד לפי דין, צו הרחבה או הסכם קיבוצי החל עליו. במקרה של סתירה – תחול ההוראה המיטיבה עם העובד.</p>
+  <p>${n}.3 העובד מאשר כי קרא את ההסכם, הבין אותו, קיבל הזדמנות לשאול שאלות, והוא מסכים לתנאיו. חתימה אלקטרונית על הסכם זה כמוה כחתימה בכתב יד.</p>
+  <p style="margin-top:10px"><b>ולראיה באו הצדדים על החתום.</b></p>`;
+}
+function termsGrid(t){
+  return `<div class="terms">
+    <div><small>תפקיד</small><b>${esc(t.role)}</b></div>
+    <div><small>תחילת עבודה</small><b>${fmtDate(t.start)}</b></div>
+    <div><small>שכר</small><b>${wageLine(t)}</b></div>
+    <div><small>היקף</small><b>${esc(t.weeklyHours)} שעות בשבוע</b></div>
+  </div>`;
 }
 
-/* ============ setup (employer) ============ */
+/* ================= employer setup ================= */
+let PRESET = null;
 function renderSetup(){
-  $("#hdr").textContent = "הכנת הסכם עבודה";
-  $("#sub").textContent = "המעסיק ממלא את התנאים, חותם, ושולח לעובד קישור אישי";
+  header("למעסיק", "הכנת הסכם עבודה לעובד חדש", "ממלאים תנאים, חותמים, ושולחים לעובד קישור אישי");
+  dock(`<button class="btn wide" type="button" id="makeLink">צור קישור לעובד ←</button>`);
   const saved = Object.assign({}, store.get("employer") || {}, PRESET || {});
-  const dayRows = DAYS.map((d,i) => `<b>${d}</b><input data-day="${i}" placeholder="למשל 09:00-17:00 (ריק = לא עובד)">`).join("");
+  const dayRows = DAYS.map((d,i) => `<b>${d}</b><input data-day="${i}" placeholder="למשל 09:00-17:00 · ריק = לא עובד">`).join("");
   $("#app").innerHTML = `
-  <div class="steps"><span class="on">1. תנאים</span><span>2. חתימת מעסיק</span><span>3. קישור לעובד</span></div>
-
   <div class="card">
-    <h2>לאן נשלחים המסמכים החתומים</h2>
-    <label class="req">המייל שלך</label><input id="ownerEmail" type="email" value="${esc(saved.ownerEmail||"")}">
-    <p class="note">עותק של כל מסמך חתום נשלח גם למשרד רואה החשבון (${CPA_EMAIL}).</p>
+    <h2><span class="n">1</span>איך זה עובד</h2>
+    <ul class="list">
+      <li><span>✍️</span><div>ממלאים את תנאי ההעסקה של העובד הזה וחותמים.</div></li>
+      <li><span>🔗</span><div>נוצר קישור אישי לעובד – שולחים לו בוואטסאפ.</div></li>
+      <li><span>📄</span><div>העובד ממלא פרטים, חותם על ההסכם וממלא טופס 101 עם הסברים.</div></li>
+      <li><span>📬</span><div>בסוף נוצר PDF חתום (הסכם + 101 רשמי + צילום ת"ז) שנשלח אליך ולמשרד רו"ח.</div></li>
+    </ul>
+    <p class="note">לכל עובד – קישור נפרד עם ההסכם שלו. פרטי העסק נשמרים במכשיר הזה כדי שלא תצטרך להקליד שוב.</p>
   </div>
 
   <div class="card">
-    <h2>פרטי המעסיק</h2>
+    <h2><span class="n">2</span>פרטי העסק</h2>
     <div class="row">
       <div><label class="req">שם החברה / העסק</label><input id="company" value="${esc(saved.company||"")}"></div>
       <div><label>ח.פ / ע.מ</label><input id="companyId" inputmode="numeric" value="${esc(saved.companyId||"")}"></div>
+    </div>
+    <div class="row">
+      <div><label>מספר תיק ניכויים</label><input id="deductions" inputmode="numeric" maxlength="9" value="${esc(saved.deductions||"")}" placeholder="9 ספרות, מתחיל ב-9"></div>
+      <div><label>טלפון העסק</label><input id="ephone" inputmode="tel" value="${esc(saved.ephone||"")}"></div>
     </div>
     <label class="req">כתובת העסק</label><input id="address" value="${esc(saved.address||"")}">
     <div class="row">
       <div><label class="req">שם החותם מטעם המעסיק</label><input id="signer" value="${esc(saved.signer||"")}"></div>
       <div><label>ממונה ישיר (אם אחר)</label><input id="manager"></div>
     </div>
+    <label class="req">המייל שלך – לכאן יגיעו המסמכים החתומים</label><input id="ownerEmail" type="email" inputmode="email" value="${esc(saved.ownerEmail||"")}" placeholder="name@example.com">
+    <p class="note">עותק נשלח גם ל${CPA_NAME} (${CPA_EMAIL}).</p>
     <label>איש קשר לתלונות על הטרדה מינית</label><input id="harassContact" value="${esc(saved.harassContact||"")}" placeholder="שם ותפקיד">
   </div>
 
   <div class="card">
-    <h2>תפקיד ושעות</h2>
+    <h2><span class="n">3</span>העובד</h2>
     <div class="row">
-      <div><label class="req">תפקיד</label><input id="role"></div>
+      <div><label class="req">שם העובד</label><input id="empName" placeholder="שם פרטי ומשפחה"></div>
+      <div><label>הנייד של העובד</label><input id="empPhone" inputmode="tel" placeholder="לשליחה ישירה בוואטסאפ"></div>
+    </div>
+    <p class="note">כך תדע/י לאיזה עובד שייך כל קישור. השם יופיע גם אצל העובד כשהוא פותח את הקישור.</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">4</span>תפקיד ושעות</h2>
+    <div class="row">
+      <div><label class="req">תפקיד</label><input id="role" placeholder="למשל: עובד/ת דלפק"></div>
       <div><label class="req">תאריך תחילת עבודה</label><input id="start" type="date"></div>
     </div>
     <h3>ימים ושעות</h3>
@@ -236,375 +390,689 @@ function renderSetup(){
     <div class="btns"><button class="btn sec" type="button" id="fillWeek">א׳–ה׳ 09:00-17:00</button><button class="btn sec" type="button" id="clearWeek">נקה</button></div>
     <div class="row">
       <div><label class="req">היקף שעות שבועי</label><input id="weeklyHours" inputmode="decimal"></div>
-      <div><label class="req">יום מנוחה שבועי</label>
-        <select id="restDay"><option>שבת</option><option>שישי</option><option>ראשון</option></select></div>
+      <div><label class="req">יום מנוחה שבועי</label><select id="restDay"><option>שבת</option><option>שישי</option><option>ראשון</option></select></div>
     </div>
-    <label>תקופת ניסיון (חודשים)</label>
-    <select id="probation"><option value="">ללא</option><option value="3" selected>3</option><option value="6">6</option></select>
+    <label>מקום העבודה (אם שונה מכתובת העסק)</label><input id="workplace">
+    <label>תקופת ניסיון</label>
+    <select id="probation"><option value="">ללא</option><option value="1">חודש</option><option value="3" selected>3 חודשים</option><option value="6">6 חודשים</option></select>
   </div>
 
   <div class="card">
-    <h2>שכר ותנאים</h2>
+    <h2><span class="n">5</span>שכר ותנאים</h2>
     <div class="row">
       <div><label class="req">סוג שכר</label><select id="wageType"><option value="hourly">שעתי</option><option value="monthly">חודשי</option></select></div>
       <div><label class="req">סכום ברוטו (₪)</label><input id="wage" inputmode="decimal"></div>
     </div>
     <label>שעות נוספות גלובליות בחודש (רק אם יש)</label><input id="globalOT" inputmode="decimal">
-    <label>עמלות (רק אם יש) – אחוז, על מה, ובסיס החישוב</label><textarea id="commission" placeholder="למשל: 5% ממכירות מוצרים, לפני מע&quot;מ"></textarea>
+    <label>עמלות (רק אם יש)</label><textarea id="commission" placeholder="אחוז, על מה, ובסיס החישוב. למשל: 5% ממכירות, לפני מע&quot;מ"></textarea>
     <label>החזר נסיעות</label><input id="travel" placeholder="למשל: לפי צו ההרחבה / חופשי חודשי">
     <label>תנאים נוספים</label><textarea id="extras"></textarea>
     <h3>פנסיה</h3>
     <label>קופת פנסיה (אם ידוע)</label><input id="pensionFund">
-    <div class="row">
+    <div class="row3">
       <div><label>עובד %</label><input id="empPct" value="6" inputmode="decimal"></div>
-      <div><label>מעסיק תגמולים %</label><input id="erPct" value="6.5" inputmode="decimal"></div>
+      <div><label>מעסיק %</label><input id="erPct" value="6.5" inputmode="decimal"></div>
+      <div><label>פיצויים %</label><input id="sevPct" value="6" inputmode="decimal"></div>
     </div>
-    <label>מעסיק פיצויים %</label><input id="sevPct" value="6" inputmode="decimal">
-    <div class="chk"><input type="checkbox" id="sec14" checked><span>הפיצויים לפי סעיף 14 (מומלץ – מגן על המעסיק מתשלום פיצויים כפול)</span></div>
+    <h3>קרן השתלמות (רק אם יש)</h3>
+    <div class="row3">
+      <div><label>מעסיק %</label><input id="hishEr" inputmode="decimal" placeholder="למשל 7.5"></div>
+      <div><label>עובד %</label><input id="hishEmp" inputmode="decimal" placeholder="למשל 2.5"></div>
+      <div><label>החל מ-</label><input id="hishFrom" placeholder="למשל: תחילת העבודה"></div>
+    </div>
+    <label class="opt"><input type="checkbox" id="sec14" checked><span class="t">הפיצויים לפי סעיף 14<small>מומלץ – ההפרשות לפיצויים באות במקום פיצויי פיטורים.</small></span></label>
   </div>
 
   <div class="card">
-    <h2>חתימת המעסיק</h2>
+    <h2><span class="n">6</span>חתימת המעסיק</h2>
+    <p class="note">חותמים באצבע בתוך המסגרת.</p>
     <canvas class="sig" id="sigEmp"></canvas>
     <div class="btns"><button class="btn sec" type="button" id="sigClear">נקה חתימה</button></div>
-    <p class="note">החתימה תופיע על ההסכם שהעובד יקבל.</p>
   </div>
 
-  <div class="card">
-    <button class="btn" type="button" id="makeLink">צור קישור לעובד</button>
-    <div id="linkOut" class="hidden">
-      <h3>הקישור לעובד</h3>
-      <div class="linkbox" id="linkTxt"></div>
-      <div class="btns">
-        <button class="btn sec" type="button" id="copyLink">העתק קישור</button>
-        <a class="btn ok" id="waLink" target="_blank" rel="noopener">שלח בוואטסאפ</a>
-      </div>
-      <p class="note">הקישור מכיל רק את תנאי ההעסקה שמילאת. פרטים אישיים של העובד לא עוברים בקישור ולא נשמרים בשום שרת.</p>
-    </div>
-  </div>`;
+  <div class="card hidden" id="linkOut">
+    <h2>🎉 הקישור מוכן</h2>
+    <p id="linkFor"></p>
+    <div class="btns"><a class="btn ok wide" id="waLink" target="_blank" rel="noopener">שלח לעובד בוואטסאפ</a></div>
+    <div class="btns"><button class="btn sec" type="button" id="copyLink">העתק קישור</button><button class="btn sec" type="button" id="another">עובד נוסף</button></div>
+    <div class="linkbox" id="linkTxt" style="margin-top:10px"></div>
+    <p class="note">הקישור מכיל רק את תנאי ההעסקה. פרטים אישיים של העובד לא עוברים בקישור ולא נשמרים בשום שרת.</p>
+  </div>
+  <div class="card" id="histCard"></div>
+  <p class="note" style="text-align:center"><a href="#" id="forget">מחק את פרטי העסק השמורים במכשיר הזה</a></p>`;
 
   const pad = sigPad($("#sigEmp"));
   $("#sigClear").onclick = () => pad.clear();
-  $("#fillWeek").onclick = () => { document.querySelectorAll("[data-day]").forEach((el,i)=> el.value = i<5 ? "09:00-17:00" : ""); if(!$("#weeklyHours").value) $("#weeklyHours").value = "40"; };
-  $("#clearWeek").onclick = () => document.querySelectorAll("[data-day]").forEach(el => el.value = "");
-
-  $("#makeLink").onclick = () => {
+  $("#fillWeek").onclick = () => { $$("[data-day]").forEach((el,i)=> el.value = i<5 ? "09:00-17:00" : ""); if(!$("#weeklyHours").value) $("#weeklyHours").value = "40"; };
+  $("#clearWeek").onclick = () => $$("[data-day]").forEach(el => el.value = "");
+  $("#forget").onclick = e => { e.preventDefault(); store.del("employer"); store.del("links"); drawHist(); toast("הפרטים והקישורים השמורים נמחקו מהמכשיר"); };
+  $("#another").onclick = () => { location.hash = PRESET ? location.hash : ""; renderSetup(); window.scrollTo(0,0); };
+  $("#makeLink").onclick = async () => {
     const v = id => $("#"+id).value.trim();
-    const need = {ownerEmail:"המייל שלך",company:"שם החברה",address:"כתובת",signer:"שם החותם",role:"תפקיד",start:"תאריך תחילה",weeklyHours:"היקף שעות",wage:"סכום השכר"};
-    const miss = Object.keys(need).filter(k => !v(k));
-    if(miss.length){ alertBox("חסר: " + miss.map(k=>need[k]).join(", ")); return; }
-    if(pad.isEmpty()){ alertBox("חסרה חתימת המעסיק"); return; }
+    const need = [["company","שם העסק"],["address","כתובת העסק"],["signer","שם החותם"],["ownerEmail","המייל שלך"],["empName","שם העובד"],["role","תפקיד"],["start","תאריך תחילה"],["weeklyHours","היקף שעות"],["wage","סכום השכר"]];
+    for(const [k,n] of need){ if(!v(k)) return bad(k, "חסר: " + n); }
+    if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
+    if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
+    if(v("deductions") && !/^9\d{8}$/.test(v("deductions"))) return bad("deductions","תיק ניכויים: 9 ספרות שמתחילות ב-9");
+    if(pad.isEmpty()){ $("#sigEmp").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימת המעסיק"); }
     const t = {
-      v:1, ownerEmail:v("ownerEmail"), cpaEmail:CPA_EMAIL,
-      company:v("company"), companyId:v("companyId"), address:v("address"), signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
+      v:2, ownerEmail:v("ownerEmail"), empName:v("empName"),
+      company:v("company"), companyId:v("companyId"), deductions:v("deductions"), ephone:v("ephone"), address:v("address"), signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
       role:v("role"), start:v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:v("probation"),
-      days:[...document.querySelectorAll("[data-day]")].map(el => el.value.trim()),
+      days:$$("[data-day]").map(el => el.value.trim()),
       wageType:v("wageType"), wage:v("wage"), globalOT:v("globalOT"), commission:v("commission"), travel:v("travel"), extras:v("extras"),
       pensionFund:v("pensionFund"), empPct:v("empPct"), erPct:v("erPct"), sevPct:v("sevPct"), sec14:$("#sec14").checked,
+      workplace:v("workplace"), hishEr:v("hishEr"), hishEmp:v("hishEmp"), hishFrom:v("hishFrom"),
       empSig: pad.compact(), empSignedAt: nowStamp()
     };
-    Object.keys(t).forEach(k => { if(t[k] === "" ) delete t[k]; }); if(t.days && !t.days.some(Boolean)) delete t.days;
-    store.set("employer", {ownerEmail:t.ownerEmail,company:t.company,companyId:t.companyId,address:t.address,signer:t.signer,harassContact:t.harassContact});
-    const url = location.origin + location.pathname + "#e=" + b64urlEncode(t);
+    Object.keys(t).forEach(k => { if(t[k] === "") delete t[k]; }); if(t.days && !t.days.some(Boolean)) delete t.days;
+    store.set("employer", {ownerEmail:t.ownerEmail,company:t.company,companyId:t.companyId,deductions:t.deductions,ephone:t.ephone,address:t.address,signer:t.signer,harassContact:t.harassContact});
+    const url = location.origin + location.pathname + await packLink(t);
     $("#linkTxt").textContent = url;
-    $("#waLink").href = "https://wa.me/?text=" + encodeURIComponent(`שלום, מצורף קישור למילוי הסכם העבודה וטופס 101 ב${t.company}. ממלאים מהטלפון, בסוף חותמים ושולחים:\n${url}`);
+    const wa = waHref(v("empPhone"), t.empName, t.company, url);
+    $("#waLink").href = wa;
+    $("#waLink").textContent = `שלח ל${t.empName} בוואטסאפ`;
+    $("#linkFor").innerHTML = `קישור אישי עבור <b>${esc(t.empName)}</b> · ${esc(t.role)} · מתחיל/ה ${fmtDate(t.start)}`;
+    const hist = store.get("links") || []; hist.unshift({name:t.empName, phone:v("empPhone"), role:t.role, start:t.start, at:new Date().toISOString(), url});
+    store.set("links", hist.slice(0, 40)); drawHist();
     $("#linkOut").classList.remove("hidden");
     $("#linkOut").scrollIntoView({behavior:"smooth"});
   };
-  $("#copyLink") && ($("#copyLink").onclick = async () => {
+  drawHist();
+  $("#copyLink").onclick = async () => {
     try{ await navigator.clipboard.writeText($("#linkTxt").textContent); $("#copyLink").textContent = "הועתק ✓"; }
-    catch(e){ alertBox("לא הצלחתי להעתיק – סמן את הקישור והעתק ידנית"); }
-  });
+    catch(e){ toast("לא הצלחתי להעתיק – סמן/י את הקישור והעתק/י ידנית"); }
+  };
 }
 
-/* ============ employee flow ============ */
-let PRESET = null;
-let T = null, E = {}, F = {}, sigE = null, idImg = null;
+function waHref(phone, name, company, url){
+  let p = String(phone||"").replace(/\D/g,""); if(p.startsWith("0")) p = "972" + p.slice(1);
+  const msg = `היי ${name || ""}! 👋 שמחים שאת/ה מצטרף/ת ל${company}.\nבקישור ממלאים פרטים, חותמים על הסכם העבודה וממלאים טופס 101 – הכל מהטלפון, כ-10 דקות:\n${url}`;
+  return "https://wa.me/" + (p.length >= 11 ? p : "") + "?text=" + encodeURIComponent(msg);
+}
+function drawHist(){
+  const box = $("#histCard"); if(!box) return; const hist = store.get("links") || [];
+  if(!hist.length){ box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  box.innerHTML = `<h2>📋 קישורים ששלחת</h2><p class="note">נשמר רק במכשיר הזה.</p>` + hist.map((x,i) => `<div class="filechip"><span><b>${esc(x.name)}</b> · ${esc(x.role||"")}<br><small class="note">נוצר ${new Date(x.at).toLocaleDateString("he-IL")} · מתחיל/ה ${fmtDate(x.start)}</small></span><span style="display:flex;gap:6px"><a class="btn sec" style="padding:8px 10px" target="_blank" rel="noopener" href="${esc(waHref(x.phone, x.name, (store.get("employer")||{}).company||"", x.url))}">וואטסאפ</a><button type="button" class="btn sec" style="padding:8px 10px;color:#c62828" data-hdel="${i}">מחק</button></span></div>`).join("");
+  $$("[data-hdel]", box).forEach(b => b.onclick = () => { const h = store.get("links") || []; h.splice(Number(b.dataset.hdel),1); store.set("links", h); drawHist(); });
+}
 
-function renderEmployee(){
-  $("#hdr").textContent = "הסכם עבודה – " + T.company;
-  $("#sub").textContent = "ממלאים פרטים, קוראים, חותמים. אחר כך טופס 101.";
+/* ================= employee flow ================= */
+let T = null, E = {}, F = {}, sigE = null, ATT = [];
+const TOTAL = 4;
+
+function renderWelcome(){
+  header(T.company, T.empName ? `שלום ${T.empName.split(" ")[0]}! 👋` : "ברוך/ה הבא/ה! 👋", "עוד כמה דקות וסיימת את כל הניירת");
+  if(T.empName && !E.first){ const parts = T.empName.trim().split(/\s+/); E.first = parts[0]; E.last = parts.slice(1).join(" "); }
+  dock(`<button class="btn wide" type="button" id="go">בוא/י נתחיל ←</button>`);
   $("#app").innerHTML = `
-  <div class="steps"><span class="on">1. פרטים והסכם</span><span>2. טופס 101</span><span>3. שליחה</span></div>
+  <div class="card hero">
+    <div class="big">🤝</div>
+    <h2>שמחים שהצטרפת ל${esc(T.company)}</h2>
+    <p>כדי להתחיל לעבוד ולקבל שכר נכון, צריך שלושה דברים קצרים:</p>
+  </div>
   <div class="card">
-    <h2>פרטים אישיים</h2>
+    <ul class="list">
+      <li><span>1️⃣</span><div><b>פרטים אישיים וחשבון בנק</b><br><span class="note">לאן להעביר את המשכורת</span></div></li>
+      <li><span>2️⃣</span><div><b>הסכם העבודה</b><br><span class="note">קוראים וחותמים באצבע</span></div></li>
+      <li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">הטופס שקובע כמה מס ינוכה לך. יש הסבר ליד כל שאלה.</span></div></li>
+    </ul>
+    <div class="help">💡 כדאי להכין: <b>תעודת זהות עם ספח</b> (לצילום), ופרטי חשבון הבנק.</div>
+    <p class="note">🔒 הפרטים שלך לא נשמרים בשום שרת. בסוף נוצר מסמך PDF חתום שנשלח רק למעסיק ולמשרד רואה החשבון.</p>
+  </div>`;
+  $("#go").onclick = renderDetails;
+}
+
+function renderDetails(){
+  window.scrollTo(0,0);
+  header(T.company, "פרטים אישיים", "כפי שמופיעים בתעודת הזהות");
+  dock(`<button class="btn wide" type="button" id="next">המשך להסכם ←</button>`);
+  $("#app").innerHTML = progress(1, TOTAL, "פרטים אישיים") + `
+  <div class="card">
+    <h2>👤 מי את/ה</h2>
     <div class="row">
-      <div><label class="req">שם פרטי</label><input id="first"></div>
-      <div><label class="req">שם משפחה</label><input id="last"></div>
+      <div><label class="req">שם פרטי</label><input id="first" autocomplete="given-name"></div>
+      <div><label class="req">שם משפחה</label><input id="last" autocomplete="family-name"></div>
     </div>
     <div class="row">
-      <div><label class="req">מספר תעודת זהות (9 ספרות)</label><input id="idNum" inputmode="numeric" maxlength="9"></div>
+      <div><label class="req">מספר תעודת זהות</label><input id="idNum" inputmode="numeric" maxlength="9" placeholder="9 ספרות"></div>
       <div><label class="req">תאריך לידה</label><input id="birth" type="date"></div>
     </div>
+    <label class="req">מין</label>${radio("gender",[["זכר","זכר"],["נקבה","נקבה"]],"")}
     <div class="row">
-      <div><label class="req">מין</label><select id="gender"><option value="">בחר</option><option>זכר</option><option>נקבה</option></select></div>
-      <div><label class="req">טלפון נייד</label><input id="phone" inputmode="tel"></div>
+      <div><label class="req">טלפון נייד</label><input id="phone" inputmode="tel" autocomplete="tel"></div>
+      <div><label>מייל</label><input id="email" type="email" inputmode="email" autocomplete="email"></div>
     </div>
-    <label>מייל</label><input id="email" type="email">
-    <div class="row">
-      <div><label class="req">רחוב ומספר</label><input id="street"></div>
-      <div><label class="req">יישוב</label><input id="city"></div>
-    </div>
-    <label>מיקוד</label><input id="zip" inputmode="numeric">
-    <h3>חשבון בנק להעברת השכר</h3>
-    <div class="row">
-      <div><label class="req">בנק</label><input id="bank" placeholder="שם או מספר"></div>
-      <div><label class="req">סניף</label><input id="branch" inputmode="numeric"></div>
-    </div>
-    <label class="req">מספר חשבון</label><input id="account" inputmode="numeric">
   </div>
-
   <div class="card">
-    <h2>הסכם העבודה</h2>
-    <div class="doc" id="agr"></div>
-    <div class="chk"><input type="checkbox" id="agree"><span>קראתי את ההסכם ואני מסכים/ה לתנאיו${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}</span></div>
-    <h3>חתימת העובד</h3>
+    <h2>🏠 כתובת מגורים</h2>
+    <div class="row">
+      <div><label class="req">רחוב</label><input id="street" autocomplete="address-line1"></div>
+      <div><label class="req">מספר בית</label><input id="house" inputmode="numeric"></div>
+    </div>
+    <div class="row">
+      <div><label class="req">יישוב</label><input id="city" autocomplete="address-level2"></div>
+      <div><label>מיקוד</label><input id="zip" inputmode="numeric" maxlength="7"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>🏦 חשבון בנק למשכורת</h2>
+    <div class="help">החשבון צריך להיות על שמך (או משותף איתך).</div>
+    <div id="bankBox"></div>
+    <label class="req">מספר חשבון</label><input id="account" inputmode="numeric">
+  </div>`;
+  bankFields();
+  for(const k of ["first","last","idNum","birth","phone","email","street","house","city","zip","account"]) if(E[k]) $("#"+k).value = E[k];
+  if(E.gender) $$('[name=gender]').forEach(r => r.checked = r.value === E.gender);
+  $("#next").onclick = () => {
+    const need = [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["birth","תאריך לידה"],["phone","טלפון"],["street","רחוב"],["house","מספר בית"],["city","יישוב"],["bank","בנק"],["branch","סניף"],["account","מספר חשבון"]];
+    for(const [k,n] of need){ const el = $("#"+k); if(!el || !el.value.trim()) return bad(k, "חסר: " + n); }
+    if(!validId($("#idNum").value)) return bad("idNum","מספר תעודת הזהות לא תקין – בדוק/י שוב");
+    if(!rv("gender")) return toast("יש לבחור מין");
+    ["first","last","idNum","birth","phone","email","street","house","city","zip","bank","branch","account"].forEach(i => E[i] = $("#"+i).value.trim());
+    E.idNum = E.idNum.padStart(9,"0"); E.gender = rv("gender");
+    E.bankName = bankName(E.bank); E.branchName = branchName(E.bank, E.branch);
+    renderAgreement();
+  };
+}
+
+/* ---- banks (official Bank of Israel list in vendor/banks.json; without it – free entry) ---- */
+let BANKS = null;
+fetch("vendor/banks.json").then(r => r.ok ? r.json() : null).then(j => { BANKS = j; }).catch(() => {});
+function bankName(code){ const b = BANKS && BANKS.banks.find(b => String(b.code) === String(code)); return b ? b.name : ""; }
+function branchName(bc, br){ const b = BANKS && BANKS.banks.find(b => String(b.code) === String(bc)); const s = b && b.branches.find(s => String(s.code) === String(br)); return s ? s.name : ""; }
+function bankFields(){
+  const box = $("#bankBox");
+  if(!BANKS){
+    box.innerHTML = `<div class="row"><div><label class="req">מספר בנק</label><input id="bank" inputmode="numeric" placeholder="למשל 12"></div><div><label class="req">מספר סניף</label><input id="branch" inputmode="numeric"></div></div><p class="note">את מספר הבנק והסניף אפשר לראות בצ'ק או באפליקציה של הבנק.</p>`;
+    return;
+  }
+  box.innerHTML = `<label class="req">בנק</label><select id="bank"><option value="">בחר/י בנק</option>${BANKS.banks.map(b => `<option value="${b.code}">${esc(b.name)} (${b.code})</option>`).join("")}</select>
+    <label class="req">סניף</label><select id="branch" disabled><option value="">קודם בוחרים בנק</option></select>
+    <p class="note">רשימת הבנקים והסניפים של בנק ישראל${BANKS.asOf ? ", מעודכנת ל-" + esc(BANKS.asOf) : ""}.</p>`;
+  const fill = () => { const b = BANKS.banks.find(b => String(b.code) === $("#bank").value); const s = $("#branch");
+    if(!b){ s.disabled = true; s.innerHTML = `<option value="">קודם בוחרים בנק</option>`; return; }
+    s.disabled = false; s.innerHTML = `<option value="">בחר/י סניף</option>` + b.branches.map(x => `<option value="${x.code}">${x.code} – ${esc(x.name)}${x.city ? ", " + esc(x.city) : ""}</option>`).join(""); };
+  $("#bank").onchange = fill;
+  if(E.bank){ $("#bank").value = E.bank; fill(); $("#branch").value = E.branch || ""; }
+}
+
+function renderAgreement(){
+  window.scrollTo(0,0);
+  header(T.company, "הסכם העבודה שלך", "קוראים, מאשרים וחותמים");
+  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">חתמתי, המשך ל-101 ←</button>`);
+  $("#app").innerHTML = progress(2, TOTAL, "הסכם עבודה") + `
+  <div class="card">
+    <h2>📋 בקצרה</h2>
+    ${termsGrid(T)}
+    <p class="note">ההסכם המלא למטה. גלול/י כדי לקרוא.</p>
+  </div>
+  <div class="card">
+    <div class="agr"><div class="ah"><b>הסכם עבודה אישי</b><span>והודעה לעובד על תנאי עבודה</span></div>${agreementBody(T, {fullName:`${E.first} ${E.last}`, idNum:E.idNum, address:`${E.street} ${E.house}, ${E.city}`})}</div>
+    <label class="opt"><input type="checkbox" id="agree"><span class="t">קראתי את ההסכם ואני מסכים/ה לתנאיו${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}</span></label>
+    <h3>✍️ החתימה שלך</h3>
+    <p class="note">חותמים באצבע בתוך המסגרת. אותה חתימה תופיע גם על טופס 101.</p>
     <canvas class="sig" id="sigE"></canvas>
     <div class="btns"><button class="btn sec" type="button" id="sigClear">נקה חתימה</button></div>
-    <div class="btns"><button class="btn" type="button" id="toForm">המשך לטופס 101</button></div>
   </div>`;
-  const upd = () => { $("#agr").innerHTML = agreementHTML(T, {fullName:($("#first").value+" "+$("#last").value).trim(), idNum:$("#idNum").value.trim()}); };
-  upd(); ["first","last","idNum"].forEach(id => $("#"+id).addEventListener("input", upd));
   sigE = sigPad($("#sigE")); $("#sigClear").onclick = () => sigE.clear();
-  $("#toForm").onclick = () => {
-    const ids = ["first","last","idNum","birth","gender","phone","street","city","bank","branch","account"];
-    const miss = ids.filter(i => !$("#"+i).value.trim());
-    if(miss.length){ alertBox("יש למלא את כל השדות המסומנים בכוכבית"); $("#"+miss[0]).focus(); return; }
-    if(!validId($("#idNum").value)){ alertBox("מספר תעודת הזהות לא תקין – בדוק/י שוב"); $("#idNum").focus(); return; }
-    if(!$("#agree").checked){ alertBox("יש לסמן שקראת ואת/ה מסכים/ה להסכם"); return; }
-    if(sigE.isEmpty()){ alertBox("חסרה חתימה"); return; }
-    ["first","last","idNum","birth","gender","phone","email","street","city","zip","bank","branch","account"].forEach(i => E[i] = $("#"+i).value.trim());
+  $("#back").onclick = renderDetails;
+  $("#next").onclick = () => {
+    if(!$("#agree").checked){ $("#agree").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לסמן שקראת ואת/ה מסכים/ה להסכם"); }
+    if(sigE.isEmpty()){ $("#sigE").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימה"); }
     E.sig = sigE.data(); E.signedAt = nowStamp();
     render101();
   };
 }
 
-function kidRow(){ return `<tr><td><input data-k="name"></td><td><input data-k="id" inputmode="numeric"></td><td><input data-k="birth" type="date"></td><td style="text-align:center"><input type="checkbox" data-k="custody" checked></td><td style="text-align:center"><input type="checkbox" data-k="allowance"></td></tr>`; }
+/* ---- 101 ---- */
+const CREDITS = [
+  ["c1","1","אני תושב/ת ישראל","כמעט כל העובדים מסמנים כאן. מקנה את נקודות הזיכוי הבסיסיות."],
+  ["c2a","2א","אני נכה 100% / עיוור/ת לצמיתות","מצרפים אישור משרד הביטחון/האוצר/פקיד השומה או תעודת עיוור."],
+  ["c2b","2ב","אני מקבל/ת תגמול חודשי לפי חוק הנכים (תגמולים ושיקום) או לפי חוק התגמולים לנפגעי פעולות איבה","מצרפים אישור על קבלת התגמול."],
+  ["c3","3","אני תושב/ת קבוע/ה ביישוב מזכה","יישובים מסוימים (למשל בצפון ובעוטף) מזכים בהנחה במס. מצרפים אישור תושב מהרשות (טופס 1312א)."],
+  ["c4","4","אני עולה חדש/ה","מצרפים תעודת עולה."],
+  ["c5","5","בגין בן/בת זוגי המתגורר/ת עימי ואין לו/לה הכנסות","רק אם אחד מבני הזוג הגיע לגיל פרישה, או נכה/עיוור לפי סעיף 9(5)."],
+  ["c6","6","אני הורה במשפחה חד הורית","ממלא רק הורה שמקבל קצבת ילדים בגין ילדיו."],
+  ["c7","7","בגין ילדיי שבחזקתי המפורטים בחלק ג","נקודות זיכוי בעד ילדים שגרים איתך. המספרים מחושבים אוטומטית מרשימת הילדים."],
+  ["c8","8","בגין ילדיי המפורטים בחלק ג (מי שלא סימן בסעיף 7)","בעיקר לאב שהילדים הקטנים לא בחזקתו, או להורה יחיד."],
+  ["c9","9","אני הורה יחיד לילדיי שבחזקתי","הורה יחיד = ההורה השני נפטר או לא רשום במרשם האוכלוסין."],
+  ["c10","10","בגין ילדיי שאינם בחזקתי ואני משתתף/ת בכלכלתם","מי שמשלם מזונות לילדיו לפי פסק דין."],
+  ["c11","11","אני הורה לילד/ה עם מוגבלות שבגינו/ה אני מקבל/ת גמלת ילד נכה","מצורף אישור גמלת ילד נכה מביטוח לאומי."],
+  ["c12","12","בגין מזונות לבן/בת זוגי לשעבר","למי שנישא בשנית. מצרפים פסק דין."],
+  ["c13","13","מלאו לי או לבן/בת זוגי 16 שנים וטרם מלאו 18 שנים בשנת המס",""],
+  ["c14","14","אני חייל/ת משוחרר/ת / שירתתי בשירות לאומי","זכאות בשנים הראשונות אחרי השחרור. מצרפים תעודת שחרור/סיום שירות."],
+  ["c15","15","בגין סיום לימודים לתואר אקדמי / תעודת מקצוע","מצרפים הצהרה על גבי טופס 119."],
+  ["c16","16","שירתתי כלוחם/ת מילואים בשנת המס הקודמת","מצרפים אישור מצה\"ל על זכאות בעד שירות מילואים כלוחם."]
+];
+function kidCard(k={}){
+  return `<div class="kidcard">
+    <button type="button" class="x" onclick="this.parentNode.remove()">הסר ✕</button>
+    <div class="row"><div><label>שם הילד/ה</label><input data-k="name" value="${esc(k.name||"")}"></div><div><label>ת"ז</label><input data-k="id" inputmode="numeric" maxlength="9" value="${esc(k.id||"")}"></div></div>
+    <label>תאריך לידה</label><input data-k="birth" type="date" value="${esc(k.birth||"")}">
+    <label class="opt"><input type="checkbox" data-k="custody" ${k.custody===false?"":"checked"}><span class="t">הילד/ה גר/ה איתי (בחזקתי)</span></label>
+    <label class="opt"><input type="checkbox" data-k="allowance" ${k.allowance?"checked":""}><span class="t">אני מקבל/ת בגינו/ה קצבת ילדים</span></label>
+  </div>`;
+}
+function readKids(){ return $$(".kidcard").map(c => { const o = {}; $$("[data-k]", c).forEach(el => o[el.dataset.k] = el.type === "checkbox" ? el.checked : el.value.trim()); return o; }).filter(k => k.name || k.id || k.birth); }
 
 function render101(){
   window.scrollTo(0,0);
-  $("#hdr").textContent = "טופס 101 – כרטיס עובד";
-  $("#sub").textContent = "לשנת המס " + new Date().getFullYear() + " · הפרטים מההסכם כבר מולאו";
-  const credits = [
-    ["resident","אני תושב/ת ישראל"],
-    ["locality","אני תושב/ת קבוע/ה ביישוב מזכה (ממלאים שם היישוב ומתי)"],
-    ["newImm","אני עולה חדש/ה או תושב/ת חוזר/ת"],
-    ["spouseNoInc","בן/בת הזוג שלי גר/ה איתי ואין לו/ה הכנסה (רלוונטי רק במקרים שקבועים בחוק)"],
-    ["singleParent","אני הורה במשפחה חד-הורית"],
-    ["kidsCustody","ילדיי בחזקתי – זכאות לנקודות זיכוי בעד ילדים"],
-    ["kidsNotCustody","יש לי ילדים שאינם בחזקתי ואני משתתף/ת בכלכלתם"],
-    ["alimony","אני משלם/ת מזונות לבן/בת זוג לשעבר"],
-    ["disabledChild","יש לי ילד/ה עם מוגבלות"],
-    ["soldier","שחררתי משירות סדיר / לאומי בשלוש השנים האחרונות"],
-    ["degree","סיימתי תואר אקדמי / לימודי מקצוע ולא ביקשתי את הזיכוי בדוח שנתי"],
-    ["disabled","אני נכה / עיוור/ת עם פטור לפי סעיף 9(5) (מצרפים אישור)"]
-  ];
-  $("#app").innerHTML = `
-  <div class="steps"><span>1. פרטים והסכם ✓</span><span class="on">2. טופס 101</span><span>3. שליחה</span></div>
+  const Y = taxYear();
+  header(T.company, "טופס 101 – כרטיס עובד", `לשנת המס ${Y} · קובע כמה מס ינוכה מהמשכורת`);
+  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">המשך לסיום ←</button>`);
+  $("#app").innerHTML = progress(3, TOTAL, "טופס 101") + `
   <div class="card">
-    <h2>א. המעסיק</h2>
-    <p>${esc(T.company)}${T.companyId?` · ${esc(T.companyId)}`:""} · ${esc(T.address)}</p>
-    <h2>ב. פרטי העובד</h2>
-    <p>${esc(E.first)} ${esc(E.last)} · ת"ז ${esc(E.idNum)} · נולד/ה ${fmtDate(E.birth)} · ${esc(E.street)}, ${esc(E.city)} · ${esc(E.phone)}</p>
+    <div class="help">💡 <b>למה זה חשוב?</b> לפי הטופס המעסיק יודע לאילו הקלות במס את/ה זכאי/ת. בלי טופס 101 חתום מנכים מס מקסימלי. ענה/י בכנות – אם משהו לא ברור, אפשר לשאול את המעסיק או את משרד רואה החשבון.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">ב</span>מצב אישי</h2>
+    <label class="req">מצב משפחתי</label>
+    ${radio("marital",[["רווק/ה","רווק/ה"],["נשוי/אה","נשוי/אה"],["גרוש/ה","גרוש/ה"],["אלמן/ה","אלמן/ה"],["פרוד/ה","פרוד/ה"]],F.marital||"")}
+    <p class="note">פרוד/ה – חובה לצרף אישור פקיד שומה.</p>
+    <label class="req">תושב/ת ישראל</label>${radio("israeli",[["כן","כן"],["לא","לא"]],F.israeli||"כן")}
+    <label>חבר/ת קיבוץ או מושב שיתופי</label>
+    <select id="kibbutz"><option value="לא">לא</option><option value="מועברות">כן – ההכנסות ממעסיק זה מועברות לקיבוץ</option><option value="לא מועברות">כן – ההכנסות ממעסיק זה אינן מועברות לקיבוץ</option></select>
     <div class="row">
-      <div><label class="req">מצב משפחתי</label><select id="marital"><option value="">בחר</option><option>רווק/ה</option><option>נשוי/אה</option><option>גרוש/ה</option><option>אלמן/ה</option><option>פרוד/ה</option></select></div>
-      <div><label class="req">תושב/ת ישראל</label><select id="israeli"><option>כן</option><option>לא</option></select></div>
+      <div><label>קופת חולים</label><select id="hmo"><option value="">בחר/י</option><option>כללית</option><option>מכבי</option><option>מאוחדת</option><option>לאומית</option><option value="אין">לא חבר/ה</option></select></div>
+      <div><label>תאריך עלייה (רק לעולים)</label><input id="aliyah" type="date"></div>
     </div>
-    <div class="row">
-      <div><label>קופת חולים</label><input id="hmo"></div>
-      <div><label>חבר/ת קיבוץ / מושב שיתופי</label><select id="kibbutz"><option>לא</option><option>כן – ההכנסה מועברת לקיבוץ</option><option>כן – ההכנסה לא מועברת לקיבוץ</option></select></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">ג</span>ילדים</h2>
+    <div class="help">ממלאים ילדים שבשנת המס ${Y} <b>טרם מלאו להם 19</b>. ילדים יכולים לזכות אותך בנקודות זיכוי = פחות מס.</div>
+    <label class="req">יש לך ילדים מתחת לגיל 19?</label>
+    ${radio("hasKids",[["no","אין לי ילדים מתחת לגיל 19"],["yes","יש לי"]],F.hasKids||"")}
+    <div id="kidsBox" class="hidden">
+      <div id="kids"></div>
+      <div class="btns"><button class="btn sec" type="button" id="addKid">+ הוסף ילד/ה</button></div>
     </div>
-    <label>תאריך עלייה (אם רלוונטי)</label><input id="aliyah" type="date">
   </div>
 
   <div class="card">
-    <h2>ג. ילדים עד גיל 19</h2>
-    <table class="kids"><thead><tr><th>שם</th><th>ת"ז</th><th>תאריך לידה</th><th>בחזקתי</th><th>מקבל/ת קצבת ילדים</th></tr></thead><tbody id="kids">${kidRow()}</tbody></table>
-    <div class="btns"><button class="btn sec" type="button" id="addKid">הוסף ילד/ה</button></div>
+    <h2><span class="n">ד</span>ההכנסה מהעבודה הזו</h2>
+    <div class="help">ברוב המקרים: <b>משכורת חודש</b>. "משרה נוספת" – אם יש לך עבודה עיקרית אחרת.</div>
+    <select id="incType"><option>משכורת חודש</option><option>משכורת בעד משרה נוספת</option><option>משכורת חלקית</option><option>שכר עבודה (עובד יומי)</option><option>קצבה</option><option>מלגה</option></select>
+    <label>תאריך תחילת העבודה בשנת המס</label><input id="incStart" type="date" value="${esc(T.start||"")}">
   </div>
 
   <div class="card">
-    <h2>ד. ההכנסה ממעסיק זה</h2>
-    <select id="incType"><option>משכורת חודש</option><option>משכורת נוספת</option><option>משכורת חלקית</option><option>שכר עבודה (עובד יומי)</option><option>קצבה</option><option>מלגה</option></select>
-    <label>תאריך תחילת העבודה בשנה זו</label><input id="incStart" type="date" value="${esc(T.start)}">
-  </div>
-
-  <div class="card">
-    <h2>ה. הכנסות אחרות</h2>
-    <select id="otherInc"><option value="none">אין לי הכנסות אחרות</option><option value="yes">יש לי הכנסות אחרות</option></select>
+    <h2><span class="n">ה</span>הכנסות אחרות</h2>
+    <div class="help">עבודה נוספת, קצבה או מלגה באותה שנה. <b>נקודות זיכוי ומדרגות מס מקבלים רק במקום אחד</b> – בדרך כלל בהכנסה הגבוהה. אם תבקש/י בשני מקומות, בסוף השנה עלול להיווצר חוב מס.</div>
+    ${radio("otherInc",[["none","אין לי הכנסות אחרות"],["yes","יש לי הכנסות אחרות"]],F.otherInc||"")}
     <div id="otherBox" class="hidden">
-      <label>אילו הכנסות (משכורת ממקום אחר, קצבה, מלגה וכו')</label><input id="otherDesc">
-      <div class="chk"><input type="radio" name="credHere" value="here" checked><span>אבקש לקבל נקודות זיכוי ומדרגות מס כאן</span></div>
-      <div class="chk"><input type="radio" name="credHere" value="other"><span>אני מקבל/ת נקודות זיכוי ומדרגות מס בהכנסה אחרת</span></div>
-      <div class="chk"><input type="checkbox" id="coord"><span>יש לי אישור תיאום מס מפקיד השומה (מצרפים)</span></div>
+      <label>אילו הכנסות?</label>
+      ${[["om","משכורת חודש"],["oa","משכורת בעד משרה נוספת"],["op","משכורת חלקית"],["od","שכר עבודה (עובד יומי)"],["os","קצבה"],["oc","מלגה"]].map(([k,t]) => `<label class="opt"><input type="checkbox" data-oi="${k}"><span class="t">${t}</span></label>`).join("")}
+      <label>נקודות זיכוי ומדרגות מס:</label>
+      ${radio("credHere",[["here","אבקש לקבל כאן"],["other","אני מקבל/ת בהכנסה האחרת"]],"")}
+      <label class="opt"><input type="checkbox" id="noHish"><span class="t">אין מפרישים עבורי לקרן השתלמות בגין ההכנסה האחרת<small>או שכל הפרשות המעסיק לקרן השתלמות שם מצורפות להכנסה האחרת</small></span></label>
+      <label class="opt"><input type="checkbox" id="noPens"><span class="t">אין מפרישים עבורי לקצבה/ביטוח אובדן כושר עבודה בגין ההכנסה האחרת<small>או שכל הפרשות המעסיק שם מצורפות להכנסה האחרת</small></span></label>
     </div>
   </div>
 
-  <div class="card">
-    <h2>ו. בן/בת זוג</h2>
+  <div class="card hidden" id="spouseCard">
+    <h2><span class="n">ו</span>בן/בת הזוג</h2>
     <div class="row">
-      <div><label>שם מלא</label><input id="spName"></div>
-      <div><label>ת"ז</label><input id="spId" inputmode="numeric"></div>
+      <div><label>שם פרטי</label><input id="spFirst"></div>
+      <div><label>שם משפחה</label><input id="spLast"></div>
     </div>
     <div class="row">
+      <div><label>ת"ז</label><input id="spId" inputmode="numeric" maxlength="9"></div>
       <div><label>תאריך לידה</label><input id="spBirth" type="date"></div>
-      <div><label>הכנסה</label><select id="spInc"><option value="">—</option><option>אין לבן/בת הזוג הכנסה</option><option>יש הכנסה מעבודה / עסק</option><option>יש הכנסה אחרת</option></select></div>
     </div>
+    <label>הכנסה של בן/בת הזוג</label>
+    ${radio("spInc",[["none","אין הכנסה"],["work","עבודה/קצבה/עסק"],["other","הכנסה אחרת"]],"")}
   </div>
 
   <div class="card">
-    <h2>ח. בקשה לפטור או זיכוי ממס</h2>
-    ${credits.map(([k,t]) => `<div class="chk"><input type="checkbox" data-cr="${k}"><span>${t}</span></div>`).join("")}
-    <label>פרטים לבקשות שסימנת (שם יישוב ותאריך, תאריכי שירות, תואר וכו')</label><textarea id="credDetails"></textarea>
+    <h2><span class="n">ח</span>הקלות במס שמגיעות לך</h2>
+    <div class="help">סמן/י רק מה שנכון לך. <b>על כל הקלה צריך אישור</b> – את האישורים מצלמים בשלב הבא.</div>
+    ${CREDITS.map(([k,n,t,h]) => `<label class="opt"><input type="checkbox" data-cr="${k}"><span class="t"><b>${n}.</b> ${t}${h?`<small>${h}</small>`:""}</span></label>
+      ${k==="c3" ? `<div class="sub hidden" data-for="c3"><div class="row"><div><label>שם היישוב</label><input id="c3town"></div><div><label>תושב/ת מתאריך</label><input id="c3from" type="date"></div></div></div>` : ""}
+      ${k==="c4" ? `<div class="sub hidden" data-for="c4"><div class="row"><div><label>תאריך עלייה</label><input id="c4from" type="date"></div><div><label>לא הייתה לי הכנסה בישראל עד</label><input id="c4noinc" type="date"></div></div></div>` : ""}
+      ${k==="c11" ? `<div class="sub hidden" data-for="c11"><label>מספר הילדים</label><input id="c11n" inputmode="numeric"></div>` : ""}
+      ${k==="c14" ? `<div class="sub hidden" data-for="c14"><div class="row"><div><label>תחילת השירות</label><input id="c14s" type="date"></div><div><label>סיום השירות</label><input id="c14e" type="date"></div></div></div>` : ""}
+      ${k==="c16" ? `<div class="sub hidden" data-for="c16"><label>ימי מילואים בשנת המס הקודמת</label><input id="c16d" inputmode="numeric"></div>` : ""}`).join("")}
   </div>
 
   <div class="card">
-    <h2>צילום תעודת זהות כולל ספח</h2>
-    <input type="file" id="idFile" accept="image/*" capture="environment">
-    <p class="note">צילום ברור של הת"ז והספח. אישורים לבקשות (אישור תושב, תעודת שחרור וכו') אפשר לשלוח בנפרד לרואה החשבון.</p>
-  </div>
-
-  <div class="card">
-    <h2>ט. הצהרה</h2>
-    <div class="chk"><input type="checkbox" id="decl"><span>אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בפרטים בתוך שבוע.</span></div>
-    <p class="note">החתימה שלך מההסכם תופיע גם על טופס זה.</p>
-    <div class="btns"><button class="btn sec" type="button" id="back">חזרה להסכם</button><button class="btn" type="button" id="finish">סיום והפקת מסמך חתום</button></div>
+    <h2><span class="n">ט</span>תיאום מס</h2>
+    <div class="help">רלוונטי רק אם עבדת השנה במקום אחר או שיש לך הכנסה נוספת. אם לא – בחר/י "לא רלוונטי".</div>
+    ${radio("coord",[["none","לא רלוונטי"],["noinc","לא הייתה לי הכנסה השנה עד עכשיו"],["more","יש לי הכנסות נוספות"],["approved","יש לי אישור תיאום מפקיד השומה"]],"")}
+    <p class="note" id="noincNote" style="display:none">יש לצרף הוכחה (למשל אישור שהייה בחו"ל או אישור מחלה). דמי לידה ודמי אבטלה הם הכנסה.</p>
+    <div id="coordBox" class="hidden">
+      ${[0,1,2].map(i => `<div class="kidcard"><b>הכנסה ${i+1}</b>
+        <div class="row"><div><label>שם המעסיק/המשלם</label><input id="co${i}n"></div><div><label>כתובת</label><input id="co${i}a"></div></div>
+        <div class="row3"><div><label>תיק ניכויים</label><input id="co${i}d" inputmode="numeric" maxlength="9"></div><div><label>סוג</label><select id="co${i}t"><option value="">—</option><option>עבודה</option><option>קצבה</option><option>מלגה</option><option>אחר</option></select></div><div><label>הכנסה חודשית ₪</label><input id="co${i}m" inputmode="decimal"></div></div>
+        <label>המס שנוכה ₪ (לפי התלושים)</label><input id="co${i}x" inputmode="decimal"></div>`).join("")}
+    </div>
   </div>`;
 
-  $("#addKid").onclick = () => $("#kids").insertAdjacentHTML("beforeend", kidRow());
-  $("#otherInc").onchange = e => $("#otherBox").classList.toggle("hidden", e.target.value !== "yes");
-  $("#back").onclick = () => renderEmployee();
-  $("#idFile").onchange = e => {
-    const f = e.target.files[0]; if(!f) return;
-    const img = new Image(); const r = new FileReader();
-    r.onload = () => { img.onload = () => { const max = 1100, s = Math.min(1, max/Math.max(img.width,img.height));
-      const c = document.createElement("canvas"); c.width = img.width*s; c.height = img.height*s;
-      c.getContext("2d").drawImage(img,0,0,c.width,c.height); idImg = c.toDataURL("image/jpeg",0.75); }; img.src = r.result; };
-    r.readAsDataURL(f);
+  // restore & wire
+  $("#kibbutz").value = F.kibbutz || "לא"; if(F.hmo) $("#hmo").value = F.hmo; if(F.aliyah) $("#aliyah").value = F.aliyah;
+  const kidsShow = () => { const y = rv("hasKids") === "yes"; $("#kidsBox").classList.toggle("hidden", !y); if(y && !$$(".kidcard", $("#kids")).length) $("#kids").insertAdjacentHTML("beforeend", kidCard()); };
+  $$('[name=hasKids]').forEach(r => r.onchange = kidsShow);
+  if(F.kids && F.kids.length){ $("#kids").innerHTML = F.kids.map(kidCard).join(""); } kidsShow();
+  $("#addKid").onclick = () => $("#kids").insertAdjacentHTML("beforeend", kidCard());
+  const spShow = () => $("#spouseCard").classList.toggle("hidden", rv("marital") !== "נשוי/אה");
+  $$('[name=marital]').forEach(r => r.onchange = spShow); spShow();
+  const oShow = () => $("#otherBox").classList.toggle("hidden", rv("otherInc") !== "yes");
+  $$('[name=otherInc]').forEach(r => r.onchange = oShow); oShow();
+  const cShow = () => { $("#coordBox").classList.toggle("hidden", rv("coord") !== "more"); $("#noincNote").style.display = rv("coord")==="noinc" ? "block" : "none"; };
+  $$('[name=coord]').forEach(r => r.onchange = cShow); cShow();
+  $$("[data-cr]").forEach(el => { const sub = $(`[data-for="${el.dataset.cr}"]`); if(sub) el.onchange = () => sub.classList.toggle("hidden", !el.checked); });
+  if(rv("israeli") === "כן" && !F.credits) $('[data-cr="c1"]').checked = true;
+  if(F.credits) F.credits.forEach(k => { const el = $(`[data-cr="${k}"]`); if(el){ el.checked = true; el.onchange && el.onchange(); } });
+
+  $("#back").onclick = () => { collect101(); renderAgreement(); };
+  $("#next").onclick = () => {
+    if(!rv("marital")) return toast("יש לבחור מצב משפחתי");
+    if(!rv("hasKids")) return toast("יש לסמן אם יש לך ילדים מתחת לגיל 19");
+    if(!rv("otherInc")) return toast("יש לסמן אם יש לך הכנסות אחרות");
+    if(rv("otherInc") === "yes" && !rv("credHere")) return toast("יש לבחור היכן לקבל נקודות זיכוי");
+    collect101();
+    for(const k of F.kids){ if(k.id && !validId(k.id)) return toast(`ת"ז של ${k.name||"ילד/ה"} לא תקינה`); if(!k.birth) return toast(`חסר תאריך לידה ל${k.name||"ילד/ה"}`); }
+    if(F.hasKids === "yes" && !F.kids.length) return toast("הוסף/י לפחות ילד/ה אחד/ת, או סמן/י שאין ילדים");
+    renderAttach();
   };
-  $("#finish").onclick = () => {
-    if(!$("#marital").value){ alertBox("יש לבחור מצב משפחתי"); return; }
-    if(!$("#decl").checked){ alertBox("יש לסמן את ההצהרה"); return; }
-    F = {
-      marital:$("#marital").value, israeli:$("#israeli").value, hmo:$("#hmo").value, kibbutz:$("#kibbutz").value, aliyah:$("#aliyah").value,
-      kids:[...document.querySelectorAll("#kids tr")].map(tr => { const o = {}; tr.querySelectorAll("[data-k]").forEach(el => o[el.dataset.k] = el.type==="checkbox" ? el.checked : el.value.trim()); return o; }).filter(k => k.name || k.id),
-      incType:$("#incType").value, incStart:$("#incStart").value,
-      otherInc:$("#otherInc").value, otherDesc:$("#otherDesc").value, credHere:(document.querySelector("[name=credHere]:checked")||{}).value, coord:$("#coord").checked,
-      spName:$("#spName").value, spId:$("#spId").value, spBirth:$("#spBirth").value, spInc:$("#spInc").value,
-      credits:[...document.querySelectorAll("[data-cr]")].filter(el => el.checked).map(el => el.nextElementSibling.textContent),
-      credDetails:$("#credDetails").value
-    };
+}
+function collect101(){
+  const val = id => ($("#"+id)||{}).value || "";
+  F = Object.assign(F, {
+    marital:rv("marital"), israeli:rv("israeli"), kibbutz:val("kibbutz"), hmo:val("hmo"), aliyah:val("aliyah"),
+    hasKids:rv("hasKids"), kids: rv("hasKids")==="yes" ? readKids() : [],
+    incType:val("incType"), incStart:val("incStart"),
+    otherInc:rv("otherInc"), oi:$$("[data-oi]").filter(e=>e.checked).map(e=>e.dataset.oi), credHere:rv("credHere"),
+    noHish:($("#noHish")||{}).checked, noPens:($("#noPens")||{}).checked,
+    spFirst:val("spFirst"), spLast:val("spLast"), spId:val("spId"), spBirth:val("spBirth"), spInc:rv("spInc"),
+    credits:$$("[data-cr]").filter(e=>e.checked).map(e=>e.dataset.cr),
+    c3town:val("c3town"), c3from:val("c3from"), c4from:val("c4from"), c4noinc:val("c4noinc"), c11n:val("c11n"), c14s:val("c14s"), c14e:val("c14e"), c16d:val("c16d"),
+    coord:rv("coord"), co:[0,1,2].map(i => ({n:val(`co${i}n`),a:val(`co${i}a`),d:val(`co${i}d`),t:val(`co${i}t`),m:val(`co${i}m`),x:val(`co${i}x`)})).filter(c => c.n)
+  });
+}
+
+/* ---- attachments ---- */
+function renderAttach(){
+  window.scrollTo(0,0);
+  header(T.company, "צילומים ואישורים", "כמעט סיימנו");
+  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">צור מסמך חתום ←</button>`);
+  const needs = [];
+  if(F.marital === "פרוד/ה") needs.push("אישור פקיד שומה על פירוד");
+  const map = {c2a:"אישור נכות/עיוורון",c2b:"אישור תגמול חודשי",c3:"אישור תושב מהרשות (1312א)",c4:"תעודת עולה",c11:"אישור גמלת ילד נכה",c12:"פסק דין למזונות",c14:"תעודת שחרור / סיום שירות",c15:"טופס 119",c16:"אישור צה\"ל על שירות מילואים כלוחם"};
+  (F.credits||[]).forEach(k => map[k] && needs.push(map[k]));
+  if(F.coord === "approved") needs.push("אישור תיאום מס מפקיד השומה");
+  $("#app").innerHTML = progress(4, TOTAL, "צילומים") + `
+  <div class="card">
+    <h2>🪪 צילום תעודת זהות עם ספח</h2>
+    <div class="help">צלם/י את הת"ז ואת הספח הפתוח (שבו מופיעים הילדים והכתובת). צילום ברור, בלי השתקפות.</div>
+    <label class="btn sec wide" style="margin:8px 0"><input type="file" accept="image/*" capture="environment" multiple data-kind="id" class="hidden">📷 צלם/י או בחר/י תמונה</label>
+    <div id="idList"></div>
+  </div>
+  <div class="card">
+    <h2>📎 אישורים</h2>
+    ${needs.length ? `<div class="help">לפי מה שסימנת צריך לצרף: <b>${needs.map(esc).join(" · ")}</b></div>` : `<p class="note">לא סימנת הקלות שדורשות אישור. אפשר לדלג.</p>`}
+    <label class="btn sec wide" style="margin:8px 0"><input type="file" accept="image/*" multiple data-kind="doc" class="hidden">📎 הוסף אישור</label>
+    <div id="docList"></div>
+  </div>
+  <div class="card">
+    <h2>✅ הצהרה</h2>
+    <label class="opt"><input type="checkbox" id="decl"><span class="t">אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בפרטים בתוך שבוע.</span></label>
+  </div>`;
+  const draw = () => { for(const kind of ["id","doc"]){ $("#"+kind+"List").innerHTML = ATT.map((a,i) => a.kind===kind ? `<div class="filechip"><span>🖼️ ${esc(a.name)}</span><button type="button" data-rm="${i}">הסר</button></div>` : "").join(""); }
+    $$("[data-rm]").forEach(b => b.onclick = () => { ATT.splice(Number(b.dataset.rm),1); draw(); }); };
+  $$("input[type=file]").forEach(inp => inp.onchange = async e => {
+    for(const f of e.target.files){ try{ ATT.push({kind:inp.dataset.kind, name:f.name || "צילום", src: await shrink(f)}); }catch(_){ toast("לא הצלחתי לקרוא את הקובץ " + f.name); } }
+    inp.value = ""; draw();
+  });
+  draw();
+  $("#back").onclick = render101;
+  $("#next").onclick = () => {
+    if(!ATT.some(a => a.kind === "id")) return toast("צריך לצרף צילום תעודת זהות");
+    if(!$("#decl").checked){ $("#decl").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לסמן את ההצהרה"); }
     renderSend();
   };
 }
+function shrink(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onerror = rej;
+  r.onload = () => { const img = new Image(); img.onerror = rej; img.onload = () => { const max = 1500, s = Math.min(1, max/Math.max(img.width,img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+    const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",0.8)); }; img.src = r.result; };
+  r.readAsDataURL(file); }); }
 
-/* ============ PDF + send ============ */
-function buildPdfHTML(){
-  const kids = F.kids.length ? `<table><tr><th>שם</th><th>ת"ז</th><th>תאריך לידה</th><th>בחזקתי</th><th>קצבת ילדים</th></tr>${F.kids.map(k=>`<tr><td>${esc(k.name)}</td><td>${esc(k.id)}</td><td>${fmtDate(k.birth)}</td><td>${k.custody?"כן":"לא"}</td><td>${k.allowance?"כן":"לא"}</td></tr>`).join("")}</table>` : "<p>אין</p>";
-  const empName = `${esc(E.first)} ${esc(E.last)}`;
-  return `
-  <h1>הסכם עבודה – ${esc(T.company)}</h1>
-  <div class="meta">נחתם דיגיטלית · מעסיק: ${esc(T.empSignedAt)} · עובד: ${esc(E.signedAt)}</div>
-  ${agreementHTML(T, {fullName:`${E.first} ${E.last}`, idNum:E.idNum})}
-  <h2>פרטי העובד</h2>
-  <table>
-    <tr><td>שם</td><td>${empName}</td><td>ת"ז</td><td>${esc(E.idNum)}</td></tr>
-    <tr><td>תאריך לידה</td><td>${fmtDate(E.birth)}</td><td>מין</td><td>${esc(E.gender)}</td></tr>
-    <tr><td>כתובת</td><td>${esc(E.street)}, ${esc(E.city)} ${esc(E.zip)}</td><td>טלפון</td><td>${esc(E.phone)}</td></tr>
-    <tr><td>מייל</td><td>${esc(E.email)}</td><td>בנק</td><td>בנק ${esc(E.bank)} · סניף ${esc(E.branch)} · חשבון ${esc(E.account)}</td></tr>
-  </table>
-  <h2>חתימות</h2>
-  <table><tr>
-    <td>המעסיק: ${esc(T.company)}<br>חותם: ${esc(T.signer)}<br>${esc(T.empSignedAt)}<br><img class="sigimg" src="${sigSrc(T.empSig)}"></td>
-    <td>העובד: ${empName}<br>ת"ז ${esc(E.idNum)}<br>${esc(E.signedAt)}<br><img class="sigimg" src="${E.sig}"></td>
-  </tr></table>
+/* ================= PDF: agreement + official 101 overlay ================= */
+const S = 794/595.276;  // pt -> px
+const px = v => (v*S).toFixed(1) + "px";
+const SY = 1118/841.89; const py = v => (v*SY).toFixed(1) + "px";
+function txt(x0, x1, top, s, size, align){ // x in pt, right-aligned box by default
+  if(!s && s !== 0) return "";
+  return `<div class="f" style="left:${px(x0)};width:${px(x1-x0)};top:${py(top)};text-align:${align||"right"};${size?`font-size:${size}px;`:""}direction:rtl">${esc(s)}</div>`;
+}
+function num(x0, x1, top, s, size){ if(!s) return ""; return `<div class="f" style="left:${px(x0)};width:${px(x1-x0)};top:${py(top)};text-align:center;direction:ltr;letter-spacing:1px;${size?`font-size:${size}px;`:""}">${esc(s)}</div>`; }
+function ck(x0, top){ return `<div class="ck" style="left:${px(x0+1.2)};top:${py(top-1.5)}">✔</div>`; }
+function ageInYear(birth, Y){ return birth ? Y - Number(birth.slice(0,4)) : -1; }
+function kidCounts(kids, Y){ const c = {b0:0,a12:0,a3:0,a45:0,a617:0,a18:0};
+  kids.forEach(k => { const a = ageInYear(k.birth, Y); if(a===0) c.b0++; else if(a>=1&&a<=2) c.a12++; else if(a===3) c.a3++; else if(a>=4&&a<=5) c.a45++; else if(a>=6&&a<=17) c.a617++; else if(a===18) c.a18++; }); return c; }
 
-  <div class="pb"></div>
-  <h1>טופס 101 – כרטיס עובד ובקשה להקלה ולתיאום מס · שנת ${new Date().getFullYear()}</h1>
-  <h2>א. המעסיק</h2>
-  <table><tr><td>שם</td><td>${esc(T.company)}</td><td>ח.פ / תיק ניכויים</td><td>${esc(T.companyId)}</td></tr><tr><td>כתובת</td><td colspan="3">${esc(T.address)}</td></tr></table>
-  <h2>ב. העובד</h2>
-  <table>
-    <tr><td>שם</td><td>${empName}</td><td>ת"ז</td><td>${esc(E.idNum)}</td></tr>
-    <tr><td>תאריך לידה</td><td>${fmtDate(E.birth)}</td><td>תאריך עלייה</td><td>${fmtDate(F.aliyah)}</td></tr>
-    <tr><td>כתובת</td><td>${esc(E.street)}, ${esc(E.city)} ${esc(E.zip)}</td><td>טלפון</td><td>${esc(E.phone)}</td></tr>
-    <tr><td>מין</td><td>${esc(E.gender)}</td><td>מצב משפחתי</td><td>${esc(F.marital)}</td></tr>
-    <tr><td>תושב ישראל</td><td>${esc(F.israeli)}</td><td>חבר קיבוץ</td><td>${esc(F.kibbutz)}</td></tr>
-    <tr><td>קופת חולים</td><td>${esc(F.hmo)}</td><td>מייל</td><td>${esc(E.email)}</td></tr>
-  </table>
-  <h2>ג. ילדים</h2>${kids}
-  <h2>ד. ההכנסה ממעסיק זה</h2><p>${esc(F.incType)} · מתאריך ${fmtDate(F.incStart)}</p>
-  <h2>ה. הכנסות אחרות</h2>
-  <p>${F.otherInc==="yes" ? `יש: ${esc(F.otherDesc)} · ${F.credHere==="here"?"מבקש/ת נקודות זיכוי ומדרגות מס כאן":"מקבל/ת נקודות זיכוי בהכנסה אחרת"}${F.coord?" · יש אישור תיאום מס":""}` : "אין לי הכנסות אחרות"}</p>
-  <h2>ו. בן/בת זוג</h2>
-  <p>${F.spName ? `${esc(F.spName)} · ת"ז ${esc(F.spId)} · ${fmtDate(F.spBirth)} · ${esc(F.spInc)}` : "—"}</p>
-  <h2>ח. בקשות לפטור או זיכוי</h2>
-  ${F.credits.length ? `<ul>${F.credits.map(c=>`<li>${esc(c)}</li>`).join("")}</ul>` : "<p>לא התבקשו</p>"}
-  ${F.credDetails ? `<p>פרטים: ${esc(F.credDetails)}</p>` : ""}
-  <h2>ט. הצהרה</h2>
-  <p>אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים, וידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בתוך שבוע.</p>
-  <p>חתימת העובד: <img class="sigimg" src="${E.sig}"> · ${esc(E.signedAt)}</p>
-  ${idImg ? `<div class="pb"></div><h2>צילום תעודת זהות</h2><img src="${idImg}" style="max-width:100%;max-height:900px">` : ""}`;
+function page101_1(Y){
+  const g = E.gender, m = F.marital;
+  let h = `<div class="pg pb"><img class="bgimg" src="vendor/f101-1.jpg">`;
+  h += num(222, 285, 87.5, String(Y), 13);
+  // א employer
+  h += txt(416, 534, 168, T.company, 11);
+  h += txt(211, 412, 168, T.address, 10.5);
+  h += num(132, 207, 168, T.ephone || "", 11);
+  if(T.deductions) h += `<div class="f" style="left:${px(40)};width:${px(88)};top:${py(169.5)};direction:ltr;letter-spacing:${px(4.6)};font-size:12px">${esc(String(T.deductions).replace(/^9/,""))}</div>`;
+  // ב employee
+  h += num(440, 538, 220, E.idNum, 12);
+  h += txt(316, 434, 220, E.last, 12);
+  h += txt(212, 310, 220, E.first, 12);
+  h += num(121, 208, 220, fmtDate(E.birth), 11);
+  h += num(31, 117, 220, fmtDate(F.aliyah), 11);
+  h += txt(231, 335, 246, E.street, 11);
+  h += num(204, 228, 246, E.house, 11);
+  h += txt(110, 201, 246, E.city, 11);
+  h += num(31, 106, 246, E.zip, 11);
+  if(g === "זכר") h += ck(528.4, 279.1); if(g === "נקבה") h += ck(528.4, 292.1);
+  const MP = {"רווק/ה":[489.3,277.8],"נשוי/אה":[430.2,277.8],"גרוש/ה":[362.9,277.8],"אלמן/ה":[489.3,290.8],"פרוד/ה":[442.5,290.8]}[m]; if(MP) h += ck(...MP);
+  h += F.israeli === "לא" ? ck(309.7, 291.8) : ck(309.7, 278.8);
+  h += F.kibbutz === "מועברות" ? ck(248.6, 279.9) : F.kibbutz === "לא מועברות" ? ck(270.6, 292.0) : ck(270.6, 279.0);
+  if(F.hmo === "אין") h += ck(123.2, 277.2); else if(F.hmo){ h += ck(123.2, 290.2); h += txt(30, 66, 292, F.hmo, 10); }
+  h += txt(363, 538, 315, E.email || "", 10.5);
+  h += num(207, 359, 315, "", 11);
+  h += num(31, 203, 315, E.phone, 11);
+  // ג kids
+  F.kids.slice(0, 13).forEach((k, i) => { const top = 380.3 + 21.9*i + 6;
+    if(k.custody) h += `<div class="ck" style="left:${px(531.5)};top:${py(top)}">✔</div>`;
+    if(k.allowance) h += `<div class="ck" style="left:${px(521.3)};top:${py(top)}">✔</div>`;
+    h += txt(451, 518, top+1, k.name, 11); h += num(349, 447, top+1, k.id, 11); h += num(258, 345, top+1, fmtDate(k.birth), 11); });
+  // ד income type
+  const it = {"משכורת חודש":357.1,"משכורת בעד משרה נוספת":369.1,"משכורת חלקית":381.1,"שכר עבודה (עובד יומי)":393.1,"קצבה":405.1,"מלגה":417.1}[F.incType];
+  if(it) h += ck(238.2, it);
+  h += num(33, 119, 378, fmtDate(F.incStart), 11);
+  // ה other income
+  if(F.otherInc === "none") h += ck(236.5, 453.8);
+  if(F.otherInc === "yes"){
+    h += ck(236.5, 478.2);
+    const pos = {om:[236.5,490.1],od:[118.6,490.1],oa:[236.5,501.1],os:[118.6,501.1],op:[236.5,512.1],oc:[118.6,512.1]};
+    (F.oi||[]).forEach(k => pos[k] && (h += ck(...pos[k])));
+    if(F.credHere === "here") h += ck(235.5, 535.8);
+    if(F.credHere === "other") h += ck(235.5, 559.1);
+    if(F.noHish) h += ck(235.6, 583.4);
+    if(F.noPens) h += ck(235.5, 617.7);
+  }
+  // ו spouse
+  if(F.marital === "נשוי/אה" && (F.spFirst || F.spId)){
+    h += num(440, 536, 694, F.spId, 12); h += txt(316, 434, 694, F.spLast, 12); h += txt(212, 310, 694, F.spFirst, 12); h += num(121, 208, 694, fmtDate(F.spBirth), 11);
+    if(F.spInc === "none") h += ck(409.8, 715.6);
+    if(F.spInc === "work"){ h += ck(282.4, 715.6); h += ck(160.1, 717.2); }
+    if(F.spInc === "other"){ h += ck(282.4, 715.6); h += ck(80.7, 717.2); }
+  }
+  return h + `</div>`;
+}
+function page101_2(Y){
+  const C = new Set(F.credits||[]);
+  let h = `<div class="pg pb"><img class="bgimg" src="vendor/f101-2.jpg">`;
+  h += num(98, 170, 16, E.idNum, 12);
+  const box = {c1:39.3,c2a:54.6,c2b:77.1,c3:94.8,c4:121.5,c5:160.9,c6:183.3,c7:206.9,c8:265.4,c9:314.9,c10:332.9,c11:357.8,c12:380.6,c13:397.0,c14:412.0,c15:436.1,c16:449.4};
+  C.forEach(k => box[k] && (h += ck(k==="c4"?511.7:510.7, box[k])));
+  if(C.has("c3")){ h += num(256, 330, 98, fmtDate(F.c3from), 11); h += txt(296, 438, 111, F.c3town, 11, "center"); }
+  if(C.has("c4")){ h += num(332, 406, 125, fmtDate(F.c4from), 11); h += num(193, 249, 139, fmtDate(F.c4noinc), 10); }
+  const putCounts = (c, rows) => rows.forEach(([key, bx, by, lx0, lx1, ly]) => { if(c[key]){ h += ck(bx, by); h += num(lx0, lx1, ly-10, String(c[key]), 12); } });
+  if(C.has("c7")){ const c = kidCounts(F.kids.filter(k => k.custody), Y);
+    putCounts(c, [["b0",498.8,230.2,369,392,241.3],["a12",498.8,242.1,280,303,253.2],["a3",498.8,253.5,324,347,263.8],["a45",256.4,232.1,44,67,242.3],["a617",256.4,242.1,40,63,252.2],["a18",256.1,253.0,78,101,263.8]]); }
+  if(C.has("c8")){ const c = kidCounts(F.kids.filter(k => !C.has("c7") || !k.custody), Y);
+    putCounts(c, [["b0",498.8,277.7,369,392,288.9],["a12",498.8,289.6,280,303,300.7],["a3",498.8,301.0,324,347,311.3],["a45",256.4,279.7,44,67,289.8],["a617",256.4,289.6,40,63,299.7]]); }
+  if(C.has("c11") && F.c11n) h += num(448, 467, 357, F.c11n, 12);
+  if(C.has("c14")){ h += num(193, 250, 413, fmtDate(F.c14s), 10); h += num(59, 119, 414, fmtDate(F.c14e), 10); }
+  if(C.has("c16") && F.c16d) h += num(346, 364, 446, F.c16d, 12);
+  // ט coordination
+  if(F.coord === "noinc") h += ck(512.4, 479.4);
+  if(F.coord === "more"){ h += ck(512.4, 508.3);
+    (F.co||[]).slice(0,3).forEach((c,i) => { const top = 546.2 + 14.2*i + 3.5;
+      h += txt(446, 536, top, c.n, 10); h += txt(312, 442, top, c.a, 9.5);
+      if(c.d) h += num(242, 308, top, String(c.d).replace(/^9/,""), 10);
+      h += txt(175, 229, top, c.t, 10, "center"); h += num(102, 171, top, c.m, 10); h += num(30, 98, top, c.x, 10); }); }
+  if(F.coord === "approved") h += ck(512.4, 589.0);
+  // י declaration
+  h += num(142, 226, 644, todayStr(), 12);
+  h += `<img src="${E.sig}" style="position:absolute;left:${px(40)};top:${py(637)};width:${px(70)};height:${px(19)}">`;
+  return h + `</div>`;
+}
+function agreementPages(){
+  const name = `${E.first} ${E.last}`;
+  return `<div class="doc">
+    <div class="dh"><div><div class="t">הסכם עבודה אישי</div><div class="s">והודעה לעובד על תנאי עבודה · נחתם דיגיטלית</div></div><div class="c">${esc(T.company)}</div></div>
+    <div class="box"><table class="kv">
+      <tr><td class="k">תפקיד</td><td>${esc(T.role)}</td><td class="k">תחילת עבודה</td><td>${fmtDate(T.start)}</td></tr>
+      <tr><td class="k">שכר</td><td>${wageLine(T)}</td><td class="k">היקף</td><td>${esc(T.weeklyHours)} שעות בשבוע</td></tr>
+    </table></div>
+    ${agreementBody(T, {fullName:name, idNum:E.idNum, address:`${E.street} ${E.house}, ${E.city}`}).replace('class="parties"','class="two"')}
+    <h4>פרטי העובד</h4>
+    <table class="kv">
+      <tr><td class="k">שם</td><td>${esc(name)}</td><td class="k">ת"ז</td><td>${esc(E.idNum)}</td></tr>
+      <tr><td class="k">כתובת</td><td>${esc(E.street)} ${esc(E.house)}, ${esc(E.city)} ${esc(E.zip)}</td><td class="k">טלפון</td><td>${esc(E.phone)}</td></tr>
+      <tr><td class="k">בנק</td><td colspan="3">${esc(E.bankName || "בנק " + E.bank)} (${esc(E.bank)}) · סניף ${esc(E.branch)}${E.branchName ? " " + esc(E.branchName) : ""} · חשבון ${esc(E.account)}</td></tr>
+    </table>
+    <div class="sigs">
+      <div><b>המעסיק</b> – ${esc(T.company)}<br>חותם: ${esc(T.signer)}<img src="${sigSrc(T.empSig)}"><span style="color:#666">${esc(T.empSignedAt||"")}</span></div>
+      <div><b>העובד</b> – ${esc(name)}<br>ת"ז ${esc(E.idNum)}<img src="${E.sig}"><span style="color:#666">${esc(E.signedAt)}</span></div>
+    </div>
+  </div>`;
+}
+function attachPages(){
+  return ATT.map(a => `<div class="pg pb"><div class="att"><h3>${a.kind==="id" ? "צילום תעודת זהות וספח" : "אישור מצורף"} – ${esc(E.first)} ${esc(E.last)}, ת"ז ${esc(E.idNum)}</h3><img src="${a.src}"></div></div>`).join("");
+}
+function buildPdf(){
+  const Y = taxYear();
+  return `<div class="agrwrap">${agreementPages()}</div>${page101_1(Y)}${page101_2(Y)}${attachPages()}`;
 }
 
-let pdfBlob = null;
+
+/* html2canvas loses spaces / misplaces punctuation in Hebrew. Wrap every word in an inline-block span. */
+function prepRTL(root){
+  const heb = /[֐-׿]/;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(tn => {
+    const t = tn.nodeValue; if(!t.trim()) return;
+    const parent = tn.parentNode; if(!parent || parent.closest(".noprep")) return;
+    const frag = document.createDocumentFragment();
+    t.split(/(\s+)/).forEach(part => {
+      if(!part) return;
+      if(/^\s+$/.test(part)){ frag.appendChild(document.createTextNode(" ")); return; }
+      const sp = document.createElement("span"); sp.style.display = "inline-block";
+      if(heb.test(part)) sp.textContent = "\u200F" + part + "\u200F"; else { sp.textContent = "\u200E" + part + "\u200E"; }
+      frag.appendChild(sp);
+    });
+    parent.replaceChild(frag, tn);
+  });
+}
+
+/* ================= send + thanks ================= */
+let pdfBlob = null, fname = "";
 function renderSend(){
   window.scrollTo(0,0);
-  $("#hdr").textContent = "סיום ושליחה";
-  $("#sub").textContent = T.company;
-  const fname = `הסכם עבודה ו-101 – ${E.first} ${E.last} – ${T.company}.pdf`;
-  $("#app").innerHTML = `
-  <div class="steps"><span>1. פרטים והסכם ✓</span><span>2. טופס 101 ✓</span><span class="on">3. שליחה</span></div>
+  header(T.company, "כמעט סיימנו! ✨", "המסמך החתום שלך נוצר עכשיו");
+  dock("");
+  fname = `הסכם עבודה ו-101 - ${E.first} ${E.last}.pdf`.replace(/[\\/:*?"<>|]/g,"");
+  $("#app").innerHTML = progress(4, TOTAL, "שליחה") + `
+  <div class="card hero">
+    <div class="big" id="pdfIcon">⏳</div>
+    <h2 id="pdfState">מכין את המסמך…</h2>
+    <p class="note">הסכם עבודה חתום · טופס 101 רשמי · צילומים</p>
+  </div>
   <div class="card">
-    <h2>המסמך החתום מוכן</h2>
-    <p id="pdfState">מכין PDF…</p>
-    <div class="btns">
-      <button class="btn ok" type="button" id="share" disabled>שלח למעסיק ולרואה החשבון</button>
-      <button class="btn sec" type="button" id="dl" disabled>הורד PDF</button>
-    </div>
-    <p class="note">בלחיצה על "שלח" ייפתח חלון השיתוף של הטלפון – בחר במייל או בוואטסאפ. אם השיתוף לא עובד: הורד את ה-PDF וצרף אותו למייל אל ${esc(T.ownerEmail)} ו-${esc(T.cpaEmail)}.</p>
-    <div class="btns"><a class="btn sec" id="mail">פתח מייל מוכן (בלי קובץ)</a></div>
+    <button class="btn ok wide" type="button" id="share" disabled>📤 שליחה למעסיק ולמשרד רו"ח</button>
+    <p class="note" style="margin-top:10px">ייפתח חלון השיתוף של הטלפון. בחר/י <b>Gmail</b> או אפליקציית מייל, ושלח/י אל:<br><span dir="ltr">${esc(T.ownerEmail)}</span> · <span dir="ltr">${CPA_EMAIL}</span></p>
+    <div class="btns"><button class="btn sec" type="button" id="dl" disabled>⬇️ הורד PDF</button><a class="btn sec" id="mail">✉️ פתח מייל מוכן</a></div>
   </div>`;
-  $("#mail").href = `mailto:${encodeURIComponent(T.ownerEmail)}?cc=${encodeURIComponent(T.cpaEmail)}&subject=${encodeURIComponent("הסכם עבודה וטופס 101 – "+E.first+" "+E.last)}&body=${encodeURIComponent("מצורף ה-PDF החתום (הסכם עבודה וטופס 101).")}`;
-  $("#pdf").innerHTML = buildPdfHTML();
+  const subject = `הסכם עבודה וטופס 101 – ${E.first} ${E.last} – ${T.company}`;
+  $("#mail").href = `mailto:${T.ownerEmail}?cc=${CPA_EMAIL}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("שלום,\nמצורף ההסכם החתום וטופס 101 (קובץ PDF).\n\n" + E.first + " " + E.last + ", " + E.phone)}`;
+  $("#mail").onclick = () => { if(pdfBlob) download(); setTimeout(() => renderThanks(false), 600); };
+  $("#pdf").innerHTML = buildPdf(); prepRTL($("#pdf"));
+  const imgs = $$("#pdf img");
+  const ready = Promise.all(imgs.map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; })));
   const go = () => {
-    if(typeof html2pdf === "undefined"){ setTimeout(go, 400); return; }
-    html2pdf().set({ margin:[8,8,8,8], filename:fname, image:{type:"jpeg",quality:0.9}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:"mm",format:"a4",orientation:"portrait"}, pagebreak:{mode:["css"],before:".pb"} })
-      .from($("#pdf")).outputPdf("blob").then(b => {
-        pdfBlob = b; $("#pdfState").textContent = "ה-PDF מוכן ✓"; $("#share").disabled = false; $("#dl").disabled = false;
-      }).catch(() => { $("#pdfState").textContent = "לא הצלחתי להפיק PDF במכשיר הזה. נסה מדפדפן אחר (כרום)."; });
+    if(typeof html2pdf === "undefined"){ setTimeout(go, 300); return; }
+    ready.then(() => html2pdf().set({ margin:0, filename:fname, image:{type:"jpeg",quality:0.86}, html2canvas:{scale:1.6,useCORS:true,backgroundColor:"#fff",letterRendering:true}, jsPDF:{unit:"px",format:[794,1122],orientation:"portrait",hotfixes:["px_scaling"],compress:true}, pagebreak:{mode:["css","avoid-all"],before:".pb",avoid:["tr",".sigs","h4"]} })
+      .from($("#pdf")).outputPdf("blob")).then(b => {
+        pdfBlob = b; $("#pdfIcon").textContent = "✅"; $("#pdfState").textContent = "המסמך מוכן";
+        $("#share").disabled = false; $("#dl").disabled = false;
+      }).catch(err => { $("#pdfIcon").textContent = "⚠️"; $("#pdfState").textContent = "לא הצלחתי ליצור את המסמך בטלפון הזה. נסה/י בדפדפן Chrome."; console.error(err); });
   };
   go();
-  $("#dl").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(pdfBlob); a.download = fname; a.click(); };
+  $("#dl").onclick = download;
   $("#share").onclick = async () => {
     const file = new File([pdfBlob], fname, {type:"application/pdf"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file], title:fname, text:`הסכם עבודה וטופס 101 חתומים – ${E.first} ${E.last}. לשליחה אל ${T.ownerEmail}, ${T.cpaEmail}`}); }
-      catch(e){ /* user cancelled */ }
-    } else { $("#dl").click(); alertBox("השיתוף הישיר לא נתמך במכשיר הזה – הקובץ ירד. צרף אותו למייל."); }
+      try{ await navigator.share({files:[file], title:subject, text:`${subject}\nלשליחה אל: ${T.ownerEmail}, ${CPA_EMAIL}`}); renderThanks(true); return; }
+      catch(e){ if(e && e.name === "AbortError") return; }
+    }
+    // fallback: download + open ready mail
+    download(); toast("הקובץ ירד לטלפון. צרף/י אותו למייל שנפתח.");
+    setTimeout(() => { location.href = $("#mail").href; renderThanks(false); }, 700);
   };
 }
-
-/* ============ misc ============ */
-function alertBox(msg){
-  let el = $("#toast"); if(!el){ el = document.createElement("div"); el.id = "toast";
-    el.style.cssText = "position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1c2333;color:#fff;padding:12px 16px;border-radius:10px;max-width:92%;z-index:9;font-size:15px";
-    document.body.appendChild(el); }
-  el.textContent = msg; el.style.display = "block"; clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", 3800);
+function download(){ const a = document.createElement("a"); a.href = URL.createObjectURL(pdfBlob); a.download = fname; document.body.appendChild(a); a.click(); a.remove(); }
+function renderThanks(shared){
+  window.scrollTo(0,0);
+  header(T.company, `תודה, ${E.first}! 🎉`, "ברוך/ה הבא/ה לצוות");
+  dock("");
+  $("#app").innerHTML = `
+  <div class="card hero">
+    <div class="big">🎉</div>
+    <h2>ברוך/ה הבא/ה ל${esc(T.company)}!</h2>
+    <p>${shared ? "המסמכים נשלחו. " : ""}שמחים מאוד שהצטרפת, ומאחלים לך התחלה מוצלחת.</p>
+  </div>
+  ${shared ? "" : `<div class="card"><div class="warn">📎 רק לוודא: המייל אל <span dir="ltr">${esc(T.ownerEmail)}</span> ו-<span dir="ltr">${CPA_EMAIL}</span> נשלח <b>עם הקובץ המצורף</b>. אם לא – לחצ/י "הורד שוב" ושלח/י.</div><div class="btns"><button class="btn sec wide" type="button" id="again">⬇️ הורד שוב</button></div></div>`}
+  <div class="card">
+    <h2>מה הלאה?</h2>
+    <ul class="list">
+      <li><span>💰</span><div>המשכורת תועבר לחשבון שמסרת, עד ה-9 בחודש שאחרי חודש העבודה.</div></li>
+      <li><span>🔄</span><div>אם משהו משתנה – כתובת, מצב משפחתי, ילדים, חשבון בנק או עבודה נוספת – עדכן/י את ${esc(T.signer)} בתוך שבוע, כדי שהמס יחושב נכון.</div></li>
+      <li><span>❓</span><div>שאלה על התלוש או על המס? פנה/י ל${esc(T.signer)}${T.ephone ? ` (${esc(T.ephone)})` : ""} או ל${CPA_NAME}: <span dir="ltr">${CPA_EMAIL}</span>.</div></li>
+      <li><span>📄</span><div>שמור/י לעצמך עותק של המסמך.</div></li>
+    </ul>
+    <div class="btns"><button class="btn sec wide" type="button" id="mine">⬇️ עותק לעצמי</button></div>
+  </div>`;
+  $("#mine").onclick = download; $("#again") && ($("#again").onclick = download);
 }
 
-function route(){
+/* ================= routing ================= */
+async function route(){
   const h = location.hash;
-  if(h.startsWith("#e=")){
-    try{ T = b64urlDecode(decodeURIComponent(h.slice(3)).replace(/[^A-Za-z0-9_\-]/g,"")); }catch(e){ $("#app").innerHTML = `<div class="card warn">הקישור פגום. בקש/י מהמעסיק קישור חדש.</div>`; return; }
-    T.cpaEmail = CPA_EMAIL;
-    renderEmployee();
-  } else {
-    if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
-    renderSetup();
+  try{
+    if(h.startsWith("#k=")) T = await unpackK(h.slice(3));
+    else if(h.startsWith("#e=")) T = b64urlDecode(decodeURIComponent(h.slice(3)));
+  }catch(e){
+    $("#app").innerHTML = `<div class="card warn">${e && e.message === "nodecomp" ? "הדפדפן בטלפון הזה ישן מדי לפתיחת הקישור. עדכן/י את Chrome או Safari ונסה/י שוב." : "הקישור פגום או חלקי. בקש/י מהמעסיק לשלוח אותו שוב."}</div>`; return;
   }
+  if(T){ renderWelcome(); return; }
+  if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
+  renderSetup();
 }
-window.addEventListener("hashchange", route);
 route();
 </script>
 </body>
