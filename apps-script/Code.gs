@@ -37,6 +37,8 @@ function doPost(e) {
     const root = folder_(DriveApp.getRootFolder(), ROOT_FOLDER);
     const sub = folder_(root, company);
     const file = sub.createFile(blob);
+    const sha = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes).map(function (b) { return ("0" + (b & 255).toString(16)).slice(-2); }).join("");
+    file.setDescription("מזהה מסמך " + clean_(d.docId) + " | גרסת הסכם " + clean_(d.agrVer) + " | SHA-256 " + sha + " | התקבל " + new Date().toISOString());
 
     const owner = String(d.ownerEmail || "").trim().toLowerCase();
     const ownerOk = /^\S+@\S+\.\S+$/.test(owner) && ALLOWED_EMPLOYERS.indexOf(owner) >= 0;
@@ -48,6 +50,8 @@ function doPost(e) {
       (d.start ? "<p>תחילת עבודה: " + esc_(clean_(d.start)) + "</p>" : "") +
       (ownerOk ? "" : "<p style='color:#a00'>המייל של המעסיק (" + esc_(owner) + ") לא ברשימה המאושרת – המסמך נשלח רק למשרד.</p>") +
       "<p>הקובץ נשמר גם בדרייב: " + esc_(ROOT_FOLDER + " / " + company) + "</p>" +
+      "<p style='color:#555;font-size:12px'>מזהה מסמך " + esc_(clean_(d.docId)) + " · גרסת הסכם " + esc_(clean_(d.agrVer)) + " · SHA-256: " + sha + "</p>" +
+      "<p>תזכורת: בתחילת כל שנת מס (" + esc_(String(Number(d.taxYear || new Date().getFullYear()) + 1)) + " ואילך) יש לבקש מהעובד טופס 101 מעודכן.</p>" +
       "<p>משרד רו\"ח שניר טרמצ'י</p></div>";
 
     MailApp.sendEmail({
