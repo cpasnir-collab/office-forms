@@ -24,7 +24,7 @@ function parseShift(v){
 function parseDay(v){ const s = parseShift(v); return s && s.g ? s.g/60 : 0; }
 function nightMin(s){ return s && s.g ? Math.max(0, Math.min(s.en,1440) - Math.max(s.st,1320)) + Math.max(0, Math.min(s.en,360) - s.st) : 0; }
 /* ניתוח שבוע העבודה לפי חוק שעות עבודה ומנוחה וצו ההרחבה לקיצור שבוע העבודה (2018):
-   5 ימים – 4 ימים עד 8:36 ויום מקוצר אחד עד 7:36; 6 ימים – עד 8:00, וערב המנוחה עד 7:00; יום שיש בו שעתיים בלילה – עד 7:00.
+   5 ימים – 4 ימים עד 8:36 ויום מקוצר אחד עד 7:36; 6 ימים – עד 8:00; ערב המנוחה (בכל מתכונת) עד 7:00; יום שיש בו שעתיים בלילה – עד 7:00.
    נוספות יומיות קודם, ואחר כך שבועיות על יתרת השעות הרגילות מעל 42 – בלי כפל. */
 function hoursPlan(t){
   const sh = DAYS.map((d,i) => parseShift((t.days||[])[i]));
@@ -39,7 +39,7 @@ function hoursPlan(t){
     const night = nightMin(s) >= 120;
     const brk = s.brk !== null ? s.brk : (s.g >= 360 ? brkDef : 0);
     const net = t.breakPaid ? s.g : s.g - brk;
-    const norm = night ? 420 : pattern === "6" ? (i === eve ? 420 : 480) : (i === shortDay ? 456 : 516);
+    const norm = (night || i === eve) ? 420 : pattern === "6" ? 480 : (i === shortDay ? 456 : 516); // ערב המנוחה – 7 שעות בכל מתכונת (סעיף 2(ב))
     const dOT = Math.max(0, net - norm);
     return {i, g:s.g, brk, net, norm, dOT, reg:net - dOT, night, st:s.st, en:s.en};
   });

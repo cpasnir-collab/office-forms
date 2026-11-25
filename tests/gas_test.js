@@ -368,5 +368,23 @@ const rr = x.E.reconcile();
 t("R6: reconcile – רשומה פגומה לא עוצרת את השאר", rr.some(z => /:error:/.test(z)) && rr.some(z => /review/.test(z)));
 t("R6: installReconcile אידמפוטנטי – טריגר אחד", x.E.installReconcile() === "created" && x.E.installReconcile() === "exists" && x.E._triggers.length === 1);
 
+// ---------- סבב 7 – ערב יום המנוחה (סעיף 2(ב)) ----------
+const R7 = { mode: "new", start: "2026-05-01", f101: "michpal", company: "test", address: "test", role: "test", manager: "test", harassContact: "0501234567", restDay: "שבת", pattern: "5", shortDay: 1,
+  days: ["", "08:00-16:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", ""], breakMin: 45, weeklyHours: 42, wage: 40, wageType: "hourly", empPct: 6, erPct: 6.5, sevPct: 6, sec14: true };
+const CT7 = (patch) => vm.runInContext("checkTerms", E)(JSON.parse(JSON.stringify(Object.assign({}, R7, patch))), { approved: false });
+const c7 = CT7({}), fri = c7.plan.rows[5];
+t("R7-01: הקלט של ChatGPT – 40.4 רגילות + 1.6 נוספות (שישי: תקן 420, נוספות 96 דקות)", c7.err.length === 0 && c7.plan.regular === 40.4 && c7.plan.dailyOT === 1.6 && c7.plan.ot === 1.6 && fri.norm === 420 && fri.dOT === 96);
+t("R7-01: אותו קלט ב-register עם הרשאה תקפה – מתקבל", REG(R7).ok === true);
+const c7b = CT7({ restDay: "שישי", days: ["08:00-17:21", "08:00-16:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "", ""] });
+t("R7: מנוחה בשישי – ערב המנוחה הוא חמישי (תקן 420)", c7b.plan.rows[4].norm === 420 && c7b.plan.rows[4].dOT === 96 && c7b.plan.rows[0].norm === 516);
+const c7c = CT7({ restDay: "ראשון", days: ["", "08:00-16:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "", "08:00-17:21"] });
+t("R7: מנוחה בראשון – ערב המנוחה הוא שבת (תקן 420)", c7c.plan.rows[6].norm === 420 && c7c.plan.rows[5] === null);
+const c7d = CT7({ shortDay: 5, days: ["", "08:00-17:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "08:00-16:21", ""] });
+t("R7: יום מקוצר שחל בערב המנוחה – התקן הנמוך (420, לא 456)", c7d.plan.rows[5].norm === 420 && c7d.plan.rows[5].dOT === 36);
+const c7e = CT7({ shortDay: 4, days: ["08:00-17:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "08:00-16:21", "", ""] });
+t("R7: ראשון–חמישי ושבת מנוחה – ללא שינוי (42 רגילות, 0 נוספות)", c7e.err.length === 0 && c7e.plan.regular === 42 && c7e.plan.ot === 0);
+t("R7: 6 ימים – ערב המנוחה נשאר 420, שאר הימים 480", (() => { const c = CT7({ pattern: "6", shortDay: "", days: SIX, weeklyHours: 36 }); return c.plan.rows[5].norm === 420 && c.plan.rows[0].norm === 480; })());
+t("R7: יום לילה שאינו ערב מנוחה – עדיין 420", (() => { const c = CT7({ days: ["", "", "", "", "16:00-24:00", "", ""], weeklyHours: 7.25 }); return c.plan.rows[4].norm === 420; })());
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

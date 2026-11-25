@@ -1,5 +1,5 @@
 /**
- * office-forms 3.7 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.8 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
  * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
@@ -47,7 +47,7 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.7" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.8" }); }
 
 /* ---------- הרשאות מעסיק ---------- */
 function setup() {

@@ -47,13 +47,19 @@ async def make_link(pg):
     await pg.click("#makeLink"); await pg.wait_for_timeout(600)
     return (await pg.text_content("#linkTxt") or "").strip()
 
+async def put(pg, k, v):
+    el = pg.locator("#"+k)
+    if await el.evaluate("e => e.tagName") == "SELECT":
+        await el.select_option(v); await pg.wait_for_timeout(50)
+    else: await el.fill(v)
+
 async def employee(pg, link, gender="נקבה", marital="רווק/ה", kids=None, other="none", coord="none", credits=("c1",), answers=None, birth="1990-05-05", pens="no"):
     """answers: list of True/False for modal dialogs in order"""
     await pg.goto("about:blank"); await pg.goto(link); await pg.wait_for_timeout(500)
     await pg.check("#privOk"); await pg.click("#go")
     for k,v in {"idNum":"000000018","birth":birth,"phone":"0500000000","email":"emp@example.com","street":"הרצל","house":"12","city":"קריית שמונה","zip":"1101101","bank":"12","branch":"718","account":"123456"}.items():
         el = pg.locator("#"+k)
-        if await el.is_visible(): await el.fill(v)
+        if await el.is_visible(): await put(pg, k, v)
     if await pg.locator("label:has(input[name=gender])").first.is_visible(): await pg.click(f"label:has(input[name=gender][value='{gender}'])")
     if await pg.locator("label:has(input[name=pens])").first.is_visible(): await pg.click(f"label:has(input[name=pens][value={pens}])")
     await pg.click("#next"); await pg.wait_for_timeout(300)
@@ -249,6 +255,9 @@ async def main():
             app_txt = await pg.inner_text("#app")
             check("G-36: הודעת פרטיות מפרטת אחראי, מטרות, חובה/רשות, נמענים וזכויות", all(x in app_txt for x in ["מי מקבל","למה","חובה או רשות","למי עוד","הזכויות שלך"]))
             await employee(pg, link)
+            bk = await pg.evaluate("({n: BANKS && BANKS.banks.length, br: BANKS && BANKS.banks.reduce((a,b)=>a+b.branches.length,0), asOf: BANKS && BANKS.asOf, e: E.bankName + '|' + E.branchName})")
+            check("בנקים: רשימת בנק ישראל נטענה – 18 בנקים, 1403 סניפים, מעודכנת ל-11/05/2026", bk["n"] == 18 and bk["br"] == 1403 and bk["asOf"] == "11/05/2026", str(bk))
+            check("בנקים: 12/718 מזוהה כ'בנק הפועלים' סניף 'קרית שמונה'", "הפועלים" in bk["e"] and "קרית שמונה" in bk["e"], bk["e"])
             await fill101(pg)
             await finish_print(pg)
             docs = await wait_docs(pg, 2)
@@ -397,7 +406,7 @@ async def main():
             await pg.goto("about:blank"); await pg.goto(link); await pg.wait_for_timeout(400)
             await pg.evaluate("T.start = '2027-01-05'")
             await pg.check("#privOk"); await pg.click("#go")
-            for k,v in {"first":"דנה","last":"בדיקה","idNum":"000000018","birth":"1990-05-05","phone":"0500000000","street":"הרצל","house":"1","city":"חיפה","bank":"12","branch":"718","account":"1"}.items(): await pg.fill("#"+k, v)
+            for k,v in {"first":"דנה","last":"בדיקה","idNum":"000000018","birth":"1990-05-05","phone":"0500000000","street":"הרצל","house":"1","city":"חיפה","bank":"12","branch":"718","account":"1"}.items(): await put(pg, k, v)
             await pg.click("label:has(input[name=gender][value='נקבה'])"); await pg.click("label:has(input[name=pens][value=no])")
             await pg.click("#next"); await pg.wait_for_timeout(300); await pg.check("#agree"); await sign(pg, "#sigE"); await pg.click("#next"); await pg.wait_for_timeout(300)
             check("G-17: שנת מס 2027 – הסבר שהטופס לא עודכן", "עדיין לא עודכן" in await pg.inner_text("#app"))
