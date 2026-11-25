@@ -1114,6 +1114,7 @@ function txt(x0, x1, top, s, size, align){ // x in pt, right-aligned box by defa
   return `<div class="f" style="left:${px(x0)};width:${px(x1-x0)};top:${py(top)};text-align:${align||"right"};${size?`font-size:${size}px;`:""}direction:rtl">${esc(s)}</div>`;
 }
 function num(x0, x1, top, s, size){ if(!s) return ""; return `<div class="f" style="left:${px(x0)};width:${px(x1-x0)};top:${py(top)};text-align:center;direction:ltr;letter-spacing:1px;${size?`font-size:${size}px;`:""}">${esc(s)}</div>`; }
+function cells(xs, top, s, size){ return String(s).split("").slice(0, xs.length-1).map((d,i) => `<div class="f" style="left:${px(xs[i])};width:${px(xs[i+1]-xs[i])};top:${py(top)};text-align:center;direction:ltr;font-size:${size}px">${esc(d)}</div>`).join(""); }
 function ck(x0, top){ return `<div class="ck" style="left:${px(x0+1.2)};top:${py(top-1.5)}">✔</div>`; }
 function ageInYear(birth, Y){ return birth ? Y - Number(birth.slice(0,4)) : -1; }
 function kidCounts(kids, Y){ const c = {b0:0,a12:0,a3:0,a45:0,a617:0,a18:0};
@@ -1122,12 +1123,12 @@ function kidCounts(kids, Y){ const c = {b0:0,a12:0,a3:0,a45:0,a617:0,a18:0};
 function page101_1(Y){
   const g = E.gender, m = F.marital;
   let h = `<div class="pg pb"><img class="bgimg" src="vendor/f101-1.jpg">`;
-  h += num(222, 285, 87.5, String(Y), 13);
+  h += cells([220.5,236.7,252.9,269.1,285.3], 86, String(Y), 14); // שנת המס – ספרה בכל תא
   // א employer
   h += txt(416, 534, 168, T.company, 11);
   h += txt(211, 412, 168, T.address, 10.5);
   h += num(132, 207, 168, T.ephone || "", 11);
-  if(T.deductions) h += `<div class="f" style="left:${px(40)};width:${px(88)};top:${py(169.5)};direction:ltr;letter-spacing:${px(4.6)};font-size:12px">${esc(String(T.deductions).replace(/^9/,""))}</div>`;
+  if(T.deductions) h += cells([39.6,50.8,62.5,73.8,85.0,96.3,107.5,118.8,130.0], 168.5, String(T.deductions).replace(/^9/,""), 13); // ה-9 מודפס בטופס
   // ב employee
   h += num(440, 538, 220, E.idNum, 12);
   h += txt(316, 434, 220, E.last, 12);
