@@ -148,7 +148,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const CPA_EMAIL = "cpa.snir@gmail.com";
 const CPA_NAME = "משרד רו\"ח שניר טרמצ'י";
 // כתובת ה-Web App של Google Apps Script (apps-script/Code.gs). ריק = שליחה דרך הטלפון.
-const SEND_URL = "";
+const SEND_URL = "https://script.google.com/macros/s/AKfycbzO1dws-MjKgRyy3BgJKwHHxoMsmpemRGdMYr3eNX4JmMYoCA8qmybCzISUTXdq8yYxiA/exec"; // שרת המשרד (Apps Script, cpa.snir)
 const store = {
   get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },

@@ -1,3 +1,4 @@
+import re
 # בדיקות רגרסיה לדף (דפדפן אוטומטי). הרצה: python3 tests/client_test.py  (מתוך תיקיית המאגר)
 import asyncio, base64, json, os, subprocess, sys, time
 from playwright.async_api import async_playwright
@@ -129,6 +130,12 @@ async def main():
             ctx = await b.new_context(viewport={"width":400,"height":860}, accept_downloads=True)
             pg = await ctx.new_page(); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
+            # הדף בייצור מחובר לשרת; בבדיקות – מצב ידני, אלא אם תרחיש מחליף לשרת דמה
+            async def manual(route):
+                r = await route.fetch(); body = re.sub(r'const SEND_URL = "[^"]*";', 'const SEND_URL = "";', await r.text())
+                await route.fulfill(response=r, body=body, headers={**r.headers, "content-type":"text/html; charset=utf-8"})
+            await pg.route(BASE + "", manual); await pg.route(BASE + "index.html", manual)
+            await pg.route("https://script.google.com/**", lambda route: route.abort())
 
             # ---------- מעסיק: בקרות ----------
             async def checks(): await pg.wait_for_timeout(150); return await pg.inner_text("#checks")
@@ -463,7 +470,7 @@ async def main():
                 if d.get("termsHash") != "a"*64: return await route.fulfill(json={"ok":False,"err":"terms-mismatch"})
                 return await route.fulfill(json={"ok":True})
             async def patch(route):
-                r = await route.fetch(); body = (await r.text()).replace('const SEND_URL = "";', 'const SEND_URL = "/mock";')
+                r = await route.fetch(); body = re.sub(r'const SEND_URL = "[^"]*";', 'const SEND_URL = "/mock";', await r.text())
                 await route.fulfill(response=r, body=body, headers={**r.headers, "content-type":"text/html; charset=utf-8"})
             await pg.route("**/mock", mock); await pg.route(BASE + "", patch); await pg.route(BASE + "index.html", patch)
             await employer(pg); link = await make_link(pg)
