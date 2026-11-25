@@ -1,5 +1,5 @@
 /**
- * office-forms 3.9 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.10 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
  * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
@@ -49,7 +49,7 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.9" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.10" }); }
 
 /* ---------- הרשאות מעסיק ---------- */
 function setup() {
@@ -382,7 +382,7 @@ function installReconcile() { // אידמפוטנטי – לא יוצר טריג
 /* משימות: [סוג קבוע, תיאור, ימים, בסיס]. בסיס "start" = מתחילת העבודה (יעד חוקי – לא נדחה בגלל קליטה מאוחרת), "now" = ממועד האירוע. */
 function tasks_(reg, mode, st) {
   const t = [];
-  if (mode === "print") { t.push(["101-sign", "101: לקבל טופס חתום בכתב יד", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7, "start"]); }
+  if (mode === "print") { t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7, "start"]); }
   if (mode === "paper") { t.push(["101-paper", "101: לא הופק – למלא טופס רשמי ידני", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס", 7, "start"]); }
   if (mode === "michpal") t.push(["101-michpal", "101 בפורטל מיכפל: לוודא שהעובד מילא וחתם, ולבדוק לפני שימוש", 7, "start"]);
   if ((st.complex || []).length) t.push(["101-complex", "101 מורכב: " + st.complex.join(", "), 3, "start"]);
@@ -436,7 +436,7 @@ function body_(d, reg, t, emp, company, docId, shas, st, linkId) {
   const row = function (k, v) { return v ? "<tr><td style='color:#555;padding:2px 8px'>" + esc_(k) + "</td><td style='padding:2px 8px'><b>" + esc_(v) + "</b></td></tr>" : ""; };
   return "<div dir='rtl' style='font-family:Arial'><p>שלום,</p>" +
     "<p>מצורפים המסמכים החתומים של <b>" + esc_(emp) + "</b> ב" + esc_(company) + ".</p>" +
-    (st.mode === "print" ? "<p><b>טופס 101:</b> להדפיס, להחתים את העובד בכתב יד בחלק י' בשבוע הראשון לעבודה, ולשמור בתיק. עד החתימה ובדיקת המשרד – טיוטה, לא לחישוב מס.</p>" : "") +
+    (st.mode === "print" ? "<p><b>טופס 101:</b> העובד חתם בחלק י' (החתימה מההסכם, באישורו). לשמור בתיק. עד בדיקת המשרד – לא לחישוב מס.</p>" : "") +
     (st.mode === "paper" ? "<p><b>טופס 101:</b> לא הופק – גרסת השנה עוד לא קיימת בכלי. יש למלא עם העובד טופס 101 רשמי.</p>" : "") +
     ((st.complex || []).length ? "<p style='color:#a00'><b>טופס 101 לבדיקת משרד לפני שימוש:</b> " + esc_(st.complex.join(", ")) + "</p>" : "") +
     (Number(t.sevPct) >= 8.33 && t.sec14 ? "<p><b>פיצויים 8.33%:</b> בקובץ ההסכם יש מכתב הודעה לקופה – ההחלה מותנית במסירה בפועל. למסור ולשמור אסמכתה.</p>" : "") +

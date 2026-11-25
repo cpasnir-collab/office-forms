@@ -102,7 +102,7 @@ async def fill101(pg, marital="רווק/ה", kids=None, other="none", coord="non
 
 async def finish_print(pg):
     await pg.set_input_files("input[data-kind=id]", "/tmp/test_id.jpg"); await pg.set_input_files("input[data-kind=sefach]", "/tmp/test_id.jpg"); await pg.wait_for_timeout(500)
-    await pg.check("#decl"); await pg.click("#next")
+    await pg.check("#decl"); await pg.check("#sig101"); await pg.click("#next")
 
 async def wait_docs(pg, n):
     for i in range(90):
@@ -280,8 +280,8 @@ async def main():
             check("הסכם: בלי 'ההוראה המיטיבה' – רק 'ההוראה המחייבת'", "המיטיבה" not in agr and "ההוראה המחייבת" in agr)
             check("הסכם: הצהרה על הסכם קיבוצי/ארגון מעסיקים", "לא חל על העובד הסכם קיבוצי" in agr)
             check("הסכם: מועד מסירת ההודעה מופיע", "תאריך מסירת ההודעה" in agr)
-            check("101: אין חתימה אלקטרונית של העובד על הטופס", h101.count("data:image/png") == 0)
-            check("101: דף הוראות להדפסה וחתימה בכתב יד", "לחתום בכתב יד" in h101)
+            check("101: חתימת העובד מההסכם נכנסה לחלק י' (פעם אחת, עמוד 2)", h101.count("data:image/png") == 1 and h101.index("data:image/png") > h101.index("f101-2.jpg"))
+            check("101: דף ההוראות מציין שהחתימה מההסכם הוכנסה באישור העובד", "החתימה מההסכם נכנסה לטופס באישורו" in h101 and "לחתום בכתב יד" not in h101)
             check("בלי מכתב לקופה כשהפיצויים 6%", "הודעה לקופה" not in agr)
             check("G-07: 6% – סעיף 14 מכוח צו ההרחבה, 72%, בלי 'האישור הכללי' כמקור", "המתחייבות לפי צו ההרחבה" in agr and "72%" in agr)
             check("G-08: חריג החזר כספים רק לפי סעיפים 16/17 או משיכה שלא לרגל אירוע מזכה", "סעיף 16 או 17" in agr and "בפסק דין או בהסכם" not in agr)
@@ -293,7 +293,7 @@ async def main():
             check("G-27: שמירת זכויות מכוח הסדר אחר המחייב", "הסדר אחר המחייב את הצדדים" in agr)
             check("G-24: קניין רוחני לפי סעיף 34 / 132, בלי זכות מוסרית", "סעיף 34" in agr and "הזכות המוסרית" in agr)
             check("G-38: נוסח חתימה – לא מאובטחת, עותק יימסר", "אין זו חתימה אלקטרונית מאובטחת" in agr)
-            check("G-19: דף ה-101 – מעקב קבלת טופס חתום תוך שבוע", "בתוך שבוע מתחילת העבודה" in h101)
+            check("G-19: דף ה-101 – חידוש בתחילת כל שנת מס ובכל שינוי", "בתחילת כל שנת מס" in h101)
             await pg.screenshot(path=f"{OUT}/s1_send.png")
 
             # ---------- תרחיש 2: גבר נשוי עם ילדים, סעיף 7 – הדיאלוג, העובד משאיר ----------
@@ -439,7 +439,7 @@ async def main():
             check("R3-10: עובד קיים קטין במסלול שינוי – נעצר ומופנה", await pg.locator("#agree").count() == 0 and "טרם מלאו לך 18" in await pg.inner_text("#app"))
             await employer(pg); link = await make_link(pg)
             await employee(pg, link); await fill101(pg, credits=("c1","c14"))
-            await pg.set_input_files("input[data-kind=id]", "/tmp/test_id.jpg"); await pg.wait_for_timeout(300); await pg.check("#decl"); await pg.click("#next"); await pg.wait_for_timeout(300)
+            await pg.set_input_files("input[data-kind=id]", "/tmp/test_id.jpg"); await pg.wait_for_timeout(300); await pg.check("#decl"); await pg.check("#sig101"); await pg.click("#next"); await pg.wait_for_timeout(300)
             check("R3-09: בלי ספח – לא ממשיכים", await pg.locator("#decl").count() == 1)
             await pg.set_input_files("input[data-kind=sefach]", "/tmp/test_id.jpg"); await pg.wait_for_timeout(300); await pg.click("#next"); await pg.wait_for_timeout(300)
             check("R3-09: אסמכתה לסעיף 14 חסרה ולא סומן 'אמסור בנפרד' – לא ממשיכים", await pg.locator("#decl").count() == 1 and "תעודת שחרור" in await pg.inner_text("#toast"))
@@ -448,7 +448,9 @@ async def main():
             check("R3-09: 'אמסור בנפרד' – ממשיכים, ודף ה-101 מסמן אסמכתה חסרה לבדיקת משרד", "אסמכתאות חסרות: תעודת שחרור" in cv and "לבדיקת משרד" in cv)
             await employer(pg); link = await make_link(pg)
             await employee(pg, link); await fill101(pg)
-            await pg.check("#noTz"); await pg.set_input_files("input[data-kind=idalt]", "/tmp/test_id.jpg"); await pg.wait_for_timeout(300); await pg.check("#decl"); await pg.click("#next"); await wait_docs(pg, 2)
+            await pg.check("#noTz"); await pg.set_input_files("input[data-kind=idalt]", "/tmp/test_id.jpg"); await pg.wait_for_timeout(300); await pg.check("#decl"); await pg.click("#next"); await pg.wait_for_timeout(300)
+            check("101: בלי אישור הכנסת החתימה לטופס – לא ממשיכים", await pg.locator("#sig101").count() == 1 and "לאשר את החתימה" in await pg.inner_text("#toast"))
+            await pg.check("#sig101"); await pg.click("#next"); await wait_docs(pg, 2)
             check("G-18: בלי ת\"ז ישראלית – מסמך זיהוי חלופי מתקבל", len(await pg.evaluate("DOCS")) == 2 and "מסמך זיהוי" in await pg.evaluate("attachPages()"))
 
             # ---------- תרחיש 11: שליחה אוטומטית מול שרת דמה (קישור אטום) ----------

@@ -193,7 +193,7 @@ t("G-39: ניסיון חוזר – needs-review, בלי מייל שני", sub2(x
 x = ready(); x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.state === "done";
 sub2(x.E, x.sha, "AAAAA44444");
 t("G-39: נפילה אחרי יומן – ניסיון חוזר לא משכפל יומן/משימות", sub2(x.E, x.sha, "AAAAA44444").ok === true && x.E._state.sheets["log"].rows.length === 2 && mails(x.E).length === 1 &&
-  x.E._state.sheets["משימות"].rows.filter(r => /101: לקבל טופס חתום/.test(r[5])).length === 1);
+  x.E._state.sheets["משימות"].rows.filter(r => /101: בדיקת משרד/.test(r[5])).length === 1);
 x = ready({ failSaveAt: 2 }); sub2(x.E, x.sha, "AAAAA55555"); x.E._state.opts.quota = 0;
 t("G-33: מכסה נבדקת גם בניסיון חוזר לפני מייל", sub2(x.E, x.sha, "AAAAA55555").err === "quota" && mails(x.E).length === 0);
 
@@ -231,7 +231,7 @@ t("R4-01: בלי ימים ושעות – השרת דוחה", !!bad({ days: ["", 
 x = ready({}, { start: "2025-11-02" });
 let qq = sub2(x.E, x.sha, "AAAAA99999");
 const tk3 = x.E._state.sheets["משימות"].rows;
-t("R4-03: קליטה מאוחרת – יעד 101 נשאר תחילה+7 (2025-11-09) ומסומן באיחור", qq.ok && tk3.some(r => r[0].endsWith("|101-sign") && r[7] === "2025-11-09" && r[8] === "כן"));
+t("R4-03: קליטה מאוחרת – יעד 101 נשאר תחילה+7 (2025-11-09) ומסומן באיחור", qq.ok && tk3.some(r => r[0].endsWith("|101-review") && r[7] === "2025-11-09" && r[8] === "כן"));
 
 // R4-04: כשל אחרי appendRow ראשון / אחרון; לא מוחק אסמכתה
 x = ready(); let appends = 0;
@@ -267,7 +267,7 @@ const sA = post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, t
 verify(E, L1); verify(E, L2);
 post(E, { action: "submit", vt: E._vt[L1], linkId: L1, docId: "1234512345", termsHash: sA, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
 post(E, { action: "submit", vt: E._vt[L2], linkId: L2, docId: "1234512345", termsHash: sB, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
-t("R4-06: אותו docId בשני קישורים – שתי שורות יומן נפרדות ומשימות נפרדות", E._state.sheets["log"].rows.length === 3 && E._state.sheets["משימות"].rows.filter(r => r[0].endsWith("|101-sign")).length === 2);
+t("R4-06: אותו docId בשני קישורים – שתי שורות יומן נפרדות ומשימות נפרדות", E._state.sheets["log"].rows.length === 3 && E._state.sheets["משימות"].rows.filter(r => r[0].endsWith("|101-review")).length === 2);
 t("R4-06: resolveDoc עם ערך לא מוכר – נדחה", (() => { try { E.resolveDoc(L1, "yes"); return false; } catch (e) { return /sent או resend/.test(e.message); } })());
 t("R4-06: resolveDoc מתעד מי ומתי", (() => { const y = ready({ failMail: 1 }); sub2(y.E, y.sha, "BCBCB99999"); y.E.resolveDoc(L1, "sent"); const r0 = regOf(y.E).doc.resolution; return r0.how === "sent" && r0.by === ME && !!r0.at; })());
 
