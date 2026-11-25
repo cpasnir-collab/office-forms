@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = "http://localhost:8765/"
-OUT = os.environ.get("OUT", "/tmp/v34")
+OUT = os.environ.get("OUT", "/tmp/v35")
 os.makedirs(OUT, exist_ok=True)
 URI = {"company":"אורי כלפה","companyId":"024592693","deductions":"904105525","address":"עירית 1, קריית שמונה","signer":"אורי כלפה"}
 def preset(extra=None):
@@ -226,6 +226,9 @@ async def main():
             await pg.uncheck("#sec14"); check("G-07: ביטול סעיף 14 ב-6% – חוסם", "מכוח צו ההרחבה" in await checks())
             await pg.check("#sec14"); await pg.fill("#harassContact", "אורי"); check("G-26: אחראי הטרדה בלי דרך פנייה – חוסם", "דרך פנייה" in await checks())
             await pg.fill("#harassContact", "אורי 0501234567"); await pg.fill("#manager", ""); check("G-13: ממונה ישיר חובה", "הממונה הישיר" in await checks())
+            await pg.fill("#manager", "אורי"); await pg.fill("#weeklyHours", "100"); check("R4-01: היקף 100 – חוסם (מעל 58)", "מעל 58" in await checks())
+            await pg.click("#clearWeek"); check("R4-01: בלי ימים ושעות – חוסם", "יש למלא את ימי ושעות העבודה" in await checks())
+            await pg.click("#fillWeek"); await pg.fill("#weeklyHours", "36.25")
 
             # דגל ענף בקישור מעסיק ידני
             await employer(pg, pre=preset({"officeOk":True,"industry":"construction"}))

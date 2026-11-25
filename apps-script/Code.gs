@@ -1,5 +1,5 @@
 /**
- * office-forms 3.4 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.5 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
  * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
@@ -8,7 +8,8 @@
  *   3. לכל מעסיק: mintEmployer("mail", "שם העסק", "ח.פ", "מזהה-לקוח", "ענף") – קישור המעסיק נשלח למייל המשרד בלבד (לא נרשם ביומן).
  *      תבנית ענפית/חריגה: mintApproval("mail", {role, wageType, minWage, empPct, erPct, sevPct, collective, breakPermit, night}, 30).
  *      ביטול/רוטציה: revokeEmployer("mail") – כל הקישורים הפעילים של המעסיק נחסמים מיד (get/submit), ולא רק יצירת קישורים חדשים.
- *   4. מסמך שנתקע בבדיקה (needs-review): resolveDoc("DOCID", "resend") או resolveDoc("DOCID", "sent").
+ *   4. מסמך שנתקע בבדיקה (needs-review): resolveDoc("<linkId>", "resend") או resolveDoc("<linkId>", "sent").
+ *   קבצי הפרויקט: Code.gs + rules.gs (עותק זהה של rules.js מהמאגר – אותם כללים בדף ובשרת).
  *
  * עקרונות:
  *  - מקור אמת אחד לכל קישור (L:<linkId>). הקישור "נתפס" למסמך אחד (claim) לפני כל פעולה חיצונית.
@@ -22,10 +23,9 @@ const LINKS_FOLDER = "_קישורים (נוצר אוטומטית)";
 const LOG_NAME = "יומן קליטות עובדים (נוצר אוטומטית – לא לערוך)";
 const MAX_BYTES = 20 * 1024 * 1024, MAX_TOTAL_B64 = 32 * 1024 * 1024, MAX_TERMS = 60000, MAX_DECODED = 20 * 1024 * 1024;
 const LINK_DAYS = 30, RETRY_GRACE_DAYS = 7, MAX_SUBMITS_PER_LINK = 5;
-const TERMS_VER = 5, F101_YEAR = 2026;
+const TERMS_VER = 5; // F101_YEAR, INDUSTRIES, TPL_KEYS, checkTerms, hoursPlan, tplMiss, validDate – ב-rules.gs
 const SITE = "https://cpasnir-collab.github.io/office-forms/";
 const MODE_FILES = { print: 2, michpal: 1, paper: 1, change: 1 };
-const INDUSTRIES = ["general", "construction", "cleaning", "security", "transport", "food", "hotels", "events", "staffing", "care", "garage", "retail", "agri", "industry", "other"];
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -47,7 +47,7 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.4" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.5" }); }
 
 /* ---------- הרשאות מעסיק ---------- */
 function setup() {
@@ -60,7 +60,7 @@ function mintEmployer(email, company, companyId, clientId, industry, days) {
   email = String(email || "").trim().toLowerCase(); clientId = String(clientId || ""); industry = industry || "general";
   if (!/^\S+@\S+\.\S+$/.test(email) || !company) throw new Error("חסר מייל או שם עסק");
   if (!/^[A-Za-z0-9-]{1,32}$/.test(clientId)) throw new Error("מזהה לקוח: אותיות לטיניות, ספרות ומקף, עד 32");
-  if (INDUSTRIES.indexOf(industry) < 0) throw new Error("ענף לא מוכר");
+  if (INDUSTRIES.map(function (x) { return x[0]; }).indexOf(industry) < 0) throw new Error("ענף לא מוכר");
   const p = PropertiesService.getScriptProperties();
   const old = emp_(email) || { ver: 0 };
   if (old.tenantId && old.tenantId !== clientId) throw new Error("המייל כבר משויך ללקוח " + old.tenantId + " – מייל אחד לעסק אחד");
@@ -82,7 +82,6 @@ function revokeEmployer(email) {
   return true;
 }
 /* אישור משרד = תבנית תנאים חתומה (לא רק ענף): תפקיד, סוג שכר, שכר מינימלי שאושר, שיעורי פנסיה, הסכם קיבוצי, היתר הפסקות, לילה. */
-const TPL_KEYS = ["role", "wageType", "minWage", "empPct", "erPct", "sevPct", "collective", "breakPermit", "night"];
 function mintApproval(email, tpl, days) {
   const rec = emp_(email); if (!rec || rec.revoked) throw new Error("מעסיק לא רשום או מבוטל");
   const t = {}; TPL_KEYS.forEach(function (k) { t[k] = tpl && tpl[k] !== undefined ? tpl[k] : ""; });
@@ -115,23 +114,10 @@ function schema_(t) {
   if ((t.mode || "new") === "new" && ["print", "michpal"].indexOf(t.f101) < 0) return "f101";
   if (!num(t.wage) || ["hourly", "monthly"].indexOf(t.wageType) < 0 || !num(t.weeklyHours)) return "wage";
   if (!t.role || !t.manager || !t.harassContact || !t.signer) return "required";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(t.mode === "change" ? t.effDate : t.start))) return "date";
+  if (!validDate(String(t.mode === "change" ? t.effDate : t.start))) return "date";
   if (t.days && (!Array.isArray(t.days) || t.days.length !== 7)) return "days";
   return "";
 }
-function tplOk_(t, tpl) { // התנאים בפועל בתוך התבנית שאושרה
-  if (tpl.role && tpl.role !== t.role) return false;
-  if (tpl.wageType && tpl.wageType !== t.wageType) return false;
-  if (tpl.minWage && Number(t.wage) < Number(tpl.minWage)) return false;
-  if (tpl.empPct && Number(tpl.empPct) !== Number(t.empPct || 6)) return false;
-  if (tpl.erPct && Number(tpl.erPct) !== Number(t.erPct || 6.5)) return false;
-  if (tpl.sevPct && Number(tpl.sevPct) !== Number(t.sevPct || 6)) return false;
-  if ((tpl.collective || "") !== (t.collective || "")) return false;
-  if (t.breakPermit && !tpl.breakPermit) return false;
-  if (t.night && !tpl.night) return false;
-  return true;
-}
-
 /* ---------- קישורים ---------- */
 function register_(d) {
   const linkId = String(d.linkId || "");
@@ -150,13 +136,16 @@ function register_(d) {
   // זהות העסק והענף – מרשומת המעסיק בשרת, לא מהדף
   terms.company = rec.company; terms.companyId = rec.companyId; terms.tenantId = rec.tenantId;
   if (rec.industry !== "general") terms.industry = rec.industry;
-  // חריגה (ענף מאומת, ענף שהמעסיק בחר, הסכם קיבוצי, היתר הפסקות, לילה) – רק בתוך תבנית חתומה ובתוקף
-  const exc = rec.industry !== "general" || (terms.industry && terms.industry !== "general") || terms.collective || terms.breakPermit || terms.night;
-  if (exc) {
-    const tpl = terms.okTpl && typeof terms.okTpl === "object" ? terms.okTpl : null;
-    if (!tpl || !terms.okSig || !tpl.exp || tpl.exp < new Date().toISOString().slice(0, 10) ||
-        !safeEq_(okSig_(owner, rec, tpl), String(terms.okSig)) || !tplOk_(terms, tpl)) return out_({ ok: false, err: "not-approved" });
-  }
+  // אישור: תבנית חתומה ובתוקף. הצורך באישור והחריגה מהתבנית מחושבים מהסידור עצמו (לילה, הפסקה קצרה) – לא מדגלים שהדף שלח.
+  const tpl = terms.okTpl && typeof terms.okTpl === "object" ? terms.okTpl : null;
+  const verified = !!(tpl && terms.okSig && tpl.exp && tpl.exp >= new Date().toISOString().slice(0, 10) && safeEq_(okSig_(owner, rec, tpl), String(terms.okSig)));
+  const plan = hoursPlan(terms), shortBreak = plan.rows.some(function (r) { return r && r.g >= 360 && r.brk < 45; });
+  if (plan.night) terms.night = true; else delete terms.night;                 // נגזר בשרת, לא מהדף
+  const needApproval = rec.industry !== "general" || (terms.industry && terms.industry !== "general") || terms.collective || terms.breakPermit || plan.night || shortBreak;
+  if ((needApproval && !verified) || (verified && tplMiss(terms).length)) return out_({ ok: false, err: "not-approved" });
+  // כל כללי ההעסקה – אותו קוד כמו בדף (rules.gs): מינימום לפי תאריך וסוג, שעות, הפסקות, מנוחה, היקף, תאריכים
+  const ruleErr = checkTerms(terms, { approved: verified }).err;
+  if (ruleErr.length) return out_({ ok: false, err: "rules", detail: ruleErr.slice(0, 5) });
   const json = canon_(terms);
   if (json.length > MAX_TERMS) return out_({ ok: false, err: "terms-size" });
   const sha = hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json, Utilities.Charset.UTF_8));
@@ -199,7 +188,9 @@ function revoke_(d) {
 }
 
 /* ---------- קבלת מסמכים ----------
-   מקור האמת: L:<linkId>.doc – מצב המסמך היחיד של הקישור. אין רשומת D נפרדת שיכולה להתפצל ממנו. */
+   מקור האמת: L:<linkId>.doc. המפתח החיצוני לכל דבר (יומן, משימות, הכרעה) הוא linkId – 128 ביט מהשרת, לא docId מהדף.
+   ב-claim נקבע manifest קנוני: שם קובץ שרתי, סוג, SHA-256 ומסלול. אחר כך רק הוא קובע. */
+const DOC_KINDS = { print: ["הסכם עבודה", "טופס 101 להדפסה"], michpal: ["הסכם עבודה"], paper: ["הסכם עבודה"], change: ["הודעה על שינוי תנאים"] };
 function submit_(d) {
   const props = PropertiesService.getScriptProperties();
   const linkId = String(d.linkId || "");
@@ -210,7 +201,7 @@ function submit_(d) {
   const save = function () { props.setProperty("L:" + linkId, JSON.stringify(reg)); };
   let st = reg.doc || null;
   if (st && st.id !== docId) return out_({ ok: false, err: reg.state === "used" ? "used" : "busy" });
-  if (st && st.state === "done") return out_({ ok: true, dup: true });   // עקבי: גם אחרי ביטול – כבר הושלם
+  if (st && st.state === "done") return out_({ ok: true, dup: true });
   const s0 = regState_(reg);
   if (s0 === "revoked" || s0 === "employer-revoked") return out_({ ok: false, err: s0 });
   if (!st) {
@@ -218,94 +209,131 @@ function submit_(d) {
     if ((reg.submits || 0) >= MAX_SUBMITS_PER_LINK) return out_({ ok: false, err: "too-many" });
     if (String(d.termsHash || "") !== reg.sha) return out_({ ok: false, err: "terms-mismatch" });
   } else if (s0 === "expired" && new Date(reg.exp).getTime() + RETRY_GRACE_DAYS * 864e5 < Date.now()) return out_({ ok: false, err: "expired" });
-  if (st && (st.mail === "pending" || st.mail === "needs-review")) return out_({ ok: false, err: "needs-review" });
+  if (st && (st.mail === "pending" || st.mail === "needs-review")) {        // reconcile: המשימה לבדיקה תמיד קיימת
+    tasksUpsert_(linkId, reg, [["mail-review", "מייל: לא ודאי אם נשלח – לבדוק בתיבת היוצאים ואז resolveDoc", 1, "now"]]);
+    return out_({ ok: false, err: "needs-review" });
+  }
 
-  // מסלול: paper רק כשטופס 101 של שנת המס לא נתמך (שנת התחלה או השנה הנוכחית שונה מ-F101_YEAR)
+  // מסלול: נקבע ב-claim ונשמר. paper רק כששנת המס אינה F101_YEAR.
   const mode = String(d.mode || "");
-  const taxYear = Math.max(Number(String(reg.start).slice(0, 4)) || 0, new Date().getFullYear());
-  const allowed = reg.mode === "change" ? ["change"] : reg.f101 === "print" ? (taxYear !== F101_YEAR ? ["paper"] : ["print"]) : ["michpal"];
-  if (allowed.indexOf(mode) < 0) return out_({ ok: false, err: "schema" });
+  if (st) { if (mode !== st.mode) return out_({ ok: false, err: "schema" }); }
+  else {
+    const taxYear = Math.max(Number(String(reg.start).slice(0, 4)) || 0, new Date().getFullYear());
+    const allowed = reg.mode === "change" ? ["change"] : reg.f101 === "print" ? (taxYear !== F101_YEAR ? ["paper"] : ["print"]) : ["michpal"];
+    if (allowed.indexOf(mode) < 0) return out_({ ok: false, err: "schema" });
+  }
   const files = Array.isArray(d.files) ? d.files : [];
   if (files.length !== MODE_FILES[mode]) return out_({ ok: false, err: "files" });
   const total = files.reduce(function (a, f) { return a + String(f.pdf || "").length; }, 0);
   if (total > MAX_TOTAL_B64) return out_({ ok: false, err: "size" });
-  if ((!st || st.mail !== "sent") && MailApp.getRemainingDailyQuota() < 2) return out_({ ok: false, err: "quota" }); // גם בניסיון חוזר
+  if ((!st || st.mail !== "sent") && MailApp.getRemainingDailyQuota() < 2) return out_({ ok: false, err: "quota" });
 
   const emp = reg.employee || "עובד", company = reg.company || "מעסיק", owner = reg.owner;
-  const blobs = [], shas = []; let decoded = 0;
-  files.forEach(function (f, i) {
+  const bytesList = [], shas = []; let decoded = 0;
+  files.forEach(function (f) {
     const bytes = Utilities.base64Decode(String(f.pdf || ""));
     decoded += bytes.length; if (decoded > MAX_DECODED) throw new Error("size");
-    pdfOk_(bytes);
-    const base = (clean_(f.fname) || ("מסמך - " + emp)).replace(/\.pdf$/i, "");
-    blobs.push(Utilities.newBlob(bytes, "application/pdf", base + " [" + docId + "-" + (i + 1) + "].pdf")); // שם יציב לאיתור
-    shas.push(hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes)));
+    pdfOk_(bytes); bytesList.push(bytes); shas.push(sha_(bytes));
   });
   if (st && st.sha.join() !== shas.join()) return out_({ ok: false, err: "retry-differs" });
 
-  if (!st) {                                   // claim אטומי: כתיבה אחת שתופסת את הקישור למסמך הזה
-    st = { id: docId, state: "received", sha: shas, mode: mode, files: [], at: new Date().toISOString(), complex: (d.complex101 || []).map(clean_).slice(0, 5) };
+  if (!st) {                                   // claim אטומי + manifest קנוני (שמות קבצים שרתיים, לא מהדף)
+    const kinds = DOC_KINDS[mode];
+    st = { id: docId, state: "received", sha: shas, mode: mode, files: [], at: new Date().toISOString(), complex: (d.complex101 || []).map(clean_).slice(0, 5),
+      manifest: kinds.map(function (k, i) { return { name: k + " - " + clean_(emp) + " [" + linkId + "-" + (i + 1) + "].pdf", kind: k, sha: shas[i] }; }) };
     reg.doc = st; reg.submits = (reg.submits || 0) + 1; save();
   }
-  // שלב 1: דרייב – לכל קובץ: איתור לפי שם יציב, ורק אם לא קיים – יצירה
+  // שלב 1: דרייב – לכל פריט ב-manifest: קובץ קיים מאומת לפי SHA של הבתים; אחרת יצירה. אי-התאמה = עצירה.
   const root = folder_(DriveApp.getRootFolder(), ROOT_FOLDER);
   const sub = tenantFolder_(root, reg.tenantId, company);
   privateOk_(root); privateOk_(sub);
-  for (let i = 0; i < blobs.length; i++) {
-    if (st.files[i]) continue;
-    const it = sub.getFilesByName(blobs[i].name);
-    const f = it.hasNext() ? it.next() : sub.createFile(blobs[i]);
-    f.setDescription("מזהה מסמך " + docId + " | גרסה " + clean_(d.agrVer) + " | SHA-256 " + shas[i] + " | תנאים " + reg.sha);
+  const blobs = st.manifest.map(function (m, i) { return Utilities.newBlob(bytesList[i], "application/pdf", m.name); });
+  for (let i = 0; i < st.manifest.length; i++) {
+    const m = st.manifest[i];
+    if (st.files[i]) {
+      let f = null; try { f = DriveApp.getFileById(st.files[i]); } catch (e) {}
+      if (!f || f.isTrashed() || sha_(f.getBlob().getBytes()) !== m.sha) { st.state = "file-problem"; save(); tasksUpsert_(linkId, reg, [["file-" + i, "קובץ בדרייב חסר או שונה: " + m.name, 1, "now"]]); return out_({ ok: false, err: "file-problem" }); }
+      continue;
+    }
+    const it = sub.getFilesByName(m.name), found = [];
+    while (it.hasNext()) found.push(it.next());
+    if (found.length > 1) { tasksUpsert_(linkId, reg, [["file-" + i, "כמה קבצים באותו שם: " + m.name, 1, "now"]]); return out_({ ok: false, err: "file-problem" }); }
+    let f;
+    if (found.length === 1) {
+      if (sha_(found[0].getBlob().getBytes()) !== m.sha) { tasksUpsert_(linkId, reg, [["file-" + i, "קובץ קיים בשם הצפוי עם תוכן שונה: " + m.name, 1, "now"]]); return out_({ ok: false, err: "file-problem" }); }
+      f = found[0];
+    } else f = sub.createFile(blobs[i]);
+    f.setDescription("קישור " + linkId + " | מזהה מסמך " + docId + " | " + m.kind + " | גרסה " + clean_(d.agrVer) + " | SHA-256 " + m.sha + " | תנאים " + reg.sha);
     st.files[i] = f.getId(); st.state = "saving"; save();
   }
-  // שלב 2: מייל. pending נכתב לפני; כל חריגה = לא ודאי → needs-review (לא נשלח שוב אוטומטית)
+  // שלב 2: מייל. pending לפני; כל חריגה = לא ודאי → needs-review + משימה.
   if (st.mail !== "sent") {
     const terms = JSON.parse(DriveApp.getFileById(reg.file).getBlob().getDataAsString());
     st.mail = "pending"; save();
     try {
-      MailApp.sendEmail({ to: owner, cc: OFFICE_EMAIL, subject: subject_(reg, emp, company), htmlBody: body_(d, reg, terms, emp, company, docId, shas, st), attachments: blobs, name: "משרד רו\"ח שניר טרמצ'י" });
+      MailApp.sendEmail({ to: owner, cc: OFFICE_EMAIL, subject: subject_(reg, emp, company), htmlBody: body_(d, reg, terms, emp, company, docId, shas, st, linkId), attachments: blobs, name: "משרד רו\"ח שניר טרמצ'י" });
     } catch (e) {
       st.mail = "needs-review"; st.mailErr = String(e && e.message || e).slice(0, 200); save();
-      tasksAdd_(docId, reg, ["מייל: לא ודאי אם נשלח – לבדוק בתיבת היוצאים ואז resolveDoc"]);
+      tasksUpsert_(linkId, reg, [["mail-review", "מייל: לא ודאי אם נשלח – לבדוק בתיבת היוצאים ואז resolveDoc", 1, "now"]]);
       return out_({ ok: false, err: "needs-review" });
     }
     st.mail = "sent"; st.mailedAt = new Date().toISOString(); save();
   }
-  // שלב 3: יומן (upsert) + משימות (פעם אחת)
-  log_(docId, [new Date(), docId, clean_(d.agrVer), mode, company, reg.tenantId, owner, emp, shas.join(" "), reg.sha, st.files.join(" "), linkId]);
-  if (!st.tasks) { tasksAdd_(docId, reg, tasks_(reg, mode, st)); st.tasks = true; save(); }
+  // שלב 3: יומן ומשימות – upsert לפי linkId (וסוג משימה). ניסיון חוזר לא משכפל ולא דורס סטטוס/אסמכתה.
+  log_(linkId, [new Date(), docId, clean_(d.agrVer), mode, company, reg.tenantId, owner, emp, shas.join(" "), reg.sha, st.files.join(" "), linkId]);
+  tasksUpsert_(linkId, reg, tasks_(reg, mode, st));
   st.state = "done"; reg.state = "used"; reg.usedAt = new Date().toISOString(); save();
   return out_({ ok: true });
 }
-/* החלטת המשרד על מסמך שנתקע: "sent" – וידאתי שיצא; "resend" – וידאתי שלא יצא, לשלוח שוב בניסיון הבא */
-function resolveDoc(docId, how) {
-  const props = PropertiesService.getScriptProperties(), all = props.getProperties();
-  const k = Object.keys(all).filter(function (x) { return /^L:/.test(x) && (JSON.parse(all[x]).doc || {}).id === docId; })[0];
-  if (!k) throw new Error("לא נמצא");
-  const reg = JSON.parse(all[k]);
-  if (reg.doc.mail !== "needs-review" && reg.doc.mail !== "pending") throw new Error("המסמך לא במצב בדיקה");
-  reg.doc.mail = how === "sent" ? "sent" : "retry"; reg.doc.resolvedAt = new Date().toISOString();
-  props.setProperty(k, JSON.stringify(reg));
-  return reg.doc.mail;
+/* הכרעת המשרד על מסמך תקוע. how: "sent" (וידאתי שיצא) | "resend" (וידאתי שלא יצא). נעילה מול submit, ותיעוד. */
+function resolveDoc(linkId, how) {
+  if (how !== "sent" && how !== "resend") throw new Error("how חייב להיות sent או resend");
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const props = PropertiesService.getScriptProperties(), reg = reg_(linkId);
+    if (!reg || !reg.doc) throw new Error("לא נמצא");
+    if (reg.doc.mail !== "needs-review" && reg.doc.mail !== "pending") throw new Error("המסמך לא במצב בדיקה");
+    reg.doc.mail = how === "sent" ? "sent" : "retry";
+    reg.doc.resolution = { how: how, by: Session.getEffectiveUser().getEmail(), at: new Date().toISOString() };
+    props.setProperty("L:" + linkId, JSON.stringify(reg));
+    tasksUpsert_(linkId, reg, [["mail-review", "מייל: הוכרע – " + (how === "sent" ? "נשלח" : "לשלוח שוב"), 0, "now"]]);
+    return reg.doc.mail;
+  } finally { lock.releaseLock(); }
 }
-function tasks_(reg, mode, st) { // [משימה, ימים עד יעד מתחילת העבודה]
+/* משימות: [סוג קבוע, תיאור, ימים, בסיס]. בסיס "start" = מתחילת העבודה (יעד חוקי – לא נדחה בגלל קליטה מאוחרת), "now" = ממועד האירוע. */
+function tasks_(reg, mode, st) {
   const t = [];
-  if (mode === "print") { t.push(["101: לקבל טופס חתום בכתב יד", 7]); t.push(["101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7]); }
-  if (mode === "paper") t.push(["101: לא הופק – למלא טופס רשמי ידני", 7]);
-  if ((st.complex || []).length) t.push(["101 מורכב: " + st.complex.join(", "), 3]);
-  if (reg.mode !== "change") { t.push(["פנסיה: לאמת ביטוח קודם, סוג מוצר ובסיס בקליטה במיכפל", 30]); if (!reg.fundKnown) t.push(["פנסיה: לקבל שם קופה ולעדכן", 30]); }
-  if (reg.sev833) t.push(["מכתב לקופה 8.33%: למסור ולקבל אסמכתה", 0]);
+  if (mode === "print") { t.push(["101-sign", "101: לקבל טופס חתום בכתב יד", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7, "start"]); }
+  if (mode === "paper") { t.push(["101-paper", "101: לא הופק – למלא טופס רשמי ידני", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס", 7, "start"]); }
+  if (mode === "michpal") t.push(["101-michpal", "101 בפורטל מיכפל: לוודא שהעובד מילא וחתם, ולבדוק לפני שימוש", 7, "start"]);
+  if ((st.complex || []).length) t.push(["101-complex", "101 מורכב: " + st.complex.join(", "), 3, "start"]);
+  if (reg.mode !== "change") {
+    t.push(["pension", "פנסיה: לאמת ביטוח קודם, סוג מוצר ובסיס – לפני חישוב השכר הראשון", "firstPay", "start"]);
+    if (!reg.fundKnown) t.push(["pension-fund", "פנסיה: לקבל שם קופה ולעדכן", "firstPay", "start"]);
+  }
+  if (reg.sev833) t.push(["fund-letter", "מכתב לקופה 8.33%: למסור לפני תחילת ההפקדות בשיעור המלא ולקבל אסמכתה", 0, "start"]);
   return t;
 }
-function tasksAdd_(docId, reg, list) {
-  const sh = sheet_("משימות", ["נוצר", "מזהה מסמך", "לקוח", "עובד", "משימה", "אחראי", "יעד", "סטטוס", "אסמכתה / הערה"]);
-  const base = /^\d{4}-\d{2}-\d{2}$/.test(reg.start) ? new Date(reg.start) : new Date();
+function dueOf_(reg, days, base) {
+  const start = validDate(reg.start) ? new Date(reg.start + "T00:00:00Z") : new Date();
+  if (days === "firstPay") return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1)); // לפני השכר הראשון (משולם עד ה-9 בחודש שאחרי)
+  return new Date((base === "now" ? Date.now() : start.getTime()) + days * 864e5);
+}
+function tasksUpsert_(linkId, reg, list) {
+  const sh = sheet_("משימות", ["מפתח", "נוצר", "קישור", "לקוח", "עובד", "משימה", "אחראי", "יעד", "באיחור בקליטה", "סטטוס", "אסמכתה / הערה"]);
+  const keys = sh.getDataRange().getValues().map(function (r) { return String(r[0]); });
   list.forEach(function (x) {
-    const task = Array.isArray(x) ? x[0] : x, days = Array.isArray(x) ? x[1] : 1;
-    const due = new Date(Math.max(base.getTime(), Date.now()) + days * 864e5);
-    sh.appendRow([new Date(), docId, reg.tenantId, reg.employee, task, "המשרד", Utilities.formatDate(due, "Asia/Jerusalem", "dd/MM/yyyy"), "פתוח", ""]);
+    const key = reg.tenantId + "|" + linkId + "|" + x[0], due = dueOf_(reg, x[2], x[3]);
+    const row = [key, new Date(), linkId, reg.tenantId, reg.employee, x[1], "המשרד", Utilities.formatDate(due, "Asia/Jerusalem", "dd/MM/yyyy"), due.getTime() < Date.now() ? "כן" : "", "פתוח", ""];
+    const at = keys.indexOf(key);
+    if (at < 0) { sh.appendRow(row); keys.push(key); return; }
+    // קיים: מעדכנים רק את התיאור והיעד; סטטוס ואסמכתה של המשרד לא נדרסים
+    const cur = sh.getDataRange().getValues()[at];
+    row[1] = cur[1]; row[9] = cur[9]; row[10] = cur[10];
+    sh.getRange(at + 1, 1, 1, row.length).setValues([row]);
   });
 }
+function sha_(bytes) { return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes)); }
 function pdfOk_(bytes) {
   if (!bytes.length || bytes.length > MAX_BYTES) throw new Error("size");
   const head = String.fromCharCode.apply(null, bytes.slice(0, 5).map(function (b) { return b & 255; }));
@@ -317,7 +345,7 @@ function pdfOk_(bytes) {
 }
 function latin_(bytes) { const parts = []; for (let i = 0; i < bytes.length; i += 8192) parts.push(String.fromCharCode.apply(null, bytes.slice(i, i + 8192).map(function (b) { return b & 255; }))); return parts.join(""); }
 function subject_(reg, emp, company) { return (reg.mode === "change" ? "הודעה על שינוי תנאי עבודה – " : "מסמכי עובד – ") + emp + " – " + company; }
-function body_(d, reg, t, emp, company, docId, shas, st) {
+function body_(d, reg, t, emp, company, docId, shas, st, linkId) {
   const row = function (k, v) { return v ? "<tr><td style='color:#555;padding:2px 8px'>" + esc_(k) + "</td><td style='padding:2px 8px'><b>" + esc_(v) + "</b></td></tr>" : ""; };
   return "<div dir='rtl' style='font-family:Arial'><p>שלום,</p>" +
     "<p>מצורפים המסמכים החתומים של <b>" + esc_(emp) + "</b> ב" + esc_(company) + ".</p>" +
@@ -334,9 +362,9 @@ function body_(d, reg, t, emp, company, docId, shas, st) {
     row("גמול גלובלי", t.globalOT ? t.globalOT + " שעות · " + t.globalOTAmount + " ₪" : "") + row("עמלות", t.commission) + row("נסיעות", t.travel) +
     row("קרן השתלמות", t.hishEr ? "מעסיק " + t.hishEr + "% · עובד " + (t.hishEmp || "") + "%" : "") + row("תנאים נוספים", t.extras) +
     "</table><p style='font-size:12px;color:#555'>הטבלה מציגה את התנאים כפי שנשמרו בשרת. ה-PDF נוצר בטלפון של העובד; אם יש הבדל בין ה-PDF לטבלה – לא להשתמש במסמך ולפנות למשרד.</p>" +
-    "<p><b>משימות פתוחות:</b> " + esc_(tasks_(reg, st.mode, st).map(function (x) { return x[0]; }).join(" · ")) + "</p>" +
+    "<p><b>משימות פתוחות:</b> " + esc_(tasks_(reg, st.mode, st).map(function (x) { return x[1]; }).join(" · ")) + "</p>" +
     "<p>הקבצים נשמרו בדרייב של המשרד: " + esc_(ROOT_FOLDER + " / " + company) + "</p>" +
-    "<p style='color:#555;font-size:12px'>מזהה מסמך " + esc_(docId) + " · גרסה " + esc_(clean_(d.agrVer)) + "<br>טביעת התנאים (SHA-256): " + reg.sha + "<br>טביעות הקבצים: " + shas.join("<br>") + "</p>" +
+    "<p style='color:#555;font-size:12px'>קישור " + esc_(linkId) + " · מזהה מסמך " + esc_(docId) + " · גרסה " + esc_(clean_(d.agrVer)) + "<br>טביעת התנאים (SHA-256): " + reg.sha + "<br>טביעות הקבצים: " + shas.join("<br>") + "</p>" +
     (reg.mode === "change" ? "" : "<p>תזכורת: בתחילת כל שנת מס יש לבקש מהעובד טופס 101 מעודכן.</p>") +
     "<p>משרד רו\"ח שניר טרמצ'י</p></div>";
 }
@@ -355,9 +383,9 @@ function logBook_() {
   return ss;
 }
 function sheet_(name, head) { const ss = logBook_(); let sh = ss.getSheetByName(name); if (!sh) { sh = ss.insertSheet(name); sh.appendRow(head); } return sh; }
-function log_(docId, row) {
-  const sh = logBook_().getSheets()[0], ids = sh.getDataRange().getValues().map(function (r) { return String(r[1]); });
-  const at = ids.indexOf(docId);
+function log_(linkId, row) { // upsert לפי linkId (עמודה אחרונה) – ייחודי ושרתי
+  const sh = logBook_().getSheets()[0], ids = sh.getDataRange().getValues().map(function (r) { return String(r[11]); });
+  const at = ids.indexOf(linkId);
   if (at > 0) sh.getRange(at + 1, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
 }
 /* תיקייה לפי מזהה לקוח קבוע (F:<tenant> → מזהה תיקייה); שינוי שם העסק לא יוצר תיקייה חדשה */
@@ -386,7 +414,7 @@ function rate_(k, max) {
 }
 function canon_(o) {
   if (Array.isArray(o)) return "[" + o.map(canon_).join(",") + "]";
-  if (o && typeof o === "object") return "{" + Object.keys(o).sort().map(function (k) { return JSON.stringify(k) + ":" + canon_(o[k]); }).join(",") + "}";
+  if (o && typeof o === "object") return "{" + Object.keys(o).filter(function (k) { return o[k] !== undefined; }).sort().map(function (k) { return JSON.stringify(k) + ":" + canon_(o[k]); }).join(",") + "}";
   return JSON.stringify(o);
 }
 function hex_(bytes) { return bytes.map(function (b) { return ("0" + (b & 255).toString(16)).slice(-2); }).join(""); }

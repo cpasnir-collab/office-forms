@@ -1,14 +1,17 @@
 // בדיקות לסקריפט Apps Script (apps-script/Code.gs) עם הדמיה של שירותי גוגל. הרצה: node tests/gas_test.js
 const fs = require("fs"), vm = require("vm"), crypto = require("crypto"), path = require("path");
-const code = fs.readFileSync(path.join(__dirname, "..", "apps-script", "Code.gs"), "utf8");
+// השרת = rules.gs (עותק זהה של rules.js) + Code.gs – בדיוק כמו בפרויקט Apps Script
+const rulesSrc = fs.readFileSync(path.join(__dirname, "..", "rules.js"), "utf8");
+if (rulesSrc !== fs.readFileSync(path.join(__dirname, "..", "apps-script", "rules.gs"), "utf8")) { console.log("✗ apps-script/rules.gs שונה מ-rules.js"); process.exit(1); }
+const code = rulesSrc + "\n" + fs.readFileSync(path.join(__dirname, "..", "apps-script", "Code.gs"), "utf8");
 const sb = a => a.map(b => b > 127 ? b - 256 : b);
 const ME = "cpa.snir@gmail.com";
 
 function makeEnv(opts = {}) {
   const props = {}, cache = {}, mails = [], files = [], folders = {}, sheets = {};
   let pdfSaves = 0, fid = 0;
-  const mkFile = (name, folder, blob) => { const f = { id: "F" + files.length, name, blob, folder, desc: "", setDescription(d) { this.desc = d; }, getId() { return this.id; }, moveTo() {},
-    getBlob() { return { getDataAsString: () => typeof blob.bytes === "string" ? blob.bytes : Buffer.from(blob.bytes.map(b => b & 255)).toString("utf8") }; } }; files.push(f); return f; };
+  const mkFile = (name, folder, blob) => { const f = { id: "F" + files.length, name, blob, folder, desc: "", trashed: false, setDescription(d) { this.desc = d; }, getId() { return this.id; }, moveTo() {}, isTrashed() { return this.trashed; },
+    getBlob() { const b = this.blob; return { getBytes: () => b.bytes, getDataAsString: () => typeof b.bytes === "string" ? b.bytes : Buffer.from(b.bytes.map(x => x & 255)).toString("utf8") }; } }; files.push(f); return f; };
   const user = m => ({ getEmail: () => m });
   const mkFolder = name => folders[name] || (folders[name] = {
     name, id: "D" + (fid++), getId() { return this.id; },
@@ -18,7 +21,7 @@ function makeEnv(opts = {}) {
     getEditors: () => [user(ME)].concat(opts.editorIn && name.includes(opts.editorIn) ? [user("stranger@x.com")] : []),
     getViewers: () => [],
     createFile: b => { if (b.type === "application/pdf") { pdfSaves++; if (opts.failSaveAt === pdfSaves) throw new Error("drive-down"); } return mkFile(b.name, name, b); },
-    getFilesByName: n => { const f = files.find(x => x.folder === name && x.name === n); return { hasNext: () => !!f, next: () => f }; }
+    getFilesByName: n => { const l = files.filter(x => x.folder === name && x.name === n && !x.trashed); let i = 0; return { hasNext: () => i < l.length, next: () => l[i++] }; }
   });
   const root = mkFolder("root");
   const mkSheet = (name) => { const rows = []; const sh = { name, rows, appendRow: r => rows.push(r), protect: () => ({ setDescription() { return this; }, removeEditors() {}, getEditors: () => [], canDomainEdit: () => false }),
@@ -36,6 +39,7 @@ function makeEnv(opts = {}) {
       base64EncodeWebSafe: (s) => Buffer.from(s, "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_"),
       newBlob: (bytes, type, name) => ({ bytes, type, name }),
       computeDigest: (alg, data) => sb(Array.from(crypto.createHash("sha256").update(typeof data === "string" ? Buffer.from(data, "utf8") : Buffer.from(data.map(b => b & 255))).digest())),
+      formatDateX: null,
       computeHmacSha256Signature: (v, k) => sb(Array.from(crypto.createHmac("sha256", k).update(v).digest())),
       getUuid: () => crypto.randomUUID(), formatDate: (d) => d.toISOString().slice(0, 10),
       DigestAlgorithm: { SHA_256: "sha256" }, Charset: { UTF_8: "utf8" }
@@ -58,11 +62,14 @@ const pdf = pdfB("%PDF-1.4\n1 0 obj << /Type /Catalog /OpenAction [3 0 R /FitH n
 const pdf2 = pdfB("%PDF-1.4\n2 0 obj << /Type /Page >> endobj\n" + "y".repeat(200) + "\n%%EOF\n");
 const post = (env, o) => env.doPost({ postData: { contents: JSON.stringify(Object.assign({ app: "office-forms-v2" }, o)) } });
 const L1 = "0123456789abcdef0123456789abcdef", L2 = "fedcba9876543210fedcba9876543210";
-const terms = (id, owner, extra) => Object.assign({ v: 5, linkId: id, ownerEmail: owner, company: "טייפון", empName: "בדיקה", role: "עובד", manager: "נדב", signer: "נדב", harassContact: "נדב 0501234567", wage: "43", wageType: "hourly", weeklyHours: "40", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
+const WEEK = ["09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "", ""];
+const terms = (id, owner, extra) => Object.assign({ v: 5, linkId: id, ownerEmail: owner, company: "טייפון", address: "הרצל 1, חיפה", empName: "בדיקה", role: "עובד", manager: "נדב", signer: "נדב", harassContact: "נדב 0501234567",
+  wage: "43", wageType: "hourly", weeklyHours: "36.25", days: WEEK, pattern: "5", shortDay: "4", breakMin: "45", restDay: "שבת", sec14: true, sevPct: "6", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
 const OWN = "nadavlevvy@gmail.com";
 let pass = 0, fail = 0;
 const t = (name, cond) => { if (cond) { pass++; console.log("✓ " + name); } else { fail++; console.log("✗ " + name); } };
 const pdfCount = E => E._state.files.filter(f => f.blob && f.blob.type === "application/pdf").length;
+function vmSet(E, name, fn) { E[name] = fn; }
 function ready(opts, tm) { const E = makeEnv(opts); const tok = employer(E, OWN); const r = post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok, terms: terms(L1, OWN, tm) }); return { E, tok, sha: r.sha }; }
 const sub2 = (E, sha, docId, extra) => post(E, Object.assign({ action: "submit", linkId: L1, docId, termsHash: sha, mode: "print", agrVer: "3.4", files: [{ fname: "הסכם.pdf", pdf }, { fname: "101.pdf", pdf: pdf2 }] }, extra || {}));
 const mails = E => E._state.mails.filter(m => !/קישור מעסיק|אישור תבנית/.test(m.subject));
@@ -109,7 +116,9 @@ t("G-12: חתימה מזויפת על תבנית נדחית", post(E, { action: 
 t("R3-05: שינוי התבנית אחרי האישור – החתימה לא תקפה", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "מלצר", wage: "50", okTpl: Object.assign({}, ap.okTpl, { minWage: 40 }), okSig: ap.okSig }) }).err === "not-approved");
 t("R3-05: שכר נמוך מהמאושר בתבנית נדחה", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "מלצר", wage: "44", okTpl: ap.okTpl, okSig: ap.okSig }) }).err === "not-approved");
 t("R3-05: תפקיד אחר מהמאושר נדחה", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "טבח", wage: "50", okTpl: ap.okTpl, okSig: ap.okSig }) }).err === "not-approved");
-t("G-03/G-04: לילה שלא בתבנית – נדחה", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "מלצר", wage: "50", night: true, okTpl: ap.okTpl, okSig: ap.okSig }) }).err === "not-approved");
+const NIGHT = ["16:00-24:00", "16:00-24:00", "16:00-24:00", "16:00-24:00", "16:00-24:00", "", ""];
+t("R4-02: סידור לילה עם night=false (דף ששונה) – השרת מחשב מהשעות ודוחה", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "מלצר", wage: "50", days: NIGHT, night: false, okTpl: ap.okTpl, okSig: ap.okSig }) }).err === "not-approved");
+t("R4-02: הפסקה חסרה (0) בלי היתר בתבנית – השרת דוחה גם בלי דגל", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "מלצר", wage: "50", breakMin: "0", weeklyHours: "40", okTpl: ap.okTpl, okSig: ap.okSig }) }).err === "not-approved");
 t("R3-05: בתוך התבנית החתומה – מתקבל", post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN, { role: "מלצר", wage: "50", okTpl: ap.okTpl, okSig: ap.okSig }) }).ok === true);
 t("G-12: תבנית שפג תוקפה נדחית", post(E, { action: "register", linkId: L2, ownerEmail: OWN, tok: tk, terms: terms(L2, OWN, { role: "מלצר", wage: "50", okTpl: Object.assign({}, ap.okTpl, { exp: "2020-01-01" }), okSig: ap.okSig }) }).err === "not-approved");
 
@@ -121,7 +130,8 @@ t("R3-07: paper בשנה נתמכת (2026) נדחה", sub2(x.E, x.sha, "ABCDEF01
 t("G-32: PDF עם JavaScript נדחה", sub2(x.E, x.sha, "ABCDEF0123", { files: [{ fname: "a.pdf", pdf }, { fname: "b.pdf", pdf: pdfB("%PDF-1.4\n/JavaScript (x)\n%%EOF") }] }).err === "pdf-active-content");
 t("G-32: PDF קטוע נדחה", sub2(x.E, x.sha, "ABCDEF0123", { files: [{ fname: "a.pdf", pdf }, { fname: "b.pdf", pdf: pdfB("%PDF-1.4\nקטוע") }] }).err === "not-pdf");
 t("G-33: גודל מצטבר נבדק לפני פענוח", /size|too-big/.test(sub2(x.E, x.sha, "ABCDEF0123", { files: [{ fname: "a.pdf", pdf: "A".repeat(33 * 1024 * 1024) }, { fname: "b.pdf", pdf }] }).err));
-t("R3-07: paper כשתחילת העבודה ב-2027 – מתקבל, print נדחה", (() => { const y = ready({}, { start: "2027-01-05" }); return sub2(y.E, y.sha, "ABCDE22222").err === "schema" && sub2(y.E, y.sha, "ABCDE22222", { mode: "paper", files: [{ fname: "a.pdf", pdf }] }).ok === true; })());
+t("R3-07: כששנת המס אינה 2026 – paper מתקבל, print נדחה", (() => { const y = ready(); const g = regOf(y.E); g.start = "2027-01-05"; y.E._state.props["L:" + L1] = JSON.stringify(g); return sub2(y.E, y.sha, "ABCDE22222").err === "schema" && sub2(y.E, y.sha, "ABCDE22222", { mode: "paper", files: [{ fname: "a.pdf", pdf }] }).ok === true; })());
+t("R4-07: retry שחוצה שנה – המסלול שנקבע ב-claim נשמר (print), בלי תקיעה", (() => { const y = ready({ failSaveAt: 2 }); sub2(y.E, y.sha, "ABCDE33333"); const g = regOf(y.E); g.start = "2027-01-05"; y.E._state.props["L:" + L1] = JSON.stringify(g); return sub2(y.E, y.sha, "ABCDE33333").ok === true && sub2(y.E, y.sha, "ABCDE33333", { mode: "paper", files: [{ fname: "a.pdf", pdf }] }).dup === true; })());
 t("G-33: מכסת מייל נגמרה – לא שומרים כלום", (() => { const y = ready({ quota: 1 }); return sub2(y.E, y.sha, "ABCDEF0123").err === "quota" && pdfCount(y.E) === 0; })());
 t("G-37: תיקייה משותפת בקישור – לא שומרים", (() => { const y = ready({ sharedFolder: "C-100" }); return sub2(y.E, y.sha, "ABCDEF0123").ok === false && mails(y.E).length === 0; })());
 t("R3-08: משתמש נוסף עם הרשאה לתיקיית הלקוח – לא שומרים", (() => { const y = ready({ editorIn: "C-100" }); return sub2(y.E, y.sha, "ABCDEF0123").err === "folder-has-users" && mails(y.E).length === 0; })());
@@ -132,10 +142,11 @@ const m0 = mails(x.E)[0];
 t("הנמען לפי הרישום בשרת, העתק למשרד; לא למייל שהקלידו", mails(x.E).length === 1 && m0.to === OWN && m0.cc === ME && !x.E._state.mails.some(m => m.to === "emp@example.com"));
 t("G-29: המייל כולל את התנאים מהשרת וטביעת התנאים", m0.htmlBody.includes("43 ₪ לשעה") && m0.htmlBody.includes("נדב") && m0.htmlBody.includes(x.sha));
 const tasks = x.E._state.sheets["משימות"].rows;
-t("G-09/11/19: גיליון משימות – אחראי, יעד וסטטוס 'פתוח' לכל משימה", tasks.length >= 4 && tasks.slice(1).every(r => r[5] === "המשרד" && /\d{4}-\d{2}-\d{2}/.test(r[6]) && r[7] === "פתוח"));
-t("G-16: 101 להדפסה תמיד מקבל משימת 'בדיקת משרד לפני שימוש' – לא תלוי בדגל מהדף", tasks.some(r => /בדיקת משרד לפני שימוש/.test(r[4])));
-t("G-13: קופה לא ידועה – משימה לעדכן", tasks.some(r => /לקבל שם קופה/.test(r[4])));
-t("שני הקבצים נשמרו בתיקיית הלקוח בשם יציב", pdfCount(x.E) === 2 && x.E._state.files.filter(f => /\[ABCDEF0123-[12]\]\.pdf$/.test(f.name)).length === 2);
+t("G-09/11/19: גיליון משימות – מפתח יציב, אחראי, יעד וסטטוס 'פתוח'", tasks.length >= 4 && tasks.slice(1).every(r => r[0].includes("|" + L1 + "|") && r[6] === "המשרד" && /\d{4}-\d{2}-\d{2}/.test(r[7]) && r[9] === "פתוח"));
+t("G-16: 101 להדפסה תמיד מקבל משימת 'בדיקת משרד לפני שימוש' – לא תלוי בדגל מהדף", tasks.some(r => /בדיקת משרד לפני שימוש/.test(r[5])));
+t("G-13: קופה לא ידועה – משימה לעדכן", tasks.some(r => /לקבל שם קופה/.test(r[5])));
+t("G-11: משימת פנסיה – יעד לפני השכר הראשון (1.1.2027 לעובד שמתחיל 1.12.2026)", tasks.some(r => r[0].endsWith("|pension") && r[7] === "2027-01-01"));
+t("G-39: שני הקבצים נשמרו בשם שרתי לפי ה-manifest (linkId), לא לפי שם מהדף", pdfCount(x.E) === 2 && x.E._state.files.filter(f => f.name.includes("[" + L1 + "-") && !f.name.includes("101.pdf")).length === 2);
 t("G-31: אותו מסמך שוב – כפילות, בלי מייל", sub2(x.E, x.sha, "ABCDEF0123").dup && mails(x.E).length === 1);
 t("G-31: קישור שכבר נשלח – מסמך חדש נדחה", sub2(x.E, x.sha, "1111122222").err === "used");
 t("G-40: קישור משומש לא נפתח שוב", post(x.E, { action: "get", linkId: L1 }).err === "used");
@@ -164,12 +175,12 @@ x = ready({ throwAfterMail: 1 });
 r = sub2(x.E, x.sha, "AAAAA11111");
 t("R3-04: המייל יצא ואז חריגה – needs-review", r.err === "needs-review" && mails(x.E).length === 1 && regOf(x.E).doc.mail === "needs-review");
 t("R3-04: ניסיון חוזר – לא שולחים שוב", sub2(x.E, x.sha, "AAAAA11111").err === "needs-review" && mails(x.E).length === 1);
-t("R3-04: נפתחה משימה לבדיקה ידנית של המייל", x.E._state.sheets["משימות"].rows.some(r => /לא ודאי אם נשלח/.test(r[4])));
-x.E.resolveDoc("AAAAA11111", "sent");
+t("R3-04: נפתחה משימה לבדיקה ידנית של המייל", x.E._state.sheets["משימות"].rows.some(r => /לא ודאי אם נשלח/.test(r[5])));
+x.E.resolveDoc(L1, "sent");
 t("R3-04: המשרד אישר 'נשלח' – השלמה בלי מייל נוסף", sub2(x.E, x.sha, "AAAAA11111").ok === true && mails(x.E).length === 1);
 x = ready({ failMail: 1 });
 t("G-39: כשל לפני מסירה – גם הוא needs-review (לא מניחים)", sub2(x.E, x.sha, "AAAAA22222").err === "needs-review" && mails(x.E).length === 0);
-x.E.resolveDoc("AAAAA22222", "resend");
+x.E.resolveDoc(L1, "resend");
 t("G-39: המשרד אישר 'לשלוח שוב' – נשלח פעם אחת", sub2(x.E, x.sha, "AAAAA22222").ok === true && mails(x.E).length === 1);
 x = ready(); x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.mail === "sent";
 t("G-39: נפילה בכתיבת 'sent' – נשאר pending", sub2(x.E, x.sha, "AAAAA33333").ok === false && regOf(x.E).doc.mail === "pending");
@@ -177,7 +188,7 @@ t("G-39: ניסיון חוזר – needs-review, בלי מייל שני", sub2(x
 x = ready(); x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.state === "done";
 sub2(x.E, x.sha, "AAAAA44444");
 t("G-39: נפילה אחרי יומן – ניסיון חוזר לא משכפל יומן/משימות", sub2(x.E, x.sha, "AAAAA44444").ok === true && x.E._state.sheets["log"].rows.length === 2 && mails(x.E).length === 1 &&
-  x.E._state.sheets["משימות"].rows.filter(r => /101: לקבל טופס חתום/.test(r[4])).length === 1);
+  x.E._state.sheets["משימות"].rows.filter(r => /101: לקבל טופס חתום/.test(r[5])).length === 1);
 x = ready({ failSaveAt: 2 }); sub2(x.E, x.sha, "AAAAA55555"); x.E._state.opts.quota = 0;
 t("G-33: מכסה נבדקת גם בניסיון חוזר לפני מייל", sub2(x.E, x.sha, "AAAAA55555").err === "quota" && mails(x.E).length === 0);
 
@@ -198,6 +209,71 @@ t("G-37: דוח רשומות ישנות לא מוחק", (() => { const n = Objec
 E = makeEnv(); let blocked = false;
 for (let i = 0; i < 130; i++) { if (post(E, { action: "get", linkId: L1 }).err === "rate") blocked = true; }
 t("הגבלת קצב עוצרת הצפה", blocked);
+
+// ---------- סבב 4 ----------
+E = makeEnv(); tk = employer(E, OWN);
+const bad = (extra, code) => { const q = post(E, { action: "register", linkId: L3x(), ownerEmail: OWN, tok: tk, terms: terms(lastL, OWN, extra) }); return q.err === code ? q : null; };
+let lastL = ""; let nL = 0; function L3x() { nL++; lastL = (nL.toString(16).padStart(2, "0")).repeat(16); return lastL; }
+t("R4-01: שכר שעתי 1 – השרת דוחה (כללי שכר מינימום משותפים)", !!bad({ wage: "1" }, "rules"));
+t("R4-01: היקף 100 – השרת דוחה", !!bad({ weeklyHours: "100" }, "rules"));
+t("R4-01: תאריך שלא קיים (31.2) – השרת דוחה", !!bad({ start: "2026-02-31" }, "schema:date"));
+t("R4-01: חודשי מתחת למינימום היחסי – השרת דוחה, עם פירוט", (() => { const q = bad({ wageType: "monthly", wage: "3000" }, "rules"); return q && q.detail.some(x => /נמוך משכר המינימום היחסי/.test(x)); })());
+t("R4-01: מינימום לפי מועד – 35 ₪ במרץ 2026 תקין, במאי 2026 נדחה", !bad({ wage: "35", start: "2026-03-01" }, "rules") && !!bad({ wage: "35", start: "2026-05-01" }, "rules"));
+t("R4-01: סידור שלא תואם להיקף – השרת דוחה", !!bad({ weeklyHours: "20" }, "rules"));
+t("R4-01: בלי ימים ושעות – השרת דוחה", !!bad({ days: ["", "", "", "", "", "", ""] }, "rules"));
+
+// R4-03: יעד לפי תחילת העבודה, לא לפי מועד הקליטה
+x = ready({}, { start: "2025-11-02" });
+let qq = sub2(x.E, x.sha, "AAAAA99999");
+const tk3 = x.E._state.sheets["משימות"].rows;
+t("R4-03: קליטה מאוחרת – יעד 101 נשאר תחילה+7 (2025-11-09) ומסומן באיחור", qq.ok && tk3.some(r => r[0].endsWith("|101-sign") && r[7] === "2025-11-09" && r[8] === "כן"));
+
+// R4-04: כשל אחרי appendRow ראשון / אחרון; לא מוחק אסמכתה
+x = ready(); let appends = 0;
+const shOrig = () => x.E._state.sheets["משימות"];
+x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.state === "done";
+sub2(x.E, x.sha, "BBBBB99999");
+const before4 = shOrig().rows.length;
+shOrig().rows[1][10] = "אסמכתה 123"; shOrig().rows[1][9] = "סגור";
+t("R4-04: אחרי כשל לפני save – ניסיון חוזר לא משכפל משימות ולא דורס סטטוס/אסמכתה", sub2(x.E, x.sha, "BBBBB99999").ok === true && shOrig().rows.length === before4 && shOrig().rows[1][10] === "אסמכתה 123" && shOrig().rows[1][9] === "סגור");
+x = ready(); sub2(x.E, x.sha, "CCCCC99999");
+const sh4 = x.E._state.sheets["משימות"]; const n4 = sh4.rows.length;
+t("R4-04: upsert לפי מפתח – הפעלה חוזרת של הוספת משימות לא מוסיפה שורות", (x.E.tasksUpsert_(L1, regOf(x.E), x.E.tasks_(regOf(x.E), "print", regOf(x.E).doc)), sh4.rows.length === n4));
+x = ready(); const sh6 = () => x.E._state.sheets["משימות"];
+x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.state === "done";
+sub2(x.E, x.sha, "CCCCC88888"); const mid = sh6().rows.length; sh6().rows.splice(3);  // מדמה נפילה אחרי השורה הראשונה במשימות
+t("R4-04: כשל אחרי appendRow ראשון – ניסיון חוזר משלים בלי כפילות", sub2(x.E, x.sha, "CCCCC88888").ok === true && sh6().rows.length === mid && new Set(sh6().rows.map(r => r[0])).size === mid);
+
+// R4-05: קבצים לפי manifest ו-SHA
+x = ready(); x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.files.length === 1;
+sub2(x.E, x.sha, "EEEEE99999");
+t("R4-05: ניסיון חוזר עם fname אחר ו-SHA זהה – לא נוצר קובץ נוסף", sub2(x.E, x.sha, "EEEEE99999", { files: [{ fname: "שם אחר.pdf", pdf }, { fname: "עוד שם.pdf", pdf: pdf2 }] }).ok === true && pdfCount(x.E) === 2);
+x = ready(); x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.files.length === 1;
+sub2(x.E, x.sha, "FFFFF99999");
+const f0 = x.E._state.files.find(f => f.blob && f.blob.type === "application/pdf"); f0.blob = { bytes: Array.from(Buffer.from("%PDF-1.4 אחר %%EOF")), type: "application/pdf", name: f0.name };
+t("R4-05: קובץ בשם הצפוי עם תוכן שונה – נעצר, לא דורס, משימה למשרד", sub2(x.E, x.sha, "FFFFF99999").err === "file-problem" && pdfCount(x.E) === 1 && x.E._state.sheets["משימות"].rows.some(r => /תוכן שונה/.test(r[5])));
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABABA99999"); x.E.resolveDoc(L1, "resend");
+x.E._state.files.find(f => f.blob && f.blob.type === "application/pdf").trashed = true;
+t("R4-05: קובץ שנמחק אחרי שמירת המזהה – מזוהה, לא נשלח מייל", sub2(x.E, x.sha, "ABABA99999").err === "file-problem" && mails(x.E).length === 0);
+
+// R4-06: מפתח = linkId; docId זהה בשני קישורים לא מתערבב
+E = makeEnv(); tk = employer(E, OWN);
+const sA = post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN) }).sha, sB = post(E, { action: "register", linkId: L2, ownerEmail: OWN, tok: tk, terms: terms(L2, OWN, { empName: "שני" }) }).sha;
+post(E, { action: "submit", linkId: L1, docId: "1234512345", termsHash: sA, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
+post(E, { action: "submit", linkId: L2, docId: "1234512345", termsHash: sB, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
+t("R4-06: אותו docId בשני קישורים – שתי שורות יומן נפרדות ומשימות נפרדות", E._state.sheets["log"].rows.length === 3 && E._state.sheets["משימות"].rows.filter(r => r[0].endsWith("|101-sign")).length === 2);
+t("R4-06: resolveDoc עם ערך לא מוכר – נדחה", (() => { try { E.resolveDoc(L1, "yes"); return false; } catch (e) { return /sent או resend/.test(e.message); } })());
+t("R4-06: resolveDoc מתעד מי ומתי", (() => { const y = ready({ failMail: 1 }); sub2(y.E, y.sha, "BCBCB99999"); y.E.resolveDoc(L1, "sent"); const r0 = regOf(y.E).doc.resolution; return r0.how === "sent" && r0.by === ME && !!r0.at; })());
+
+// R4-08: נפילה אחרי needs-review ולפני משימה – reconcile יוצר משימה אחת
+x = ready({ failMail: 1 });
+const realUpsert = x.E.tasksUpsert_;
+vmSet(x.E, "tasksUpsert_", function () { throw new Error("sheet-down"); });
+sub2(x.E, x.sha, "CDCDC99999");
+vmSet(x.E, "tasksUpsert_", realUpsert);
+const noTask = !(x.E._state.sheets["משימות"] || { rows: [] }).rows.some(r => /mail-review/.test(r[0]));
+sub2(x.E, x.sha, "CDCDC99999"); sub2(x.E, x.sha, "CDCDC99999");
+t("R4-08: אחרי כשל ביצירת משימה – ניסיון חוזר יוצר משימת בדיקה אחת בלבד", noTask && x.E._state.sheets["משימות"].rows.filter(r => /\|mail-review$/.test(r[0])).length === 1 && mails(x.E).length === 0);
 
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

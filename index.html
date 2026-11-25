@@ -138,6 +138,7 @@
 <div style="position:fixed;left:-10000px;top:0"><div id="pdf"></div></div>
 
 <script src="vendor/html2pdf.bundle.min.js" defer></script>
+<script src="rules.js"></script>
 <script>
 "use strict";
 /* ================= helpers ================= */
@@ -148,7 +149,6 @@ const CPA_EMAIL = "cpa.snir@gmail.com";
 const CPA_NAME = "משרד רו\"ח שניר טרמצ'י";
 // כתובת ה-Web App של Google Apps Script (apps-script/Code.gs). ריק = שליחה דרך הטלפון.
 const SEND_URL = "";
-const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
 const store = {
   get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
@@ -173,7 +173,6 @@ async function unpackK(s){
   const txt = await new Response(new Blob([fromB64url(s)]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
   return JSON.parse(txt);
 }
-function fmtDate(d){ if(!d) return ""; const [y,m,dd] = d.split("-"); return dd && m && y ? `${dd}/${m}/${y}` : d; }
 function nowStamp(){ const d = new Date(); const o = {timeZone:"Asia/Jerusalem"}; return d.toLocaleDateString("en-GB",o) + " בשעה " + d.toLocaleTimeString("en-GB",Object.assign({hour:"2-digit",minute:"2-digit"},o)); }
 function todayStr(){ return new Date().toLocaleDateString("he-IL",{timeZone:"Asia/Jerusalem",day:"2-digit",month:"2-digit",year:"numeric"}).replace(/\./g,"/"); }
 function validId(id){
@@ -398,159 +397,8 @@ function termsGrid(t){
 
 /* ================= employer setup ================= */
 let PRESET = null;
-/* שכר מינימום לבגיר לפי תאריך תחולה – טבלת ביטוח לאומי, בסיס 182 שעות. [מ-, חודשי, שעתי] */
-const MINW = [["2023-04-01",5571.75,30.61],["2024-04-01",5880.02,32.30],["2025-04-01",6247.67,34.32],["2026-04-01",6443.85,35.40]];
-const MINW_SRC = "ביטוח לאומי – שכר מינימום (btl.gov.il)";
-const MINW_KNOWN_UNTIL = "2027-03-31"; // אחרי התאריך הזה – חסימה עד עדכון הטבלה
-function minWageAt(date){ let r = null; MINW.forEach(x => { if(date >= x[0]) r = x; }); return r ? {from:r[0], m:r[1], h:r[2]} : null; }
-const FULL_WEEK = 42, MAX_WEEK_OT = 16, F101_YEAR = 2026;
-const INDUSTRIES = [["general","כללי – אין צו הרחבה ענפי ידוע"],["construction","בנייה ותשתיות"],["cleaning","ניקיון"],["security","שמירה ואבטחה"],["transport","הובלה ומשאיות"],["food","מסעדנות וקייטרינג"],["hotels","מלונאות"],["events","אולמות וגני אירועים"],["staffing","קבלן כוח אדם / השמה"],["care","סיעוד ומטפלים"],["garage","מוסכים ורכב"],["retail","מסחר קמעונאי"],["agri","חקלאות"],["industry","תעשייה"],["other","אחר"]];
-/* משמרת: "09:00-17:00" ואפשר הפסקה ליום: "09:00-17:00/30". הכול בדקות שלמות.
-   מחזיר null (ריק), {bad}, {over} (חוצה חצות) או {st,en,g,brk} */
-function parseShift(v){
-  const s = String(v||"").trim(); if(!s) return null;
-  const mm = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*-\s*(\d{1,2})(?::?(\d{2}))?(?:\s*\/\s*(\d{1,3}))?$/); if(!mm) return {bad:true};
-  const m1 = +(mm[2]||0), m2 = +(mm[4]||0);
-  if(+mm[1] > 24 || +mm[3] > 24 || m1 > 59 || m2 > 59) return {bad:true};
-  const st = +mm[1]*60 + m1, en = +mm[3]*60 + m2;
-  if(en <= st) return {over:true, st, en};
-  return {st, en, g:en-st, brk: mm[5] === undefined ? null : +mm[5]};
-}
-function parseDay(v){ const s = parseShift(v); return s && s.g ? s.g/60 : 0; }
-function nightMin(s){ return s && s.g ? Math.max(0, Math.min(s.en,1440) - Math.max(s.st,1320)) + Math.max(0, Math.min(s.en,360) - s.st) : 0; }
-/* ניתוח שבוע העבודה לפי חוק שעות עבודה ומנוחה וצו ההרחבה לקיצור שבוע העבודה (2018):
-   5 ימים – 4 ימים עד 8:36 ויום מקוצר אחד עד 7:36; 6 ימים – עד 8:00, וערב המנוחה עד 7:00; יום שיש בו שעתיים בלילה – עד 7:00.
-   נוספות יומיות קודם, ואחר כך שבועיות על יתרת השעות הרגילות מעל 42 – בלי כפל. */
-function hoursPlan(t){
-  const sh = DAYS.map((d,i) => parseShift((t.days||[])[i]));
-  const workIdx = sh.map((s,i) => s && s.g ? i : -1).filter(i => i >= 0);
-  const pattern = t.pattern || (workIdx.length >= 6 ? "6" : "5");
-  const restIdx = {"ראשון":0,"שישי":5,"שבת":6}[t.restDay||"שבת"];
-  const eve = (restIdx + 6) % 7;
-  const shortDay = pattern === "5" ? (t.shortDay !== undefined && t.shortDay !== "" ? Number(t.shortDay) : workIdx[workIdx.length-1]) : -1;
-  const brkDef = t.breakMin === undefined || t.breakMin === "" ? 0 : Number(t.breakMin);
-  const rows = sh.map((s,i) => {
-    if(!s || !s.g) return null;
-    const night = nightMin(s) >= 120;
-    const brk = s.brk !== null ? s.brk : (s.g >= 360 ? brkDef : 0);
-    const net = t.breakPaid ? s.g : s.g - brk;
-    const norm = night ? 420 : pattern === "6" ? (i === eve ? 420 : 480) : (i === shortDay ? 456 : 516);
-    const dOT = Math.max(0, net - norm);
-    return {i, g:s.g, brk, net, norm, dOT, reg:net - dOT, night, st:s.st, en:s.en};
-  });
-  const real = rows.filter(Boolean);
-  const net = real.reduce((a,r) => a + r.net, 0), reg0 = real.reduce((a,r) => a + r.reg, 0), dOT = real.reduce((a,r) => a + r.dOT, 0);
-  const wOT = Math.max(0, reg0 - FULL_WEEK*60);
-  const h = x => Math.round(x)/60;
-  return {sh, rows, pattern, restIdx, shortDay, brkDef, workDays:real.length, night:real.some(r => r.night),
-    net:h(net), regular:h(reg0 - wOT), dailyOT:h(dOT), weeklyOT:h(wOT), ot:h(dOT + wOT), otMin:dOT + wOT};
-}
-function restGap(plan){ // מנוחה רצופה סביב יום המנוחה, בשעות (36 לפחות – סעיף 7)
-  const p = plan.sh[(plan.restIdx+6)%7], n = plan.sh[(plan.restIdx+1)%7];
-  const end = p && p.g ? p.en : 0, start = n && n.g ? n.st : 1440;
-  return ((1440 - end) + 1440 + start)/60;
-}
-function dayGaps(plan){ // הפסקה בין יום עבודה למשנהו (8 שעות לפחות – סעיף 21), כולל מעבר שבוע
-  const out = [];
-  plan.sh.forEach((s,i) => { const n = plan.sh[(i+1)%7]; if(s && s.g && n && n.g) out.push({i, j:(i+1)%7, gap:((1440 - s.en) + n.st)/60}); });
-  return out;
-}
-const fmtH = h => (Math.round(h*100)/100).toString();
-/* אישור משרד = תבנית חתומה (okTpl + okSig) שהשרת מאמת. בדף – רק בדיקה מקדימה לנוחות; האימות האמיתי ב-register_. */
-const TPL_KEYS = ["role","wageType","minWage","empPct","erPct","sevPct","collective","breakPermit","night"];
+/* בדף: יש אישור חתום בקישור (השרת מאמת). */
 function approved(t){ return !!(SEND_URL && t.okSig && t.okTpl && typeof t.okTpl === "object"); }
-function tplMiss(t){ const p = t.okTpl || {}, out = [];
-  if(p.role && p.role !== t.role) out.push("תפקיד"); if(p.wageType && p.wageType !== t.wageType) out.push("סוג שכר");
-  if(p.minWage && Number(t.wage) < Number(p.minWage)) out.push("שכר נמוך מהמאושר");
-  ["empPct","erPct","sevPct"].forEach(k => { if(p[k] && Number(p[k]) !== Number(t[k] || {empPct:6,erPct:6.5,sevPct:6}[k])) out.push("שיעורי פנסיה"); });
-  if((p.collective||"") !== (t.collective||"")) out.push("הסכם קיבוצי"); if(t.breakPermit && !p.breakPermit) out.push("היתר הפסקות"); if(t.night && !p.night) out.push("עבודת לילה");
-  return [...new Set(out)]; }
-const numOk = v => v !== "" && v !== undefined && isFinite(Number(v)) && Number(v) > 0;
-function checkTerms(t){
-  const err = [], warn = [];
-  const plan = hoursPlan(t);
-  plan.sh.forEach((s,i) => {
-    if(s && s.bad) err.push(`ביום ${DAYS[i]} השעות לא בפורמט "09:00-17:00" (אפשר להוסיף הפסקה ליום: "09:00-17:00/30").`);
-    if(s && s.over) err.push(`ביום ${DAYS[i]} המשמרת חוצה את חצות. משמרות שחוצות יום לא נתמכות בכלי – יש לפנות למשרד.`);
-    if(s && s.g && s.brk !== null && s.brk >= s.g) err.push(`ביום ${DAYS[i]} ההפסקה ארוכה מהמשמרת.`);
-  });
-  if(plan.pattern === "5" && plan.workDays > 5) err.push(`נבחר שבוע של 5 ימים, אבל רשומים ${plan.workDays} ימי עבודה.`);
-  if(plan.pattern === "6" && plan.workDays && plan.workDays < 6) warn.push(`נבחר שבוע של 6 ימים, ורשומים ${plan.workDays} ימי עבודה – ודא/י שזו המתכונת הנכונה.`);
-  if(plan.pattern === "5" && plan.workDays && !plan.sh[plan.shortDay]?.g) err.push("היום המקוצר שנבחר אינו יום עבודה.");
-  if(plan.sh[plan.restIdx] && plan.sh[plan.restIdx].g) err.push(`ביום המנוחה השבועי (${t.restDay||"שבת"}) רשומות שעות עבודה. עבודה במנוחה מחייבת היתר – יש לפנות למשרד.`);
-  else if(plan.workDays && restGap(plan) < 36) err.push(`המנוחה הרצופה סביב יום ה${t.restDay||"שבת"} קצרה מ-36 שעות (${fmtH(restGap(plan))} שעות) – סעיף 7 לחוק.`);
-  dayGaps(plan).forEach(g => { if(g.gap < 8) err.push(`בין יום ${DAYS[g.i]} ליום ${DAYS[g.j]} יש רק ${fmtH(g.gap)} שעות מנוחה – לפי סעיף 21 לחוק נדרשות 8 שעות לפחות.`); });
-  plan.rows.forEach(r => { if(r && r.net > 720) err.push(`ביום ${DAYS[r.i]} יוצאות ${fmtH(r.net/60)} שעות עבודה – יותר מ-12 שעות ביום, כולל שעות נוספות.`); });
-  if(plan.otMin > MAX_WEEK_OT*60) err.push(`לפי המשמרות יש ${fmtH(plan.ot)} שעות נוספות בשבוע – מעל ${MAX_WEEK_OT}. זה חורג מההיתר הכללי ומחייב בדיקת משרד.`);
-  // הפסקות – סעיף 20. גם כשהעובד נשאר במקום (ההפסקה משולמת) – ההפסקה עצמה נדרשת.
-  plan.rows.forEach(r => { if(r && r.g >= 360 && r.brk < 45 && !t.breakPermit) err.push(`ביום ${DAYS[r.i]} (${fmtH(r.g/60)} שעות) מוגדרת הפסקה של ${r.brk} דקות. לפי סעיף 20 לחוק נדרשת הפסקה של 45 דקות לפחות, מהן 30 רצופות${t.breakPaid ? " – גם כשהעובד נדרש להישאר במקום (אז היא משולמת)" : ""}. אם חל היתר – סמן/י אותו; זה מחייב אישור משרד.`); });
-  if(t.breakPermit && !approved(t)) err.push("סומן היתר להפסקות (עבודה שאינה עבודת כפיים). חריגה מחייבת אישור משרד חתום בקישור המעסיק.");
-  if(plan.night && !approved(t)) err.push("יש משמרת עם שעתיים לפחות בין 22:00 ל-06:00. יום כזה הוא עד 7 שעות רגילות, וחלות מגבלות עבודת לילה (סעיף 22) – מחייב אישור משרד חתום.");
-  else if(plan.night) warn.push("עבודת לילה: יום של עד 7 שעות רגילות. המשרד אישר את התבנית.");
-  if(plan.ot > 0) warn.push(`לפי המשמרות: ${fmtH(plan.regular)} שעות רגילות ו-${fmtH(plan.ot)} שעות נוספות בשבוע (${fmtH(plan.dailyOT)} יומיות, ${fmtH(plan.weeklyOT)} שבועיות). השעות הנוספות ישולמו בגמול לפי החוק${t.wageType === "monthly" && !t.globalOT ? " – בנוסף לשכר החודשי" : ""}.`);
-  // היקף: השדה = שעות העבודה הנטו לפי הסידור. סתירה מהותית חוסמת.
-  const w = Number(t.weeklyHours||0);
-  if(t.weeklyHours !== undefined && t.weeklyHours !== "" && !numOk(t.weeklyHours)) err.push("היקף השעות השבועי לא תקין.");
-  if(plan.workDays && w && Math.abs(plan.net - w) > 0.5) err.push(`לפי הימים, השעות וההפסקות יוצאות ${fmtH(plan.net)} שעות עבודה בשבוע, ובהיקף המשרה כתוב ${w}. יש להתאים (כפתור "עדכן היקף").`);
-  else if(plan.workDays && w && Math.abs(plan.net - w) > 0.01) warn.push(`הפרש קטן בין ההיקף (${w}) לבין הסידור (${fmtH(plan.net)}).`);
-  // שכר מינימום – חוסם. נבדק לפי מועד התחולה, על השכר הרגיל בלבד, ולפי השעות הרגילות שבסידור (או ההיקף אם אין סידור).
-  const on = (t.mode === "change" ? t.effDate : t.start) || "", mw = on ? minWageAt(on) : null;
-  if(t.wage !== undefined && t.wage !== "" && !numOk(t.wage)) err.push("סכום השכר לא תקין.");
-  const wage = Number(t.wage||0);
-  if(on && !mw) err.push(`מועד התחולה (${fmtDate(on)}) לפני 1.4.2023 – אין בכלי טבלת שכר מינימום לתקופה זו. יש לפנות למשרד.`);
-  if(on > MINW_KNOWN_UNTIL) err.push(`מועד התחולה (${fmtDate(on)}) אחרי ${fmtDate(MINW_KNOWN_UNTIL)} – טבלת שכר המינימום בכלי עוד לא עודכנה לתקופה זו. יש לפנות למשרד.`);
-  if(mw && numOk(t.wage)){
-    const regH = plan.workDays ? Math.min(plan.regular, FULL_WEEK) : Math.min(w || FULL_WEEK, FULL_WEEK);
-    if(t.wageType === "monthly"){ const min = Math.round(mw.m * regH / FULL_WEEK * 100)/100; if(wage < min) err.push(`השכר החודשי (${wage} ₪) נמוך משכר המינימום היחסי להיקף (${min} ₪ ל-${fmtH(regH)} שעות רגילות, לפי ${mw.m} ₪ למשרה מלאה מ-${fmtDate(mw.from)}; מקור: ${MINW_SRC}).`); }
-    else if(wage < mw.h) err.push(`השכר השעתי (${wage} ₪) נמוך משכר המינימום לשעה (${mw.h} ₪ מ-${fmtDate(mw.from)}; מקור: ${MINW_SRC}).`);
-  }
-  // גמול שעות נוספות גלובלי – חייב סכום, והסכום לא נמוך מהגמול המינימלי על השעות
-  if(t.globalOT){
-    if(!numOk(t.globalOT)) err.push("מספר השעות הנוספות הגלובליות לא תקין.");
-    else if(!numOk(t.globalOTAmount)) err.push("לגמול שעות נוספות גלובלי יש לרשום סכום חודשי.");
-    else { // ערך שעה לפי השעות הרגילות המוסכמות (לא 182 קבוע), ובדיקה שמרנית לפי 150% – כי חלק מהשעות עשוי להיות ב-150%
-      const regH = plan.workDays ? Math.min(plan.regular, FULL_WEEK) : Math.min(w || FULL_WEEK, FULL_WEEK);
-      const hr = t.wageType === "monthly" ? wage / (regH * 52 / 12) : wage, need = Math.round(Number(t.globalOT) * hr * 1.5 * 100)/100;
-      if(Number(t.globalOTAmount) < need) err.push(`הגמול הגלובלי (${t.globalOTAmount} ₪) נמוך מ-150% עבור ${t.globalOT} שעות לפי ערך שעה ${fmtH(hr)} ₪ (${need} ₪). הבדיקה שמרנית; סכום נמוך יותר – רק אחרי בדיקה פרטנית של המשרד.`); }
-  }
-  if(t.youth) err.push("עובד/ת מתחת לגיל 18: חלים חוק עבודת הנוער, שכר מינימום לנוער ומגבלות שעות ולילה. מסלול נוער לא נתמך בכלי – יש לפנות למשרד.");
-  // ענף / הסכם קיבוצי – חוסם. אישור משרד תקף רק במצב שרת, חתום בשרת (ראה register_ ב-Code.gs) – דגל בדף אינו אישור.
-  const branch = (t.industry && t.industry !== "general") || t.collective;
-  if(branch && !approved(t)) err.push("נבחר ענף שעשוי לחול עליו צו הרחבה ענפי, או הוזן הסכם קיבוצי. השכר, הפנסיה, השעות והתוספות תלויים בצו – המסמך לא יופק בלי אישור משרד חתום, שקיים רק בקישור מעסיק שהמשרד הפיק.");
-  if(approved(t)){ const miss = tplMiss(t); if(miss.length) err.push(`התנאים חורגים מהתבנית שהמשרד אישר: ${miss.join(", ")}.`); else warn.push("התנאים בתוך התבנית שהמשרד אישר. השרת יאמת את האישור ביצירת הקישור."); }
-  if(t.collective && !t.unionInfo) err.push("הוזן הסכם קיבוצי – יש לרשום את שם ארגון העובדים ומענו (חוק הודעה לעובד).");
-  if(t.sevPct && Number(t.sevPct) < 8.33 && !t.sec14) err.push("ב-6% לפיצויים סעיף 14 חל מכוח צו ההרחבה לביטוח פנסיוני. ביטול הסימון מחייב בדיקת משרד.");
-  if(t.sec14 && Number(t.sevPct) >= 8.33) warn.push("פיצויים 8.33%: יופק מכתב הודעה לקופה (העתק לעובד). ההחלה על ההשלמה מותנית במסירה בפועל לקופה – לא בהדפסת המכתב. יש למסור ולשמור אישור; המשרד יעקוב.");
-  if(t.cameras && !t.camPolicy) err.push("סומנו מצלמות – יש לאשר שמדיניות המצלמות (מיקום ומטרה) נמסרה לעובד בכתב.");
-  if(t.mode !== "change" && t.f101 === "print" && t.start && Number(t.start.slice(0,4)) > F101_YEAR) err.push(`תחילת העבודה ב-${t.start.slice(0,4)}: טופס 101 בכלי הוא גרסת ${F101_YEAR}. עד לעדכון הטופס – בחר/י 101 דרך מיכפל, או פנה/י למשרד.`);
-  // חוק הודעה לעובד – פרטים חובה (סעיף 2)
-  const need = [["company","זהות המעסיק"],["address","כתובת המעסיק"],["role","התפקיד"],["manager","שם או תפקיד הממונה הישיר"],["weeklyHours","היקף המשרה"],["restDay","יום המנוחה"],["wage","השכר"],["harassContact","האחראי לטיפול בתלונות על הטרדה מינית ודרך הפנייה"]];
-  if(t.mode !== "change") need.push(["start","מועד תחילת העבודה"]);
-  need.forEach(([k,n]) => { if(!t[k]) err.push(`חסר פרט חובה: ${n}.`); });
-  if(t.harassContact && !/\d{6,}|@/.test(t.harassContact.replace(/[\s-]/g,""))) err.push("באחראי לתלונות על הטרדה מינית יש לרשום גם דרך פנייה – טלפון או מייל.");
-  if(t.mode === "change") changeCheck(t).forEach(x => err.push(x));
-  return {err, warn, plan};
-}
-/* הודעה על שינוי: כל פרט שמשתנה – ערך קודם מובנה; ה"אחרי" מאותו אובייקט שמזין את התנאים. אין הערות חופשיות. */
-const CHG = [["wage","השכר"],["hours","היקף המשרה"],["role","התפקיד"],["sched","ימי ושעות העבודה"],["pension","הפרשות לפנסיה"],["other","תנאי אחר"]];
-const CHG_REASONS = ["","העלאת שכר","קידום או שינוי תפקיד","לבקשת העובד","שינוי בצורכי העסק","עדכון לפי דין או צו","אחר"];
-const pensLine = t => `עובד ${t.empPct||"6"}% · מעסיק ${t.erPct||"6.5"}% · פיצויים ${t.sevPct||"6"}%`;
-function chgBefore(t, k){ const p = t.prev||{}; return k === "wage" ? (p.wage ? `${p.wage} ₪ ${p.wageType === "monthly" ? "לחודש" : "לשעה"}` : "") : k === "hours" ? (p.hours ? `${p.hours} שעות בשבוע` : "") : String(p[k]||""); }
-function chgAfter(t, k){ return k === "wage" ? `${t.wage} ₪ ${t.wageType === "monthly" ? "לחודש" : "לשעה"}` : k === "hours" ? `${t.weeklyHours} שעות בשבוע` : k === "role" ? t.role : k === "sched" ? (t.days||[]).map((d,i) => d ? `${DAYS[i]} ${d}` : "").filter(Boolean).join(", ") : k === "pension" ? pensLine(t) : (t.otherAfter || ""); }
-function changeCheck(t){
-  const e = [], ch = t.changed || [], p = t.prev || {};
-  if(!ch.length) e.push("בהודעה על שינוי יש לסמן מה משתנה, ולמלא את הערך הקודם.");
-  ch.forEach(k => { const n = (CHG.find(c => c[0] === k)||[,k])[1];
-    if(k === "wage"){ if(!numOk(p.wage)) e.push("חסר השכר הקודם (סכום)."); else if(Number(p.wage) === Number(t.wage) && (p.wageType||"hourly") === (t.wageType||"hourly")) e.push(`השכר הקודם והחדש זהים (${t.wage}). בדוק/י שעדכנת את השכר בטופס לערך החדש.`); return; }
-    if(k === "hours"){ if(!numOk(p.hours)) e.push("חסר ההיקף הקודם (שעות)."); else if(Number(p.hours) === Number(t.weeklyHours)) e.push(`ההיקף הקודם והחדש זהים (${t.weeklyHours}).`); return; }
-    const before = String(p[k]||"").trim();
-    if(!before) e.push(`חסר הערך הקודם של ${n}.`);
-    if(k === "other" && !String(t.otherAfter||"").trim()) e.push("חסר הערך החדש של התנאי האחר.");
-    if(k === "other" && /₪|שכר|שעות|שעה|היקף|פנסי|%|\d/.test(before + " " + (t.otherAfter||""))) e.push("ב'תנאי אחר' אסור לכתוב שכר, שעות, פנסיה או מספרים – לאלה יש שדות מובנים.");
-    if(before && before === chgAfter(t,k).trim()) e.push(`הערך הקודם והחדש של ${n} זהים.`);
-  });
-  return e;
-}
 function renderSetup(){
   header("למעסיק", "מסמכי עובד", "הסכם עבודה, טופס 101 והודעה על שינוי תנאים");
   dock(`<button class="btn wide" type="button" id="makeLink">צור קישור לעובד ←</button>`);
@@ -732,7 +580,7 @@ function renderSetup(){
     return t;
   };
   const drawChecks = () => {
-    const t = collect(), {err, warn} = checkTerms(t);
+    const t = collect(), {err, warn} = checkTerms(t, {approved:approved(t)});
     $("#checks").innerHTML = (err.length || warn.length) ?
       err.map(x => `<div class="warn" style="background:#fdecec;border-color:#f3b4b4;color:#a11;margin:6px 0">⛔ ${esc(x)}</div>`).join("") +
       warn.map(x => `<div class="warn" style="margin:6px 0">⚠️ ${esc(x)}</div>`).join("") +
@@ -766,7 +614,7 @@ function renderSetup(){
     if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
     if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
     if(v("deductions") && !/^9\d{8}$/.test(v("deductions"))) return bad("deductions","תיק ניכויים: 9 ספרות שמתחילות ב-9");
-    const t = collect(), {err} = checkTerms(t);
+    const t = collect(), {err} = checkTerms(t, {approved:approved(t)});
     if(err.length){ $("#checks").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לתקן את השגיאות בבדיקת התקינות"); }
     if(!$("#confirm").checked){ $("#confirm").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לאשר את נכונות הנתונים"); }
     if(pad.isEmpty()){ $("#sigEmp").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימת המעסיק"); }
@@ -1548,7 +1396,7 @@ async function route(){
     return stop(e && e.message === "nodecomp" ? "הדפדפן בטלפון הזה ישן מדי לפתיחת הקישור. עדכן/י את Chrome או Safari ונסה/י שוב." : "הקישור פגום או חלקי. בקש/י מהמעסיק לשלוח אותו שוב.");
   }
   if(T && Number(T.v) !== LINK_VER) return stop("הקישור הזה נוצר בגרסה קודמת של הטופס, ולא ניתן להשתמש בו. בקש/י מהמעסיק ליצור קישור חדש – זה לוקח דקה.");
-  if(T && checkTerms(T).err.length) return stop("בתנאים שבקישור יש שגיאה שהמעסיק צריך לתקן. בקש/י ממנו ליצור קישור חדש.");
+  if(T && checkTerms(T, {approved:approved(T)}).err.length) return stop("בתנאים שבקישור יש שגיאה שהמעסיק צריך לתקן. בקש/י ממנו ליצור קישור חדש.");
   if(T){ renderWelcome(); return; }
   if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
   renderSetup();
