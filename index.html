@@ -148,7 +148,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const CPA_EMAIL = "cpa.snir@gmail.com";
 const CPA_NAME = "משרד רו\"ח שניר טרמצ'י";
 // כתובת ה-Web App של Google Apps Script (apps-script/Code.gs). ריק = שליחה דרך הטלפון.
-const SEND_URL = "";
+const SEND_URL = "https://script.google.com/macros/s/AKfycbzO1dws-MjKgRyy3BgJKwHHxoMsmpemRGdMYr3eNX4JmMYoCA8qmybCzISUTXdq8yYxiA/exec"; // שרת המשרד (Apps Script, cpa.snir)
 const store = {
   get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null"); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
@@ -233,7 +233,7 @@ function probationText(t){
   const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
   return ` ${words} להעסקה הם תקופת ניסיון.`;
 }
-const AGR_VER = "3.8 (11/2026)";
+const AGR_VER = "3.10 (11/2026)";
 const LINK_VER = 5; // קישורים מגרסה קודמת לא נפתחים – המעסיק יוצר קישור חדש
 function agreementBody(t, emp){
   const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
@@ -410,8 +410,8 @@ function renderSetup(){
     ${radio("mode",[["new","עובד חדש – הסכם עבודה"],["change","עובד קיים – הודעה על שינוי תנאים"]],"new")}
     <div id="f101Box">
       <label>טופס 101</label>
-      ${radio("f101",[["print","העובד ממלא כאן, וחותם בכתב יד על הטופס המודפס"],["michpal","דרך פורטל מיכפל (101 אלקטרוני מאושר)"]],"print")}
-      <p class="note">טופס 101 נחתם בכתב יד או במערכת מאושרת על ידי רשות המסים. הכלי הזה ממלא את הטופס הרשמי, ואת החתימה עושים על הדף המודפס.</p>
+      ${radio("f101",[["print","העובד ממלא כאן, והחתימה שלו מההסכם נכנסת גם לטופס"],["michpal","דרך פורטל מיכפל (101 אלקטרוני מאושר)"]],"print")}
+      <p class="note">העובד ממלא את הטופס הרשמי בשאלון, ובסוף מאשר שהחתימה שלו מההסכם תיכנס גם לחלק י' של טופס 101.</p>
     </div>
     <div class="help">ℹ️ הכלי מסייע בהכנת מסמכי העסקה לפי הנתונים שתזין/י, ואינו מחליף ייעוץ משפטי פרטני. בענפים עם צו הרחבה או הסכם קיבוצי ענפי – יש לבדוק התאמה.</div>
   </div>
@@ -448,6 +448,8 @@ function renderSetup(){
       <div><label class="req">שם העובד</label><input id="empName" placeholder="שם פרטי ומשפחה"></div>
       <div><label>הנייד של העובד</label><input id="empPhone" inputmode="tel" placeholder="לשליחה ישירה בוואטסאפ"></div>
     </div>
+    ${SEND_URL ? `<label class="req">המייל של העובד</label><input id="empEmail" type="email" dir="ltr" placeholder="name@example.com">
+    <p class="note">לאימות זהות: לפני החתימה העובד יקבל למייל הזה קוד חד-פעמי. המייל לא נכנס לקישור.</p>` : ""}
     <p class="note">כך תדע/י לאיזה עובד שייך כל קישור. השם יופיע גם אצל העובד כשהוא פותח את הקישור. הטלפון לא נכנס לקישור.</p>
     <label class="opt"><input type="checkbox" id="youth"><span class="t">העובד/ת מתחת לגיל 18 בתחילת העבודה<small>לנוער חלים כללים אחרים – הכלי לא מפיק לו מסמכים, והמשרד מטפל.</small></span></label>
   </div>
@@ -559,7 +561,7 @@ function renderSetup(){
   const v = id => ($("#"+id)||{value:""}).value.trim();
   const collect = () => {
     const t = {
-      v:3, mode:rv("mode"), f101:rv("mode")==="change" ? "" : rv("f101"), ownerEmail:v("ownerEmail"), empName:v("empName"),
+      v:3, mode:rv("mode"), f101:rv("mode")==="change" ? "" : rv("f101"), ownerEmail:v("ownerEmail"), empName:v("empName"), empEmail:SEND_URL ? v("empEmail").trim().toLowerCase() : "",
       company:v("company"), companyId:v("companyId"), deductions:v("deductions"), ephone:v("ephone"), address:v("address"), industry:v("industry"), collective:v("collective"),
       signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
       role:v("role"), start:rv("mode")==="change" ? v("origStart") : v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:rv("mode")==="change" ? "" : v("probation"),
@@ -613,6 +615,11 @@ function renderSetup(){
     for(const [k,n] of need){ if(!v(k)) return bad(k, "חסר: " + n); }
     if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
     if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
+    if(SEND_URL){
+      const em = v("empEmail").trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return bad("empEmail","חסר או לא תקין: המייל של העובד (לקוד האימות)");
+      if(em === v("ownerEmail").trim().toLowerCase() || em === CPA_EMAIL) return bad("empEmail","כאן כותבים את המייל של העובד עצמו – לא של המעסיק או המשרד");
+    }
     if(v("deductions") && !/^9\d{8}$/.test(v("deductions"))) return bad("deductions","תיק ניכויים: 9 ספרות שמתחילות ב-9");
     const t = collect(), {err} = checkTerms(t, {approved:approved(t)});
     if(err.length){ $("#checks").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לתקן את השגיאות בבדיקת התקינות"); }
@@ -664,7 +671,7 @@ function drawHist(){
 }
 
 /* ================= employee flow ================= */
-let T = null, E = {}, F = {}, sigE = null, ATT = [];
+let T = null, E = {}, F = {}, sigE = null, ATT = [], VT = "", NEED_OTP = false;
 const DOC_ID = Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase();
 const MODE = () => (T && T.mode === "change") ? "change" : (T && T.f101 === "michpal") ? "michpal" : (T && T.f101 === "paper") ? "paper" : "print";
 const STEPS = () => ({change:["פרטים","אישור השינוי","שליחה"], michpal:["פרטים","הסכם עבודה","שליחה"], paper:["פרטים","הסכם עבודה","שליחה"], print:["פרטים","הסכם עבודה","טופס 101","צילומים ושליחה"]})[MODE()];
@@ -676,6 +683,38 @@ function ask(msg, yes, no){ return new Promise(res => {
   o.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { o.remove(); res(b.dataset.a === "1"); });
   document.body.appendChild(o); }); }
 
+/* אימות זהות: קוד חד-פעמי למייל שהמעסיק רשם (מצב שרת בלבד). בלי אימות השרת לא מקבל את המסמכים. */
+function renderOtp(){
+  header(T.company, "אימות זהות", "לפני שממשיכים – נוודא שהקישור הגיע אליך");
+  dock("");
+  const linkId = location.hash.slice(3).replace(/[^0-9a-f]/g,"");
+  const call = async (o) => { const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(Object.assign({app:"office-forms-v2", linkId}, o))}); return r.json(); };
+  const msg = {"otp-wrong":"הקוד לא נכון.", "otp-locked":"היו יותר מדי ניסיונות. שלח/י קוד חדש.", "otp-expired":"תוקף הקוד הסתיים. שלח/י קוד חדש.", "otp-none":"צריך לשלוח קוד חדש.", "otp-limit":"נשלחו היום יותר מדי קודים לקישור הזה. נסה/י מחר, או פנה/י למעסיק.", quota:"לא ניתן לשלוח קוד כרגע. נסה/י שוב מאוחר יותר.", rate:"יותר מדי בקשות. נסה/י שוב בעוד כמה דקות."};
+  $("#app").innerHTML = `<div class="card">
+    <p>כדי לוודא שהמסמכים נחתמים על ידך, נשלח קוד בן 6 ספרות למייל שהמעסיק רשם עבורך.</p>
+    <div class="btns"><button class="btn wide" type="button" id="otpSend">שלחו לי קוד</button></div>
+    <div id="otpBox" class="hidden">
+      <p class="note" id="otpTo"></p>
+      <label class="req">הקוד מהמייל</label><input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" placeholder="000000">
+      <div class="btns"><button class="btn wide" type="button" id="otpOk">אימות והמשך</button></div>
+      <p class="note">לא הגיע? בדוק/י בתיקיית הספאם, או <a href="#" id="otpAgain">שלחו שוב</a>. אם המייל לא נכון – פנה/י למעסיק.</p>
+    </div></div>`;
+  const send = async () => {
+    try{ const j = await call({action:"otp"});
+      if(!j.ok) return toast(msg[j.err] || "לא ניתן לשלוח קוד. פנה/י למעסיק.");
+      $("#otpTo").textContent = `הקוד נשלח אל ${j.to} ותקף ${j.min || 10} דקות.`; $("#otpBox").classList.remove("hidden"); $("#otpCode").focus();
+    }catch(e){ toast("אין חיבור לשרת. נסה/י שוב."); }
+  };
+  $("#otpSend").onclick = send; $("#otpAgain").onclick = e => { e.preventDefault(); send(); };
+  $("#otpOk").onclick = async () => {
+    const code = $("#otpCode").value.replace(/\D/g,"");
+    if(code.length !== 6) return toast("הקוד בן 6 ספרות");
+    try{ const j = await call({action:"otpCheck", code});
+      if(!j.ok) return toast((msg[j.err] || "האימות נכשל.") + (j.err === "otp-wrong" && j.left ? ` נשארו ${j.left} ניסיונות.` : ""));
+      VT = j.vt; renderWelcome(); window.scrollTo(0,0);
+    }catch(e){ toast("אין חיבור לשרת. נסה/י שוב."); }
+  };
+}
 function renderWelcome(){
   header(T.company, T.empName ? `שלום ${T.empName.split(" ")[0]}! 👋` : "ברוך/ה הבא/ה! 👋", "עוד כמה דקות וסיימת את כל הניירת");
   if(T.empName && !E.first){ const parts = T.empName.trim().split(/\s+/); E.first = parts[0]; E.last = parts.slice(1).join(" "); }
@@ -885,7 +924,7 @@ function render101(){
   header(T.company, "טופס 101 – כרטיס עובד", `לשנת המס ${Y} · קובע כמה מס ינוכה מהמשכורת`);
   dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">המשך לסיום ←</button>`);
   $("#app").innerHTML = stepOf("טופס 101") + `
-  <div class="card"><div class="warn">✍️ את טופס 101 ממלאים כאן, ובסוף <b>חותמים בכתב יד על הטופס המודפס</b> (לפי דרישות רשות המסים). המעסיק ידפיס לך אותו.</div></div>
+  <div class="card"><div class="warn">✍️ את טופס 101 ממלאים כאן. בסוף תאשר/י שהחתימה שלך מההסכם תיכנס גם לטופס 101 – אין צורך לחתום שוב.</div></div>
   <div class="card">
     <div class="help">💡 <b>למה זה חשוב?</b> לפי הטופס המעסיק יודע לאילו הקלות במס את/ה זכאי/ת. בלי טופס 101 חתום מנכים מס מקסימלי. ענה/י בכנות – אם משהו לא ברור, אפשר לשאול את המעסיק או את משרד רואה החשבון.</div>
   </div>
@@ -1073,6 +1112,8 @@ function renderAttach(){
   <div class="card">
     <h2>✅ הצהרה</h2>
     <label class="opt"><input type="checkbox" id="decl"><span class="t">אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בפרטים בתוך שבוע.</span></label>
+    <label class="opt"><input type="checkbox" id="sig101"><span class="t">אני מאשר/ת שהחתימה שלי מההסכם תיכנס לטופס 101 (חלק י') כחתימתי על ההצהרה.</span></label>
+    ${E.sig ? `<img src="${E.sig}" alt="החתימה שלך" style="max-width:220px;height:60px;object-fit:contain;border:1px dashed #bbb;border-radius:8px;background:#fff">` : ""}
   </div>`;
   const draw = () => { $$("[data-list]").forEach(box => { const kind = box.dataset.list;
       box.innerHTML = ATT.map((a,i) => a.kind===kind ? `<div class="filechip"><span>🖼️ ${esc(a.name)}</span><button type="button" data-rm="${i}">הסר</button></div>` : "").join(""); });
@@ -1096,6 +1137,8 @@ function renderAttach(){
     F.pendingDocs = F.later.filter(k => !has(k)).map(k => needs[Number(k.split(":")[1])]);
     if(F.pendingDocs.length) F.complex = (F.complex||[]).filter(x => !x.startsWith("אסמכתאות חסרות")).concat("אסמכתאות חסרות: " + F.pendingDocs.join(", "));
     if(!$("#decl").checked){ $("#decl").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לסמן את ההצהרה"); }
+    if(!$("#sig101").checked){ $("#sig101").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לאשר את החתימה על טופס 101"); }
+    F.sig101 = true; F.sig101At = nowStamp();
     renderSend();
   };
 }
@@ -1114,6 +1157,7 @@ function txt(x0, x1, top, s, size, align){ // x in pt, right-aligned box by defa
   return `<div class="f" style="left:${px(x0)};width:${px(x1-x0)};top:${py(top)};text-align:${align||"right"};${size?`font-size:${size}px;`:""}direction:rtl">${esc(s)}</div>`;
 }
 function num(x0, x1, top, s, size){ if(!s) return ""; return `<div class="f" style="left:${px(x0)};width:${px(x1-x0)};top:${py(top)};text-align:center;direction:ltr;letter-spacing:1px;${size?`font-size:${size}px;`:""}">${esc(s)}</div>`; }
+function cells(xs, top, s, size){ return String(s).split("").slice(0, xs.length-1).map((d,i) => `<div class="f" style="left:${px(xs[i])};width:${px(xs[i+1]-xs[i])};top:${py(top)};text-align:center;direction:ltr;font-size:${size}px">${esc(d)}</div>`).join(""); }
 function ck(x0, top){ return `<div class="ck" style="left:${px(x0+1.2)};top:${py(top-1.5)}">✔</div>`; }
 function ageInYear(birth, Y){ return birth ? Y - Number(birth.slice(0,4)) : -1; }
 function kidCounts(kids, Y){ const c = {b0:0,a12:0,a3:0,a45:0,a617:0,a18:0};
@@ -1122,12 +1166,12 @@ function kidCounts(kids, Y){ const c = {b0:0,a12:0,a3:0,a45:0,a617:0,a18:0};
 function page101_1(Y){
   const g = E.gender, m = F.marital;
   let h = `<div class="pg pb"><img class="bgimg" src="vendor/f101-1.jpg">`;
-  h += num(222, 285, 87.5, String(Y), 13);
+  h += cells([220.5,236.7,252.9,269.1,285.3], 86, String(Y), 14); // שנת המס – ספרה בכל תא
   // א employer
   h += txt(416, 534, 168, T.company, 11);
   h += txt(211, 412, 168, T.address, 10.5);
   h += num(132, 207, 168, T.ephone || "", 11);
-  if(T.deductions) h += `<div class="f" style="left:${px(40)};width:${px(88)};top:${py(169.5)};direction:ltr;letter-spacing:${px(4.6)};font-size:12px">${esc(String(T.deductions).replace(/^9/,""))}</div>`;
+  if(T.deductions) h += cells([39.6,50.8,62.5,73.8,85.0,96.3,107.5,118.8,130.0], 168.5, String(T.deductions).replace(/^9/,""), 13); // ה-9 מודפס בטופס
   // ב employee
   h += num(440, 538, 220, E.idNum, 12);
   h += txt(316, 434, 220, E.last, 12);
@@ -1201,6 +1245,7 @@ function page101_2(Y){
   if(F.coord === "approved") h += ck(512.4, 589.0);
   // י declaration
   h += num(142, 226, 644, todayStr(), 12);
+  if(F.sig101 && E.sig) h += `<img src="${E.sig}" alt="" style="position:absolute;left:${px(36)};top:${py(636)};width:${px(86)};height:${py(19)};object-fit:contain">`; // חתימת העובד מההסכם, באישורו
   return h + `</div>`;
 }
 function sigBlock(){
@@ -1241,16 +1286,14 @@ function attachPages(){
 }
 function cover101(){
   return `<div class="doc">
-    <div class="dh"><div><div class="t">טופס 101 – להדפסה וחתימה</div><div class="s">מזהה ${DOC_ID} · הוכן על סמך הצהרת העובד בטופס המקוון</div></div><div class="c">${esc(T.company)}</div></div>
+    <div class="dh"><div><div class="t">טופס 101</div><div class="s">מזהה ${DOC_ID} · הוכן על סמך הצהרת העובד בטופס המקוון</div></div><div class="c">${esc(T.company)}</div></div>
     <div class="box"><b>הוראות למעסיק:</b>
-      <p>1. להדפיס את שני עמודי הטופס הרשמי שבהמשך.</p>
-      <p>2. לבקש מהעובד/ת ${esc(E.first)} ${esc(E.last)} לעבור על הפרטים ו<b>לחתום בכתב יד</b> בחלק י' (עמוד 2).</p>
-      <p>3. לצרף את האישורים שבסוף הקובץ ולשמור בתיק העובד. עותק סרוק – ל${CPA_NAME}.</p>
-      <p>4. לקבל מהעובד את הטופס החתום בתוך שבוע מתחילת העבודה, ולסמן בתיק העובד את תאריך הקבלה: ________. עד שמתקבל טופס חתום – זו טיוטה, ולא טופס 101 שנמסר כדין.</p>
-      <p>5. טופס 101 ממולא מחדש בתחילת כל שנת מס, ובכל שינוי בפרטים.</p>
+      <p>1. העובד/ת ${esc(E.first)} ${esc(E.last)} חתם/ה בחלק י' (עמוד 2): החתימה מההסכם נכנסה לטופס באישורו/ה, ${esc(F.sig101At||"")}.</p>
+      <p>2. לשמור את הקובץ בתיק העובד, כולל האישורים שבסופו. עותק – ל${CPA_NAME}.</p>
+      <p>3. טופס 101 ממולא מחדש בתחילת כל שנת מס, ובכל שינוי בפרטים.</p>
     </div>
     ${(F.complex||[]).length ? `<div class="box" style="background:#fdecec;border:1px solid #f3b4b4"><b>⚠ לבדיקת משרד לפני שימוש:</b> ${F.complex.map(esc).join(" · ")}. אין להשתמש בטופס לחישוב המס לפני שהמשרד אישר את ההצהרה.</div>` : ""}
-    <p style="font-size:11.5px;color:#555">טופס 101 נחתם בכתב יד או באמצעות מערכת שאושרה על ידי רשות המסים. מסמך זה אינו טופס 101 אלקטרוני מאושר.</p>
+    <p style="font-size:11.5px;color:#555">החתימה בחלק י' היא חתימת העובד על ההסכם, שהוכנסה לטופס באישורו. הכלי אינו מערכת 101 אלקטרונית שאושרה על ידי רשות המסים.</p>
   </div>`;
 }
 function buildAgreementHtml(){ return agreementPages(); }
@@ -1327,7 +1370,7 @@ function renderSend(){
         const files = [];
         for(const d of DOCS){ files.push({fname:d.fname, pdf: await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(d.blob); })}); }
         const resp = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({
-          app:"office-forms-v2", action:"submit", linkId:T.linkId||"", files, docId:DOC_ID, agrVer:AGR_VER, mode:md, taxYear:taxYear(), company:T.company, employee:who, role:T.role, start:fmtDate(T.start),
+          app:"office-forms-v2", action:"submit", vt:VT, linkId:T.linkId||"", files, docId:DOC_ID, agrVer:AGR_VER, mode:md, taxYear:taxYear(), company:T.company, employee:who, role:T.role, start:fmtDate(T.start),
           termsHash:T.termsHash || "", complex101:F.complex || [] })});
         const j = await resp.json();
         if(j && j.ok){ renderThanks(true); return; }
@@ -1363,7 +1406,7 @@ function renderThanks(shared){
   <div class="card">
     <h2>מה הלאה?</h2>
     <ul class="list">
-      ${md === "print" ? `<li><span>✍️</span><div>המעסיק ידפיס לך את טופס 101 – עובר/ת על הפרטים וחותם/ת בכתב יד, בשבוע הראשון לעבודה. עד אז ינוכה מס לפי הכללים למי שלא מסר טופס.</div></li>` : ""}
+      ${md === "print" ? `<li><span>✍️</span><div>טופס 101 נשלח למעסיק עם החתימה שלך. אם יחול שינוי בפרטים – לעדכן את המעסיק בתוך שבוע.</div></li>` : ""}
       ${md === "michpal" ? `<li><span>📱</span><div>בקרוב תגיע אליך הודעה מפורטל מיכפל למילוי וחתימה על טופס 101.</div></li>` : ""}
       ${md === "paper" ? `<li><span>✍️</span><div>טופס 101 לשנה זו ימולא מול המעסיק על גבי הטופס הרשמי, בשבוע הראשון לעבודה.</div></li>` : ""}
       ${md === "change" ? "" : `<li><span>💰</span><div>המשכורת תועבר לחשבון שמסרת, לא יאוחר מה-9 בחודש שאחרי חודש העבודה.</div></li>`}
@@ -1387,7 +1430,7 @@ async function route(){
       const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({app:"office-forms-v2", action:"get", linkId:id})});
       const j = await r.json();
       if(!j.ok) return stop({used:"המסמכים בקישור הזה כבר נשלחו. אם צריך לשלוח שוב – בקש/י מהמעסיק קישור חדש.", expired:"תוקף הקישור (30 יום) הסתיים. בקש/י מהמעסיק קישור חדש.", revoked:"המעסיק ביטל את הקישור הזה."}[j.err] || "הקישור לא נמצא. בקש/י מהמעסיק לשלוח אותו שוב.");
-      T = j.terms; T.termsHash = j.sha;
+      T = j.terms; T.termsHash = j.sha; NEED_OTP = true;
     }
     else if((h.startsWith("#k=") || h.startsWith("#e=")) && SEND_URL) return stop("הקישור הזה מגרסה ידנית ואינו תקף במערכת השליחה. בקש/י מהמעסיק ליצור קישור חדש.");
     else if(h.startsWith("#k=")) T = await unpackK(h.slice(3));
@@ -1397,7 +1440,7 @@ async function route(){
   }
   if(T && Number(T.v) !== LINK_VER) return stop("הקישור הזה נוצר בגרסה קודמת של הטופס, ולא ניתן להשתמש בו. בקש/י מהמעסיק ליצור קישור חדש – זה לוקח דקה.");
   if(T && checkTerms(T, {approved:approved(T)}).err.length) return stop("בתנאים שבקישור יש שגיאה שהמעסיק צריך לתקן. בקש/י ממנו ליצור קישור חדש.");
-  if(T){ renderWelcome(); return; }
+  if(T){ NEED_OTP ? renderOtp() : renderWelcome(); return; }
   if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
   renderSetup();
 }
