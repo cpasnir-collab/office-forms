@@ -75,34 +75,59 @@ function tplMiss(t){ const p = t.okTpl || {}, out = [], plan = hoursPlan(t);
   return out.filter((x,i) => out.indexOf(x) === i); }
 const numOk = v => v !== "" && v !== undefined && isFinite(Number(v)) && Number(v) > 0;
 /* שכבת קלט סגורה – לפני כל חישוב. בלי truthiness ובלי NaN: כל ערך נבדק לסוג ולטווח. */
+/* שכבת קלט סגורה – לפני כל חישוב. כל שדה נבדק לסוג (לא String() על מערכים/אובייקטים) ולטווח,
+   ואחר כך הכול מנורמל פעם אחת לאובייקט קנוני (מחרוזות), ורק הוא משמש לחישוב ולטביעה. */
 const BOOL_KEYS = ["breakPaid","sec14","breakPermit","cash","cameras","youth","camPolicy","night"];
-const fin = v => v !== "" && v !== null && v !== undefined && typeof v !== "boolean" && typeof v !== "object" && isFinite(Number(v)) && String(v).trim() !== "";
+const ENUMS = {mode:["new","change"], pattern:["5","6"], restDay:["שבת","שישי","ראשון"], wageType:["hourly","monthly"], f101:["print","michpal","paper"],
+  industry:INDUSTRIES.map(x => x[0]), shortDay:["0","1","2","3","4","5","6"]};
+const NUM_KEYS = ["wage","weeklyHours","globalOT","globalOTAmount","empPct","erPct","sevPct","hishEr","hishEmp","breakMin"];
+const TEXT_KEYS = ["company","companyId","address","role","manager","signer","harassContact","empName","collective","unionInfo","commission","travel","extras","pensionFund","workplace","otherAfter","chgReason","ownerEmail","deductions","ephone","hishFrom","probation"];
+const scalar = v => typeof v === "string" || (typeof v === "number" && isFinite(v));
+const fin = v => scalar(v) && String(v).trim() !== "" && /^-?\d+(\.\d+)?$/.test(String(v).trim()) && isFinite(Number(v));
 function validateInput(t){
   const e = [], has = k => t[k] !== undefined && t[k] !== "";
-  if(t.mode !== undefined && ["new","change"].indexOf(t.mode) < 0) e.push("סוג מסמך לא מוכר.");
-  if(has("pattern") && ["5","6"].indexOf(String(t.pattern)) < 0) e.push("מתכונת שבוע חייבת להיות 5 או 6 ימים.");
-  if(has("restDay") && ["שבת","שישי","ראשון"].indexOf(t.restDay) < 0) e.push("יום מנוחה לא מוכר.");
-  if(has("shortDay") && !(/^[0-6]$/.test(String(t.shortDay)))) e.push("היום המקוצר לא תקין.");
-  if(has("breakMin") && !(/^\d{1,3}$/.test(String(t.breakMin)) && Number(t.breakMin) <= 180)) e.push("משך ההפסקה חייב להיות מספר שלם של דקות בין 0 ל-180.");
+  if(!t || typeof t !== "object" || Array.isArray(t)) return ["מבנה תנאים לא תקין."];
+  Object.keys(ENUMS).forEach(k => { if(has(k) && !(scalar(t[k]) && ENUMS[k].indexOf(String(t[k])) >= 0)) e.push({mode:"סוג מסמך לא מוכר.", pattern:"מתכונת שבוע חייבת להיות 5 או 6 ימים.", restDay:"יום מנוחה לא מוכר.", wageType:"סוג שכר לא מוכר.", f101:"מסלול טופס 101 לא מוכר.", industry:"ענף לא מוכר.", shortDay:"היום המקוצר לא תקין."}[k]); });
+  if(has("breakMin") && !(fin(t.breakMin) && /^\d{1,3}$/.test(String(t.breakMin).trim()) && Number(t.breakMin) <= 180)) e.push("משך ההפסקה חייב להיות מספר שלם של דקות בין 0 ל-180.");
   if(t.days !== undefined && (!Array.isArray(t.days) || t.days.length !== 7 || t.days.some(d => typeof d !== "string"))) e.push("ימי העבודה במבנה לא תקין.");
   BOOL_KEYS.forEach(k => { if(t[k] !== undefined && typeof t[k] !== "boolean") e.push(`השדה ${k} חייב להיות כן/לא.`); });
+  TEXT_KEYS.forEach(k => { if(t[k] !== undefined && typeof t[k] !== "string") e.push(`השדה ${k} חייב להיות טקסט.`); });
+  ["start","effDate","origStart"].forEach(k => { if(has(k) && !(typeof t[k] === "string" && validDate(t[k]))) e.push(`התאריך ${k} לא תקין.`); });
+  NUM_KEYS.forEach(k => { if(has(k) && !fin(t[k])) e.push(`הערך ${k} חייב להיות מספר.`); });
   [["wage","השכר"],["weeklyHours","היקף השעות"]].forEach(([k,n]) => { if(has(k) && !(fin(t[k]) && Number(t[k]) > 0)) e.push(`${n} לא תקין.`); });
-  [["globalOT","שעות גלובליות"],["globalOTAmount","סכום גלובלי"]].forEach(([k,n]) => { if(has(k) && !(fin(t[k]) && Number(t[k]) > 0)) e.push(`${n} לא תקין.`); });
+  // גמול גלובלי: צמד אטומי – שניהם ריקים, או שניהם חיוביים
+  if(has("globalOT") || has("globalOTAmount")) { if(!(fin(t.globalOT) && Number(t.globalOT) > 0 && fin(t.globalOTAmount) && Number(t.globalOTAmount) > 0)) e.push("גמול שעות נוספות גלובלי: יש למלא גם מכסת שעות וגם סכום חודשי, שניהם חיוביים – או להשאיר את שניהם ריקים."); }
   // פנסיה: לא פחות מהשיעורים בצו ההרחבה (עובד 6%, מעסיק 6.5%, פיצויים 6% או 8.33%), ועד תקרה סבירה
   const pct = (k, def) => has(k) ? Number(t[k]) : def;
-  if(["empPct","erPct","sevPct"].some(k => has(k) && !fin(t[k]))) e.push("שיעורי הפנסיה לא תקינים.");
-  else {
+  if(!["empPct","erPct","sevPct"].some(k => has(k) && !fin(t[k]))){
     if(pct("empPct",6) < 6 || pct("empPct",6) > 20) e.push("הפרשת עובד לפנסיה – לפחות 6% (צו ההרחבה). שיעור אחר מחייב בדיקת משרד.");
     if(pct("erPct",6.5) < 6.5 || pct("erPct",6.5) > 20) e.push("הפרשת מעסיק לתגמולים – לפחות 6.5% (צו ההרחבה). שיעור אחר מחייב בדיקת משרד.");
     if([6, 8.33].indexOf(pct("sevPct",6)) < 0) e.push("הפרשה לפיצויים – 6% או 8.33% בלבד בכלי.");
   }
-  ["hishEr","hishEmp"].forEach(k => { if(has(k) && !(fin(t[k]) && Number(t[k]) >= 0 && Number(t[k]) <= 20)) e.push("שיעורי קרן השתלמות לא תקינים."); });
+  ["hishEr","hishEmp"].forEach(k => { if(has(k) && fin(t[k]) && !(Number(t[k]) >= 0 && Number(t[k]) <= 20)) e.push("שיעורי קרן השתלמות לא תקינים."); });
+  // הודעת שינוי: changed = מערך ייחודי מתוך CHG; prev = אובייקט פשוט עם ערכים סקלריים
+  if(t.changed !== undefined){
+    const keys = CHG.map(c => c[0]);
+    if(!Array.isArray(t.changed) || t.changed.some(k => typeof k !== "string" || keys.indexOf(k) < 0) || new Set(t.changed).size !== t.changed.length) e.push("רשימת השינויים לא תקינה.");
+  }
+  if(t.prev !== undefined){
+    if(!t.prev || typeof t.prev !== "object" || Array.isArray(t.prev) || Object.keys(t.prev).some(k => !scalar(t.prev[k]))) e.push("הערכים הקודמים במבנה לא תקין.");
+    else if(t.prev.wageType !== undefined && ENUMS.wageType.indexOf(t.prev.wageType) < 0) e.push("סוג השכר הקודם לא מוכר.");
+  }
   return e;
+}
+/* נרמול חד-פעמי: אחרי validateInput בלבד. ערכים מספריים ו-enum הופכים למחרוזת קנונית – אותו אובייקט לחישוב ולטביעה. */
+function normalizeTerms(t){
+  const o = JSON.parse(JSON.stringify(t));
+  Object.keys(ENUMS).concat(NUM_KEYS).forEach(k => { if(o[k] !== undefined && o[k] !== "" && scalar(o[k])) o[k] = String(o[k]).trim(); });
+  if(o.prev) Object.keys(o.prev).forEach(k => { o.prev[k] = String(o.prev[k]); });
+  return o;
 }
 function checkTerms(t, ctx){
   const err = [], warn = [], ok = !!(ctx && ctx.approved);
   const bad = validateInput(t);
   if(bad.length) return {err: bad, warn, plan: null};      // קלט לא תקין – לא מחשבים כלום
+  t = normalizeTerms(t);                                   // מכאן – רק האובייקט הקנוני
   const plan = hoursPlan(t);
   if(["net","regular","ot","dailyOT","weeklyOT"].some(k => !isFinite(plan[k]) || plan[k] < 0)) return {err: ["חישוב השעות לא תקין – בדוק/י את הימים, השעות וההפסקות."], warn, plan};
   plan.sh.forEach((s,i) => {
@@ -167,6 +192,7 @@ function checkTerms(t, ctx){
   [["start","תאריך תחילת העבודה"],["effDate","מועד השינוי"]].forEach(([k,n]) => { if(t[k] && !validDate(t[k])) err.push(`${n} (${t[k]}) אינו תאריך קיים.`); });
   if(numOk(t.weeklyHours) && Number(t.weeklyHours) > FULL_WEEK + MAX_WEEK_OT) err.push(`היקף של ${t.weeklyHours} שעות בשבוע – מעל ${FULL_WEEK + MAX_WEEK_OT} (42 רגילות + 16 נוספות).`);
   if(!plan.workDays && t.mode !== "change") err.push("יש למלא את ימי ושעות העבודה – בלעדיהם אי אפשר לבדוק שעות, הפסקות ומנוחה.");
+  if(!plan.workDays && t.mode === "change" && (t.changed||[]).some(k => k === "sched" || k === "hours")) err.push("שינוי בשעות או בסידור – יש למלא את ימי ושעות העבודה החדשים. שעות משתנות בלי סידור – רק בבדיקת משרד.");
   if(t.harassContact && !/\d{6,}|@/.test(t.harassContact.replace(/[\s-]/g,""))) err.push("באחראי לתלונות על הטרדה מינית יש לרשום גם דרך פנייה – טלפון או מייל.");
   if(t.mode === "change") changeCheck(t).forEach(x => err.push(x));
   return {err, warn, plan};

@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = "http://localhost:8765/"
-OUT = os.environ.get("OUT", "/tmp/v36")
+OUT = os.environ.get("OUT", "/tmp/v37")
 os.makedirs(OUT, exist_ok=True)
 URI = {"company":"אורי כלפה","companyId":"024592693","deductions":"904105525","address":"עירית 1, קריית שמונה","signer":"אורי כלפה"}
 def preset(extra=None):
@@ -210,7 +210,7 @@ async def main():
             await pg.check("#breakPermit"); check("G-03: היתר להפסקות – בלי אישור משרד חתום חוסם", "סעיף 20" not in await checks() and "מחייבת אישור משרד" in await checks())
             await pg.uncheck("#breakPermit"); await pg.check("#breakPaid"); check("G-03: הפסקה משולמת לא פוטרת מההפסקה עצמה", "גם כשהעובד נדרש להישאר" in await checks())
             await pg.uncheck("#breakPaid"); await pg.click("#clearWeek"); await pg.click("#fillWeek"); await pg.fill("#weeklyHours", "36.25")
-            await pg.fill("#globalOT", "10"); check("G-23: גלובלי בלי סכום – חוסם", "יש לרשום סכום" in await checks())
+            await pg.fill("#globalOT", "10"); check("G-23: גלובלי בלי סכום – חוסם", "גם מכסת שעות וגם סכום" in await checks())
             await pg.fill("#globalOTAmount", "500"); check("G-23: גלובלי נמוך מ-150% (10×40×1.5=600) – חוסם", "נמוך מ-150%" in await checks())
             await pg.fill("#globalOTAmount", "600"); check("G-23: גלובלי מספיק – עובר", "גלובלי" not in await checks())
             await pg.select_option("#wageType", "monthly"); await pg.fill("#wage", "3500")

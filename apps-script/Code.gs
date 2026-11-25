@@ -1,5 +1,5 @@
 /**
- * office-forms 3.6 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.7 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
  * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
@@ -47,7 +47,7 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.6" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.7" }); }
 
 /* ---------- הרשאות מעסיק ---------- */
 function setup() {
@@ -128,7 +128,7 @@ function register_(d) {
   if (!rate_("reg:" + owner, 30)) return out_({ ok: false, err: "rate" });
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty("L:" + linkId)) return out_({ ok: false, err: "exists" });
-  const terms = d.terms && typeof d.terms === "object" ? d.terms : null;
+  let terms = d.terms && typeof d.terms === "object" && !Array.isArray(d.terms) ? d.terms : null;
   if (!terms) return out_({ ok: false, err: "no-terms" });
   delete terms.tok;
   if (String(terms.ownerEmail || "").trim().toLowerCase() !== owner || terms.linkId !== linkId) return out_({ ok: false, err: "mismatch" });
@@ -139,6 +139,7 @@ function register_(d) {
   // אישור: תבנית חתומה ובתוקף. הצורך באישור והחריגה מהתבנית מחושבים מהסידור עצמו (לילה, הפסקה קצרה) – לא מדגלים שהדף שלח.
   const vin = validateInput(terms);                                           // קלט סגור לפני כל חישוב (NaN, סוגים, טווחים)
   if (vin.length) return out_({ ok: false, err: "rules", detail: vin.slice(0, 5) });
+  terms = normalizeTerms(terms);                                              // מכאן – רק האובייקט הקנוני: לחישוב, לאישור ולטביעה
   const tpl = terms.okTpl && typeof terms.okTpl === "object" ? terms.okTpl : null;
   const verified = !!(tpl && terms.okSig && tpl.exp && tpl.exp >= new Date().toISOString().slice(0, 10) && safeEq_(okSig_(owner, rec, tpl), String(terms.okSig)));
   const plan = hoursPlan(terms), shortBreak = plan.rows.some(function (r) { return r && r.g >= 360 && r.brk < 45; });
@@ -317,6 +318,7 @@ function reconcile() {
   try {
     const props = PropertiesService.getScriptProperties(), all = props.getProperties(), out = [];
     Object.keys(all).filter(function (k) { return /^L:/.test(k); }).forEach(function (k) {
+     try {                                                                     // רשומה פגומה לא עוצרת את השאר
       const reg = JSON.parse(all[k]), st = reg.doc, linkId = k.slice(2);
       if (!st || st.state === "done") return;
       if (st.mail === "pending" || st.mail === "needs-review") { tasksUpsert_(linkId, reg, [["mail-review", "מייל: לא ודאי אם נשלח – לבדוק בתיבת היוצאים ואז resolveDoc", 1, "now"]]); out.push(linkId + ":review"); return; }
@@ -326,11 +328,15 @@ function reconcile() {
         st.state = "done"; reg.state = "used"; reg.usedAt = reg.usedAt || new Date().toISOString(); props.setProperty(k, JSON.stringify(reg)); out.push(linkId + ":closed"); return;
       }
       if (Date.now() - new Date(st.at).getTime() > 864e5) { tasksUpsert_(linkId, reg, [["stuck", "מסמך תקוע מעל יום (" + st.state + ") – לבדוק", 0, "now"]]); out.push(linkId + ":stuck"); }
+     } catch (e) { out.push(k.slice(2) + ":error:" + String(e && e.message || e).slice(0, 80)); }
     });
     return out;
   } finally { lock.releaseLock(); }
 }
-function installReconcile() { ScriptApp.newTrigger("reconcile").timeBased().everyHours(1).create(); }
+function installReconcile() { // אידמפוטנטי – לא יוצר טריגר כפול
+  if (ScriptApp.getProjectTriggers().some(function (tr) { return tr.getHandlerFunction() === "reconcile"; })) return "exists";
+  ScriptApp.newTrigger("reconcile").timeBased().everyHours(1).create(); return "created";
+}
 /* משימות: [סוג קבוע, תיאור, ימים, בסיס]. בסיס "start" = מתחילת העבודה (יעד חוקי – לא נדחה בגלל קליטה מאוחרת), "now" = ממועד האירוע. */
 function tasks_(reg, mode, st) {
   const t = [];

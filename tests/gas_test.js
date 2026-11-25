@@ -50,6 +50,7 @@ function makeEnv(opts = {}) {
     SpreadsheetApp: { create: name => { mkSheet("log"); const ss = { getId: () => "SS", getSheets: () => [sheets["log"]], getSheetByName: n => sheets[n] || null, insertSheet: n => mkSheet(n) }; files.push({ name, folder: "root/קליטת עובדים", ss }); return ss; }, open: f => f.ss },
     MailApp: { getRemainingDailyQuota: () => opts.quota === undefined ? 100 : opts.quota,
       sendEmail: m => { const doc = !!m.attachments; if (doc && opts.failMail && opts.failMail-- > 0) throw new Error("mail-down"); mails.push(m); if (doc && opts.throwAfterMail && opts.throwAfterMail-- > 0) throw new Error("timeout-after-send"); } },
+    ScriptApp: { getProjectTriggers: () => (env._triggers || []).map(h => ({ getHandlerFunction: () => h })), newTrigger: h => ({ timeBased: () => ({ everyHours: () => ({ create: () => { (env._triggers = env._triggers || []).push(h); } }) }) }) },
     ContentService: { createTextOutput: t => ({ t, setMimeType() { return JSON.parse(t); } }), MimeType: { JSON: "json" } }
   };
   vm.createContext(env); vm.runInContext(code, env);
@@ -66,7 +67,7 @@ const post = (env, o) => env.doPost({ postData: { contents: JSON.stringify(Objec
 const L1 = "0123456789abcdef0123456789abcdef", L2 = "fedcba9876543210fedcba9876543210";
 const WEEK = ["09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "", ""];
 const terms = (id, owner, extra) => Object.assign({ v: 5, linkId: id, ownerEmail: owner, company: "טייפון", address: "הרצל 1, חיפה", empName: "בדיקה", role: "עובד", manager: "נדב", signer: "נדב", harassContact: "נדב 0501234567",
-  agrVer: "3.6 (11/2026)", wage: "43", wageType: "hourly", weeklyHours: "36.25", days: WEEK, pattern: "5", shortDay: "4", breakMin: "45", restDay: "שבת", sec14: true, sevPct: "6", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
+  agrVer: "3.7 (11/2026)", wage: "43", wageType: "hourly", weeklyHours: "36.25", days: WEEK, pattern: "5", shortDay: "4", breakMin: "45", restDay: "שבת", sec14: true, sevPct: "6", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
 const OWN = "nadavlevvy@gmail.com";
 let pass = 0, fail = 0;
 const t = (name, cond) => { if (cond) { pass++; console.log("✓ " + name); } else { fail++; console.log("✗ " + name); } };
@@ -328,7 +329,44 @@ t("R5-03: קובץ עם משתמש נוסף – נעצר", sub2(x.E, x.sha, "ABC
 x = ready(); const tf = x.E._state.files.find(f => f.id === regOf(x.E).file); tf.blob = Object.assign({}, tf.blob, { bytes: tf.blob.bytes.replace('"43"', '"99"') });
 t("R5-03: תנאים ששונו בקובץ אחרי הרישום – get ו-submit נעצרים", post(x.E, { action: "get", linkId: L1 }).ok === false && sub2(x.E, x.sha, "ABCDECCCCC").err === "terms-tampered" && mails(x.E).length === 0);
 x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDEDDDDD", { agrVer: "9.9" }); x.E.resolveDoc(L1, "resend"); sub2(x.E, x.sha, "ABCDEDDDDD", { agrVer: "1.0-זיוף" });
-t("R5-03: agrVer מהדף לא נכנס – הגרסה נקבעת מהתנאים הקנוניים ב-claim", regOf(x.E).doc.agrVer === "3.6 (11/2026)" && x.E._state.sheets["log"].rows[1][2] === "3.6 (11/2026)" && !mails(x.E)[0].htmlBody.includes("זיוף"));
+t("R5-03: agrVer מהדף לא נכנס – הגרסה נקבעת מהתנאים הקנוניים ב-claim", regOf(x.E).doc.agrVer === "3.7 (11/2026)" && x.E._state.sheets["log"].rows[1][2] === "3.7 (11/2026)" && !mails(x.E)[0].htmlBody.includes("זיוף"));
+
+// ---------- סבב 6 – הקלטים של ChatGPT, בדיוק ----------
+const B = { mode: "new", start: "2026-05-01", f101: "michpal", company: "test", address: "test", role: "test", manager: "test", harassContact: "0501234567", restDay: "שבת", pattern: "5", shortDay: 4,
+  days: ["08:00-16:00", "08:00-16:00", "08:00-16:00", "08:00-16:00", "08:00-16:00", "", ""], breakMin: 45, weeklyHours: 36.25, wage: 40, wageType: "hourly", empPct: 6, erPct: 6.5, sevPct: 6, sec14: true };
+E = makeEnv(); tk = employer(E, OWN);
+const CT = (patch) => vm.runInContext("checkTerms", E)(JSON.parse(JSON.stringify(Object.assign({}, B, patch))), { approved: false });
+const REG = (patch) => { const id = L3x(); return post(E, { action: "register", linkId: id, ownerEmail: OWN, tok: tk, terms: Object.assign({ v: 5, linkId: id, ownerEmail: OWN, signer: "x", empName: "x" }, JSON.parse(JSON.stringify(Object.assign({}, B, patch)))) }); };
+const SIX = ["08:00-14:45", "08:00-14:45", "08:00-14:45", "08:00-14:45", "08:00-14:45", "08:00-14:45", ""];
+const SHORT0 = ["08:00-17:21", "08:00-16:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "", ""];
+let c0 = CT({});
+t("R6-00: B ללא שינוי – תקין (err=[], 36.25 רגילות, 0 נוספות)", c0.err.length === 0 && c0.plan.regular === 36.25 && c0.plan.ot === 0);
+t("R6-00: B ב-register עם הרשאה תקפה – מתקבל", REG({}).ok === true);
+let c1 = CT({ pattern: 5, days: SIX, weeklyHours: 36 });
+t("R6-01: pattern כמספר 5 עם 6 ימי עבודה – נחסם (מנורמל ל-\"5\")", c1.err.some(x => /5 ימים, אבל רשומים 6/.test(x)));
+t("R6-01: אותו קלט ב-register – נדחה", REG({ pattern: 5, days: SIX, weeklyHours: 36 }).err === "rules");
+let c2n = CT({ pattern: 5, shortDay: 0, days: SHORT0, weeklyHours: 42 }), c2s = CT({ pattern: "5", shortDay: 0, days: SHORT0, weeklyHours: 42 });
+t("R6-02: pattern 5 (מספר) ו-\"5\" (מחרוזת) – אותה תוצאה: 41 רגילות + 1 נוספת", c2n.plan.regular === 41 && c2n.plan.ot === 1 && c2s.plan.regular === 41 && c2s.plan.ot === 1);
+const h1 = REG({ pattern: 5, shortDay: 4, wage: 40 }); const id1 = lastL; const g1 = post(E, { action: "get", linkId: id1 }).terms;
+t("R6-02: השרת שומר ומגבב את האובייקט המנורמל (pattern \"5\", shortDay \"4\", wage \"40\" – מחרוזות)", h1.ok && g1.pattern === "5" && g1.shortDay === "4" && g1.wage === "40" && g1.breakMin === "45");
+const EMPTY = ["", "", "", "", "", "", ""];
+t("R6-03: הודעת שינוי סידור עם סידור ריק – נחסמת", CT({ mode: "change", effDate: "2026-05-01", changed: ["sched"], prev: { sched: "08:00-16:00" }, days: EMPTY }).err.some(x => /שינוי בשעות או בסידור/.test(x)));
+t("R6-04: הודעת שינוי היקף עם סידור ריק – נחסמת", CT({ mode: "change", effDate: "2026-05-01", changed: ["hours"], prev: { hours: 40 }, days: EMPTY }).err.some(x => /שינוי בשעות או בסידור/.test(x)));
+t("R6-03/04: אותו דבר ב-register – נדחה", REG({ mode: "change", effDate: "2026-05-01", changed: ["hours"], prev: { hours: 40 }, days: EMPTY }).err === "rules");
+t("R6-03: changed לא מוכר / כפול – נחסם", CT({ mode: "change", effDate: "2026-05-01", changed: ["salary"], prev: {} }).err.some(x => /רשימת השינויים/.test(x)) && CT({ mode: "change", effDate: "2026-05-01", changed: ["wage", "wage"], prev: { wage: 30 } }).err.some(x => /רשימת השינויים/.test(x)));
+t("R6-03: prev.wageType לא מוכר – נחסם", CT({ mode: "change", effDate: "2026-05-01", changed: ["wage"], prev: { wage: 30, wageType: "daily" } }).err.some(x => /סוג השכר הקודם/.test(x)));
+t("R6-03: שינוי שאינו בשעות (תפקיד) בלי סידור – מותר", !CT({ mode: "change", effDate: "2026-05-01", changed: ["role"], prev: { role: "קופאי" }, days: EMPTY }).err.some(x => /סידור|ימי ושעות/.test(x)));
+t("R6-05: גמול גלובלי – סכום בלי מכסה – נחסם", CT({ globalOTAmount: 500 }).err.some(x => /גם מכסת שעות וגם סכום/.test(x)) && REG({ globalOTAmount: 500 }).err === "rules");
+t("R6-05: מכסה בלי סכום / אפס – נחסם", CT({ globalOT: 10 }).err.some(x => /גם מכסת שעות/.test(x)) && CT({ globalOT: 0, globalOTAmount: 0 }).err.some(x => /גם מכסת שעות/.test(x)));
+t("R6-06: wageType לא מוכר – נחסם גם במודול (enum משותף)", CT({ wageType: "foo" }).err.some(x => /סוג שכר לא מוכר/.test(x)));
+t("R6-06: מערכים במקום ערכים (shortDay [4], breakMin [45], pattern [\"5\"]) – נחסמים", CT({ shortDay: [4] }).err.length > 0 && CT({ breakMin: [45] }).err.length > 0 && CT({ pattern: ["5"] }).err.length > 0);
+t("R6-06: אובייקט / מספר בשדה טקסט ובתאריך – נחסמים", CT({ role: { a: 1 } }).err.some(x => /טקסט/.test(x)) && CT({ start: 20260501 }).err.some(x => /תאריך/.test(x)));
+t("R6-06: industry לא מוכר / f101 לא מוכר – נחסמים", CT({ industry: "x" }).err.some(x => /ענף/.test(x)) && CT({ f101: "x" }).err.some(x => /101/.test(x)));
+// reconcile חסין לרשומה פגומה; התקנת טריגר אידמפוטנטית
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDEEEEEE"); x.E._state.props["L:" + "cd".repeat(16)] = "{not json";
+const rr = x.E.reconcile();
+t("R6: reconcile – רשומה פגומה לא עוצרת את השאר", rr.some(z => /:error:/.test(z)) && rr.some(z => /review/.test(z)));
+t("R6: installReconcile אידמפוטנטי – טריגר אחד", x.E.installReconcile() === "created" && x.E.installReconcile() === "exists" && x.E._triggers.length === 1);
 
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);
