@@ -234,7 +234,7 @@ function probationText(t){
   const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
   return ` ${words} להעסקה הם תקופת ניסיון.`;
 }
-const AGR_VER = "3.3 (11/2026)";
+const AGR_VER = "3.4 (11/2026)";
 const LINK_VER = 5; // קישורים מגרסה קודמת לא נפתחים – המעסיק יוצר קישור חדש
 function agreementBody(t, emp){
   const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
@@ -456,6 +456,15 @@ function dayGaps(plan){ // הפסקה בין יום עבודה למשנהו (8 �
   return out;
 }
 const fmtH = h => (Math.round(h*100)/100).toString();
+/* אישור משרד = תבנית חתומה (okTpl + okSig) שהשרת מאמת. בדף – רק בדיקה מקדימה לנוחות; האימות האמיתי ב-register_. */
+const TPL_KEYS = ["role","wageType","minWage","empPct","erPct","sevPct","collective","breakPermit","night"];
+function approved(t){ return !!(SEND_URL && t.okSig && t.okTpl && typeof t.okTpl === "object"); }
+function tplMiss(t){ const p = t.okTpl || {}, out = [];
+  if(p.role && p.role !== t.role) out.push("תפקיד"); if(p.wageType && p.wageType !== t.wageType) out.push("סוג שכר");
+  if(p.minWage && Number(t.wage) < Number(p.minWage)) out.push("שכר נמוך מהמאושר");
+  ["empPct","erPct","sevPct"].forEach(k => { if(p[k] && Number(p[k]) !== Number(t[k] || {empPct:6,erPct:6.5,sevPct:6}[k])) out.push("שיעורי פנסיה"); });
+  if((p.collective||"") !== (t.collective||"")) out.push("הסכם קיבוצי"); if(t.breakPermit && !p.breakPermit) out.push("היתר הפסקות"); if(t.night && !p.night) out.push("עבודת לילה");
+  return [...new Set(out)]; }
 const numOk = v => v !== "" && v !== undefined && isFinite(Number(v)) && Number(v) > 0;
 function checkTerms(t){
   const err = [], warn = [];
@@ -474,9 +483,10 @@ function checkTerms(t){
   plan.rows.forEach(r => { if(r && r.net > 720) err.push(`ביום ${DAYS[r.i]} יוצאות ${fmtH(r.net/60)} שעות עבודה – יותר מ-12 שעות ביום, כולל שעות נוספות.`); });
   if(plan.otMin > MAX_WEEK_OT*60) err.push(`לפי המשמרות יש ${fmtH(plan.ot)} שעות נוספות בשבוע – מעל ${MAX_WEEK_OT}. זה חורג מההיתר הכללי ומחייב בדיקת משרד.`);
   // הפסקות – סעיף 20. גם כשהעובד נשאר במקום (ההפסקה משולמת) – ההפסקה עצמה נדרשת.
-  plan.rows.forEach(r => { if(r && r.g >= 360 && r.brk < 45 && !t.breakPermit) warn.push(`ביום ${DAYS[r.i]} (${fmtH(r.g/60)} שעות) מוגדרת הפסקה של ${r.brk} דקות. לפי סעיף 20 לחוק נדרשת הפסקה של 45 דקות לפחות, מהן 30 רצופות${t.breakPaid ? " – גם כשהעובד נדרש להישאר במקום (אז היא משולמת)" : ""}, אלא אם חל היתר.`); });
-  if(t.breakPermit) warn.push("סומן שחל היתר להפסקות (עבודה שאינה עבודת כפיים). ודא/י שתנאי ההיתר מתקיימים; המשרד יבדוק.");
-  if(plan.night) warn.push("יש משמרת עם שעתיים לפחות בין 22:00 ל-06:00 – יום כזה הוא עד 7 שעות רגילות; השעות שמעבר הן נוספות. מגבלות עבודת לילה (סעיף 22) – לבדיקת משרד.");
+  plan.rows.forEach(r => { if(r && r.g >= 360 && r.brk < 45 && !t.breakPermit) err.push(`ביום ${DAYS[r.i]} (${fmtH(r.g/60)} שעות) מוגדרת הפסקה של ${r.brk} דקות. לפי סעיף 20 לחוק נדרשת הפסקה של 45 דקות לפחות, מהן 30 רצופות${t.breakPaid ? " – גם כשהעובד נדרש להישאר במקום (אז היא משולמת)" : ""}. אם חל היתר – סמן/י אותו; זה מחייב אישור משרד.`); });
+  if(t.breakPermit && !approved(t)) err.push("סומן היתר להפסקות (עבודה שאינה עבודת כפיים). חריגה מחייבת אישור משרד חתום בקישור המעסיק.");
+  if(plan.night && !approved(t)) err.push("יש משמרת עם שעתיים לפחות בין 22:00 ל-06:00. יום כזה הוא עד 7 שעות רגילות, וחלות מגבלות עבודת לילה (סעיף 22) – מחייב אישור משרד חתום.");
+  else if(plan.night) warn.push("עבודת לילה: יום של עד 7 שעות רגילות. המשרד אישר את התבנית.");
   if(plan.ot > 0) warn.push(`לפי המשמרות: ${fmtH(plan.regular)} שעות רגילות ו-${fmtH(plan.ot)} שעות נוספות בשבוע (${fmtH(plan.dailyOT)} יומיות, ${fmtH(plan.weeklyOT)} שבועיות). השעות הנוספות ישולמו בגמול לפי החוק${t.wageType === "monthly" && !t.globalOT ? " – בנוסף לשכר החודשי" : ""}.`);
   // היקף: השדה = שעות העבודה הנטו לפי הסידור. סתירה מהותית חוסמת.
   const w = Number(t.weeklyHours||0);
@@ -498,14 +508,16 @@ function checkTerms(t){
   if(t.globalOT){
     if(!numOk(t.globalOT)) err.push("מספר השעות הנוספות הגלובליות לא תקין.");
     else if(!numOk(t.globalOTAmount)) err.push("לגמול שעות נוספות גלובלי יש לרשום סכום חודשי.");
-    else { const hr = t.wageType === "monthly" ? wage / 182 : wage, need = Math.round(Number(t.globalOT) * hr * 1.25 * 100)/100;
-      if(Number(t.globalOTAmount) < need) err.push(`הגמול הגלובלי (${t.globalOTAmount} ₪) נמוך מ-125% עבור ${t.globalOT} שעות (${need} ₪). יש להגדיל או לפנות למשרד.`); }
+    else { // ערך שעה לפי השעות הרגילות המוסכמות (לא 182 קבוע), ובדיקה שמרנית לפי 150% – כי חלק מהשעות עשוי להיות ב-150%
+      const regH = plan.workDays ? Math.min(plan.regular, FULL_WEEK) : Math.min(w || FULL_WEEK, FULL_WEEK);
+      const hr = t.wageType === "monthly" ? wage / (regH * 52 / 12) : wage, need = Math.round(Number(t.globalOT) * hr * 1.5 * 100)/100;
+      if(Number(t.globalOTAmount) < need) err.push(`הגמול הגלובלי (${t.globalOTAmount} ₪) נמוך מ-150% עבור ${t.globalOT} שעות לפי ערך שעה ${fmtH(hr)} ₪ (${need} ₪). הבדיקה שמרנית; סכום נמוך יותר – רק אחרי בדיקה פרטנית של המשרד.`); }
   }
   if(t.youth) err.push("עובד/ת מתחת לגיל 18: חלים חוק עבודת הנוער, שכר מינימום לנוער ומגבלות שעות ולילה. מסלול נוער לא נתמך בכלי – יש לפנות למשרד.");
   // ענף / הסכם קיבוצי – חוסם. אישור משרד תקף רק במצב שרת, חתום בשרת (ראה register_ ב-Code.gs) – דגל בדף אינו אישור.
   const branch = (t.industry && t.industry !== "general") || t.collective;
-  if(branch && !(SEND_URL && t.okSig)) err.push("נבחר ענף שעשוי לחול עליו צו הרחבה ענפי, או הוזן הסכם קיבוצי. השכר, הפנסיה, השעות והתוספות תלויים בצו – המסמך לא יופק בלי אישור משרד חתום, שקיים רק בקישור מעסיק שהמשרד הפיק.");
-  else if(branch) warn.push("לקישור מצורף אישור משרד לענף/להסכם. השרת יאמת אותו ביצירת הקישור.");
+  if(branch && !approved(t)) err.push("נבחר ענף שעשוי לחול עליו צו הרחבה ענפי, או הוזן הסכם קיבוצי. השכר, הפנסיה, השעות והתוספות תלויים בצו – המסמך לא יופק בלי אישור משרד חתום, שקיים רק בקישור מעסיק שהמשרד הפיק.");
+  if(approved(t)){ const miss = tplMiss(t); if(miss.length) err.push(`התנאים חורגים מהתבנית שהמשרד אישר: ${miss.join(", ")}.`); else warn.push("התנאים בתוך התבנית שהמשרד אישר. השרת יאמת את האישור ביצירת הקישור."); }
   if(t.collective && !t.unionInfo) err.push("הוזן הסכם קיבוצי – יש לרשום את שם ארגון העובדים ומענו (חוק הודעה לעובד).");
   if(t.sevPct && Number(t.sevPct) < 8.33 && !t.sec14) err.push("ב-6% לפיצויים סעיף 14 חל מכוח צו ההרחבה לביטוח פנסיוני. ביטול הסימון מחייב בדיקת משרד.");
   if(t.sec14 && Number(t.sevPct) >= 8.33) warn.push("פיצויים 8.33%: יופק מכתב הודעה לקופה (העתק לעובד). ההחלה על ההשלמה מותנית במסירה בפועל לקופה – לא בהדפסת המכתב. יש למסור ולשמור אישור; המשרד יעקוב.");
@@ -534,6 +546,7 @@ function changeCheck(t){
     const before = String(p[k]||"").trim();
     if(!before) e.push(`חסר הערך הקודם של ${n}.`);
     if(k === "other" && !String(t.otherAfter||"").trim()) e.push("חסר הערך החדש של התנאי האחר.");
+    if(k === "other" && /₪|שכר|שעות|שעה|היקף|פנסי|%|\d/.test(before + " " + (t.otherAfter||""))) e.push("ב'תנאי אחר' אסור לכתוב שכר, שעות, פנסיה או מספרים – לאלה יש שדות מובנים.");
     if(before && before === chgAfter(t,k).trim()) e.push(`הערך הקודם והחדש של ${n} זהים.`);
   });
   return e;
@@ -708,9 +721,10 @@ function renderSetup(){
       workplace:v("workplace"), breakPaid:$("#breakPaid").checked, cash:$("#cash").checked, cameras:$("#cameras").checked, hishEr:v("hishEr"), hishEmp:v("hishEmp"), hishFrom:v("hishFrom"),
       pattern:v("pattern"), breakMin:v("breakMin"), shortDay:v("pattern")==="5" ? v("shortDay") : "", breakPermit:$("#breakPermit").checked, youth:$("#youth").checked,
       globalOTAmount:v("globalOTAmount"), unionInfo:v("collective") ? v("unionInfo") : "", camPolicy:$("#cameras").checked && $("#camPolicy").checked,
-      okSig:(PRESET && PRESET.okSig) || "", okExp:(PRESET && PRESET.okExp) || "", tok:(PRESET && PRESET.tok) || "",
+      okSig:(PRESET && PRESET.okSig) || "", okTpl:(PRESET && PRESET.okTpl) || "", tok:(PRESET && PRESET.tok) || "",
       effDate:v("effDate"), chgReason:v("chgReason")
     };
+    if(hoursPlan(t).night) t.night = true;
     if(t.mode === "change"){ t.changed = $$("[data-chg]").filter(e => e.checked).map(e => e.dataset.chg); t.prev = {};
       t.changed.forEach(k => { if(k === "wage"){ t.prev.wage = v("prev_wage"); t.prev.wageType = v("prev_wageType"); } else t.prev[k] = v("prev_"+k); });
       if(t.changed.includes("other")) t.otherAfter = v("otherAfter"); }
@@ -869,7 +883,7 @@ function renderDetails(){
     </div>
     <div class="row">
       <div><label class="req">מספר תעודת זהות</label><input id="idNum" inputmode="numeric" maxlength="9" placeholder="9 ספרות"></div>
-      <div class="${chg ? "hidden" : ""}"><label class="req">תאריך לידה</label><input id="birth" type="date"></div>
+      <div><label class="req">תאריך לידה</label><input id="birth" type="date"></div>
     </div>
     <div class="${chg ? "hidden" : ""}"><label class="req">מין</label>${radio("gender",[["זכר","זכר"],["נקבה","נקבה"]],"")}</div>
     <div class="row">
@@ -907,14 +921,15 @@ function renderDetails(){
   for(const k of ["first","last","idNum","birth","phone","email","street","house","city","zip","account"]) if(E[k]) $("#"+k).value = E[k];
   if(E.gender) $$('[name=gender]').forEach(r => r.checked = r.value === E.gender);
   $("#next").onclick = () => {
-    const need = chg ? [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["phone","טלפון"]] : [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["birth","תאריך לידה"],["phone","טלפון"],["street","רחוב"],["house","מספר בית"],["city","יישוב"],["bank","בנק"],["branch","סניף"],["account","מספר חשבון"]];
+    const need = chg ? [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["birth","תאריך לידה"],["phone","טלפון"]] : [["first","שם פרטי"],["last","שם משפחה"],["idNum","תעודת זהות"],["birth","תאריך לידה"],["phone","טלפון"],["street","רחוב"],["house","מספר בית"],["city","יישוב"],["bank","בנק"],["branch","סניף"],["account","מספר חשבון"]];
     for(const [k,n] of need){ const el = $("#"+k); if(!el || !el.value.trim()) return bad(k, "חסר: " + n); }
     if(!validId($("#idNum").value)) return bad("idNum","מספר תעודת הזהות לא תקין – בדוק/י שוב");
     if(!chg && !rv("gender")) return toast("יש לבחור מין");
-    if(!chg){
-      const b = $("#birth").value, age = ageAt(b, T.start || new Date().toISOString().slice(0,10));
+    { const b = $("#birth").value, age = ageAt(b, (chg ? T.effDate : T.start) || new Date().toISOString().slice(0,10));
       if(age < 14 || age > 100) return bad("birth","תאריך הלידה לא נראה תקין – בדוק/י שוב");
-      if(age < 18) return renderYouth();
+      if(age < 18) return renderYouth(); }
+    if(!chg){
+      const age = ageAt($("#birth").value, T.start || new Date().toISOString().slice(0,10));
       if(!rv("pens")) return toast("יש לסמן אם יש לך ביטוח פנסיוני");
       E.pens = rv("pens"); E.pensFund = $("#pensFund").value.trim();
       const pa = rv("gender") === "זכר" ? 21 : 20; E.pensAge = age < pa ? pa : 0; // גיל זכאות לפנסיית חובה לפי הצו
@@ -930,7 +945,7 @@ function renderDetails(){
 function ageAt(birth, on){ if(!birth) return -1; const b = birth.split("-").map(Number), d = on.split("-").map(Number); return d[0] - b[0] - ((d[1] < b[1] || (d[1] === b[1] && d[2] < b[2])) ? 1 : 0); }
 function renderYouth(){ window.scrollTo(0,0); dock("");
   header(T.company, "רגע לפני שממשיכים", "");
-  $("#app").innerHTML = `<div class="card"><div class="warn">לפי תאריך הלידה, בתחילת העבודה טרם מלאו לך 18. לעובדים צעירים חלים כללים מיוחדים (שעות, לילה, שכר ואישור רפואי), ולכן את המסמכים יכין לך המעסיק יחד עם משרד רואה החשבון.</div><p>אפשר לסגור את הדף. כדאי לעדכן את ${esc(T.signer)}${T.ephone ? ` (${esc(T.ephone)})` : ""}.</p></div>`; }
+  $("#app").innerHTML = `<div class="card"><div class="warn">לפי תאריך הלידה, במועד תחילת העבודה או השינוי טרם מלאו לך 18. לעובדים צעירים חלים כללים מיוחדים (שעות, לילה, שכר ואישור רפואי), ולכן את המסמכים יכין לך המעסיק יחד עם משרד רואה החשבון.</div><p>אפשר לסגור את הדף. כדאי לעדכן את ${esc(T.signer)}${T.ephone ? ` (${esc(T.ephone)})` : ""}.</p></div>`; }
 /* ---- banks (official Bank of Israel list in vendor/banks.json; without it – free entry) ---- */
 let BANKS = null;
 fetch("vendor/banks.json").then(r => r.ok ? r.json() : null).then(j => { BANKS = j; }).catch(() => {});
@@ -1182,38 +1197,56 @@ function renderAttach(){
   window.scrollTo(0,0);
   header(T.company, "צילומים ואישורים", "כמעט סיימנו");
   dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">צור מסמך חתום ←</button>`);
+  // אסמכתאות לפי ההצהרה. לכל אחת: מצורף, או "אמסור בנפרד" – ואז אין זיכוי עד קבלתה (מסומן למשרד).
   const needs = [];
   if(F.marital === "פרוד/ה") needs.push("אישור פקיד שומה על פירוד");
   const map = {c2a:"אישור נכות/עיוורון",c2b:"אישור תגמול חודשי",c3:"אישור תושב מהרשות (1312א)",c4:"תעודת עולה",c11:"אישור גמלת ילד נכה",c12:"פסק דין למזונות",c14:"תעודת שחרור / סיום שירות",c15:"טופס 119",c16:"אישור צה\"ל על שירות מילואים כלוחם"};
   (F.credits||[]).forEach(k => map[k] && needs.push(map[k]));
   if(F.coord === "approved") needs.push("אישור תיאום מס מפקיד השומה");
+  if(F.coord === "more") (F.co||[]).forEach(c => needs.push(`תלוש אחרון או אישור הכנסה – ${c.n}`));
+  if(F.coord === "noinc") needs.push("הוכחה שלא הייתה הכנסה (למשל אישור שהייה בחו\"ל)");
+  F.needs = needs;
+  const slot = (kind, title) => `<div class="kidcard" data-slot="${kind}"><b>${esc(title)}</b>
+      <label class="btn sec wide" style="margin:8px 0"><input type="file" accept="image/*" capture="environment" multiple data-kind="${kind}" class="hidden">📷 צלם/י או בחר/י</label>
+      <div data-list="${kind}"></div>
+      ${kind.startsWith("need:") ? `<label class="opt"><input type="checkbox" data-later="${kind}"><span class="t">אמסור למעסיק בנפרד<small>עד שהאישור יתקבל – לא יינתן הזיכוי הזה.</small></span></label>` : ""}</div>`;
   $("#app").innerHTML = stepOf("צילומים ושליחה") + `
   <div class="card">
-    <h2>🪪 צילום תעודת זהות עם ספח</h2>
-    <div class="help">צלם/י את הת"ז ואת הספח הפתוח (שבו מופיעים הילדים והכתובת). צילום ברור, בלי השתקפות.</div>
-    <label class="btn sec wide" style="margin:8px 0"><input type="file" accept="image/*" capture="environment" multiple data-kind="id" class="hidden">📷 צלם/י או בחר/י תמונה</label>
-    <div id="idList"></div>
+    <h2>🪪 זיהוי</h2>
+    <div class="help">לפי הוראות טופס 101 מצרפים צילום תעודת זהות <b>וגם</b> את הספח (שבו מופיעים הילדים והכתובת). צילום ברור, בלי השתקפות.</div>
+    <label class="opt"><input type="checkbox" id="noTz"><span class="t">אין לי תעודת זהות ישראלית<small>אצרף מסמך זיהוי אחר (דרכון / תעודת עולה / רישיון ישיבה)</small></span></label>
+    <div id="tzSlots">${slot("id","תעודת זהות")}${slot("sefach","ספח")}</div>
+    <div id="altSlot" class="hidden">${slot("idalt","מסמך זיהוי אחר")}</div>
   </div>
   <div class="card">
     <h2>📎 אישורים</h2>
-    ${needs.length ? `<div class="help">לפי מה שסימנת צריך לצרף: <b>${needs.map(esc).join(" · ")}</b></div>` : `<p class="note">לא סימנת הקלות שדורשות אישור. אפשר לדלג.</p>`}
-    <label class="btn sec wide" style="margin:8px 0"><input type="file" accept="image/*" multiple data-kind="doc" class="hidden">📎 הוסף אישור</label>
-    <div id="docList"></div>
+    ${needs.length ? `<div class="help">לפי מה שסימנת צריך לצרף ${needs.length} אישורים. לכל אחד: מצלמים, או מסמנים שתמסור/י בנפרד.</div>${needs.map((n,i) => slot("need:"+i, n)).join("")}` : `<p class="note">לא סימנת הקלות שדורשות אישור.</p>`}
   </div>
   <div class="card">
     <h2>✅ הצהרה</h2>
     <label class="opt"><input type="checkbox" id="decl"><span class="t">אני מצהיר/ה כי הפרטים שמסרתי בטופס זה מלאים ונכונים. ידוע לי שהשמטה או מסירת פרטים לא נכונים הן עבירה על פקודת מס הכנסה. אני מתחייב/ת להודיע למעסיק על כל שינוי בפרטים בתוך שבוע.</span></label>
   </div>`;
-  const draw = () => { for(const kind of ["id","doc"]){ $("#"+kind+"List").innerHTML = ATT.map((a,i) => a.kind===kind ? `<div class="filechip"><span>🖼️ ${esc(a.name)}</span><button type="button" data-rm="${i}">הסר</button></div>` : "").join(""); }
+  const draw = () => { $$("[data-list]").forEach(box => { const kind = box.dataset.list;
+      box.innerHTML = ATT.map((a,i) => a.kind===kind ? `<div class="filechip"><span>🖼️ ${esc(a.name)}</span><button type="button" data-rm="${i}">הסר</button></div>` : "").join(""); });
     $$("[data-rm]").forEach(b => b.onclick = () => { ATT.splice(Number(b.dataset.rm),1); draw(); }); };
   $$("input[type=file]").forEach(inp => inp.onchange = async e => {
     for(const f of e.target.files){ try{ ATT.push({kind:inp.dataset.kind, name:f.name || "צילום", src: await shrink(f)}); }catch(_){ toast("לא הצלחתי לקרוא את הקובץ " + f.name); } }
     inp.value = ""; draw();
   });
+  const tzShow = () => { const n = $("#noTz").checked; $("#tzSlots").classList.toggle("hidden", n); $("#altSlot").classList.toggle("hidden", !n); };
+  $("#noTz").onchange = tzShow; if(F.noTz) $("#noTz").checked = true; tzShow();
+  (F.later||[]).forEach(k => { const el = $(`[data-later="${k}"]`); if(el) el.checked = true; });
   draw();
   $("#back").onclick = render101;
   $("#next").onclick = () => {
-    if(!ATT.some(a => a.kind === "id")) return toast("צריך לצרף צילום תעודת זהות");
+    const has = k => ATT.some(a => a.kind === k);
+    F.noTz = $("#noTz").checked;
+    if(F.noTz){ if(!has("idalt")) return toast("צריך לצרף מסמך זיהוי"); }
+    else { if(!has("id")) return toast("צריך לצרף צילום תעודת זהות"); if(!has("sefach")) return toast("צריך לצרף גם את הספח"); }
+    F.later = $$("[data-later]").filter(e => e.checked).map(e => e.dataset.later);
+    for(let i = 0; i < needs.length; i++){ const k = "need:"+i; if(!has(k) && !F.later.includes(k)){ $(`[data-slot="${k}"]`).scrollIntoView({behavior:"smooth",block:"center"}); return toast(`חסר: ${needs[i]} – לצרף, או לסמן שתמסור/י בנפרד`); } }
+    F.pendingDocs = F.later.filter(k => !has(k)).map(k => needs[Number(k.split(":")[1])]);
+    if(F.pendingDocs.length) F.complex = (F.complex||[]).filter(x => !x.startsWith("אסמכתאות חסרות")).concat("אסמכתאות חסרות: " + F.pendingDocs.join(", "));
     if(!$("#decl").checked){ $("#decl").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לסמן את ההצהרה"); }
     renderSend();
   };
@@ -1355,7 +1388,8 @@ function agreementPages(){
   ${T.sec14 && Number(T.sevPct) >= 8.33 ? `<div class="pb" style="page-break-before:always">${fundNotice(T, name, E.idNum)}</div>` : ""}`;
 }
 function attachPages(){
-  return ATT.map(a => `<div class="pg pb"><div class="att"><h3>${a.kind==="id" ? "צילום תעודת זהות וספח" : "אישור מצורף"} – ${esc(E.first)} ${esc(E.last)}, ת"ז ${esc(E.idNum)}</h3><img src="${a.src}"></div></div>`).join("");
+  const title = k => k === "id" ? "תעודת זהות" : k === "sefach" ? "ספח" : k === "idalt" ? "מסמך זיהוי" : k.startsWith("need:") ? (F.needs||[])[Number(k.split(":")[1])] || "אישור" : "אישור מצורף";
+  return ATT.map(a => `<div class="pg pb"><div class="att"><h3>${esc(title(a.kind))} – ${esc(E.first)} ${esc(E.last)}, ת"ז ${esc(E.idNum)}</h3><img src="${a.src}"></div></div>`).join("");
 }
 function cover101(){
   return `<div class="doc">

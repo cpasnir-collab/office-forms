@@ -1,31 +1,31 @@
 /**
- * office-forms 3.3 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.4 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
- * פריסה (שניר, פעם אחת):
- *   1. להריץ את setup() מהעורך – יוצר סוד חתימה (SECRET) במאפייני הסקריפט.
- *   2. Deploy → New deployment → Web app → Execute as: Me → Who has access: Anyone.
- *   3. לכל מעסיק: mintEmployer("mail", "שם העסק", "ח.פ", "מזהה לקוח") – מחזיר קישור מעסיק מוכן (עם טוקן).
- *      ענף/הסכם קיבוצי: mintApproval("mail", "construction", "", 30) – אישור חתום, מוגבל למעסיק, לענף ולזמן.
- *      ביטול/רוטציה: revokeEmployer("mail") – כל הטוקנים והאישורים הקודמים של המעסיק מפסיקים לעבוד.
+ * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
+ *   1. setup() – יוצר סוד חתימה (SECRET).
+ *   2. Deploy → Web app → Execute as: Me → Who has access: Anyone (בסביבת בדיקה עד אישור).
+ *   3. לכל מעסיק: mintEmployer("mail", "שם העסק", "ח.פ", "מזהה-לקוח", "ענף") – קישור המעסיק נשלח למייל המשרד בלבד (לא נרשם ביומן).
+ *      תבנית ענפית/חריגה: mintApproval("mail", {role, wageType, minWage, empPct, erPct, sevPct, collective, breakPermit, night}, 30).
+ *      ביטול/רוטציה: revokeEmployer("mail") – כל הקישורים הפעילים של המעסיק נחסמים מיד (get/submit), ולא רק יצירת קישורים חדשים.
+ *   4. מסמך שנתקע בבדיקה (needs-review): resolveDoc("DOCID", "resend") או resolveDoc("DOCID", "sent").
  *
- * מודל אבטחה:
- *  - register: רק מי שמחזיק טוקן מעסיק תקף (HMAC של המייל בסוד השרת). התנאים נשמרים בשרת עם SHA-256.
- *  - העובד מקבל קישור אטום (#r=<128 ביט>), תקף 30 יום, לשליחה אחת, וניתן לביטול (revoke).
- *  - get: מחזיר את התנאים כפי שנשמרו – הדף לא יכול לשנות אותם; submit מאמת את ה-hash מול השרת.
- *  - הנמען נקבע רק לפי הרישום בשרת; אין שליחת מייל לכתובת שהעובד הקליד.
- *  - submit: מכונת מצבים (received → saved → mailed → done) – ניסיון חוזר לא שולח שוב מי שכבר קיבל.
- *  - בדיקות PDF: מבנה (%PDF- … %%EOF), גודל לכל קובץ ומצטבר לפני פענוח, דחיית /JavaScript, /Launch, /EmbeddedFile.
- *  - המייל כולל את התנאים כפי שנרשמו בשרת – מקור ההשוואה למה שבתוך ה-PDF.
+ * עקרונות:
+ *  - מקור אמת אחד לכל קישור (L:<linkId>). הקישור "נתפס" למסמך אחד (claim) לפני כל פעולה חיצונית.
+ *  - כל קובץ בדרייב מקבל שם יציב עם מזהה המסמך; לפני יצירה מחפשים אותו (reconcile) – אין כפילות גם אחרי נפילה.
+ *  - מייל: כל חריגה בזמן השליחה = מצב לא ודאי → needs-review. לא שולחים שוב אוטומטית.
+ *  - משימות פתוחות נרשמות בגיליון "משימות" עם אחראי, יעד וסטטוס; הסקריפט לא סוגר משימות.
  */
 const OFFICE_EMAIL = "cpa.snir@gmail.com";
 const ROOT_FOLDER = "קליטת עובדים";
 const LINKS_FOLDER = "_קישורים (נוצר אוטומטית)";
 const LOG_NAME = "יומן קליטות עובדים (נוצר אוטומטית – לא לערוך)";
-const MAX_BYTES = 20 * 1024 * 1024, MAX_TOTAL_B64 = 32 * 1024 * 1024, MAX_TERMS = 60000;
-const LINK_DAYS = 30, RETRY_GRACE_DAYS = 7, MAX_SUBMITS_PER_LINK = 5, MAX_DECODED = 20 * 1024 * 1024;
+const MAX_BYTES = 20 * 1024 * 1024, MAX_TOTAL_B64 = 32 * 1024 * 1024, MAX_TERMS = 60000, MAX_DECODED = 20 * 1024 * 1024;
+const LINK_DAYS = 30, RETRY_GRACE_DAYS = 7, MAX_SUBMITS_PER_LINK = 5;
+const TERMS_VER = 5, F101_YEAR = 2026;
 const SITE = "https://cpasnir-collab.github.io/office-forms/";
 const MODE_FILES = { print: 2, michpal: 1, paper: 1, change: 1 };
+const INDUSTRIES = ["general", "construction", "cleaning", "security", "transport", "food", "hotels", "events", "staffing", "care", "garage", "retail", "agri", "industry", "other"];
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -47,26 +47,33 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.3" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.4" }); }
 
-/* ---------- הרשאות מעסיק: רשומה לכל מעסיק (מזהה לקוח קבוע), טוקן עם גרסה – ניתן לביטול ולרוטציה ---------- */
+/* ---------- הרשאות מעסיק ---------- */
 function setup() {
   const p = PropertiesService.getScriptProperties();
   if (!p.getProperty("SECRET")) p.setProperty("SECRET", Utilities.getUuid() + Utilities.getUuid());
-  Logger.log("SECRET קיים. להפקת קישור למעסיק: mintEmployer(mail, company, companyId, clientId)");
 }
 function emp_(email) { return JSON.parse(PropertiesService.getScriptProperties().getProperty("E:" + String(email || "").trim().toLowerCase()) || "null"); }
-function mintEmployer(email, company, companyId, clientId, days) {
-  email = String(email || "").trim().toLowerCase();
-  if (!/^\S+@\S+\.\S+$/.test(email) || !company || !clientId) throw new Error("חסר מייל, שם עסק או מזהה לקוח");
+/* מעסיק = מייל מורשה אחד ↔ עסק אחד (מזהה לקוח קבוע). ריבוי עסקים לאותו מייל חסום במפורש. */
+function mintEmployer(email, company, companyId, clientId, industry, days) {
+  email = String(email || "").trim().toLowerCase(); clientId = String(clientId || ""); industry = industry || "general";
+  if (!/^\S+@\S+\.\S+$/.test(email) || !company) throw new Error("חסר מייל או שם עסק");
+  if (!/^[A-Za-z0-9-]{1,32}$/.test(clientId)) throw new Error("מזהה לקוח: אותיות לטיניות, ספרות ומקף, עד 32");
+  if (INDUSTRIES.indexOf(industry) < 0) throw new Error("ענף לא מוכר");
+  const p = PropertiesService.getScriptProperties();
   const old = emp_(email) || { ver: 0 };
-  const rec = { tenantId: String(clientId), company: String(company).trim().slice(0, 120), companyId: clean_(companyId), ver: (old.ver || 0) + 1, revoked: false,
-    exp: new Date(Date.now() + (days || 365) * 864e5).toISOString(), at: new Date().toISOString() };
-  PropertiesService.getScriptProperties().setProperty("E:" + email, JSON.stringify(rec));
-  const preset = { company: rec.company, companyId: rec.companyId, ownerEmail: email, tok: tok_(email, rec) };
+  if (old.tenantId && old.tenantId !== clientId) throw new Error("המייל כבר משויך ללקוח " + old.tenantId + " – מייל אחד לעסק אחד");
+  const owner = p.getProperty("T:" + clientId);
+  if (owner && owner !== email) throw new Error("מזהה הלקוח כבר משויך למייל אחר");
+  const rec = { tenantId: clientId, company: String(company).trim().slice(0, 120), companyId: clean_(companyId), industry: industry,
+    ver: (old.ver || 0) + 1, revoked: false, exp: new Date(Date.now() + (days || 365) * 864e5).toISOString(), at: new Date().toISOString() };
+  p.setProperty("E:" + email, JSON.stringify(rec)); p.setProperty("T:" + clientId, email);
+  const preset = { company: rec.company, companyId: rec.companyId, ownerEmail: email, industry: industry, tok: tok_(email, rec) };
   const link = SITE + "#s=" + Utilities.base64EncodeWebSafe(JSON.stringify(preset), Utilities.Charset.UTF_8).replace(/=+$/, "");
-  Logger.log("קישור מעסיק (לשלוח רק למעסיק): " + link); // היומן נגיש רק לבעל הסקריפט; הסוד עצמו לא נרשם
-  return link;
+  // הקישור הוא הרשאה – לא נרשם ביומן. נשלח רק לתיבת המשרד, שממנה שניר מעביר למעסיק.
+  MailApp.sendEmail({ to: OFFICE_EMAIL, subject: "קישור מעסיק – " + rec.company + " (" + clientId + ")", htmlBody: "<div dir='rtl'>קישור המעסיק (הרשאה – להעביר רק למעסיק):<br>" + esc_(link) + "</div>" });
+  return "נשלח למייל המשרד";
 }
 function revokeEmployer(email) {
   const rec = emp_(email); if (!rec) return false;
@@ -74,24 +81,56 @@ function revokeEmployer(email) {
   PropertiesService.getScriptProperties().setProperty("E:" + String(email).trim().toLowerCase(), JSON.stringify(rec));
   return true;
 }
-function mintApproval(email, industry, collective, days) {
+/* אישור משרד = תבנית תנאים חתומה (לא רק ענף): תפקיד, סוג שכר, שכר מינימלי שאושר, שיעורי פנסיה, הסכם קיבוצי, היתר הפסקות, לילה. */
+const TPL_KEYS = ["role", "wageType", "minWage", "empPct", "erPct", "sevPct", "collective", "breakPermit", "night"];
+function mintApproval(email, tpl, days) {
   const rec = emp_(email); if (!rec || rec.revoked) throw new Error("מעסיק לא רשום או מבוטל");
-  const exp = new Date(Date.now() + (days || 30) * 864e5).toISOString().slice(0, 10);
-  const sig = okSig_(email, rec, industry, collective, exp);
-  Logger.log("אישור ענף: okSig=" + sig + " okExp=" + exp + " (להוסיף לקישור המעסיק יחד עם industry/collective)");
-  return { okSig: sig, okExp: exp, industry: industry, collective: collective || "" };
+  const t = {}; TPL_KEYS.forEach(function (k) { t[k] = tpl && tpl[k] !== undefined ? tpl[k] : ""; });
+  t.exp = new Date(Date.now() + (days || 30) * 864e5).toISOString().slice(0, 10);
+  const sig = okSig_(String(email).trim().toLowerCase(), rec, t);
+  MailApp.sendEmail({ to: OFFICE_EMAIL, subject: "אישור תבנית – " + rec.company, htmlBody: "<div dir='rtl'>להוסיף לקישור המעסיק: okTpl=" + esc_(JSON.stringify(t)) + " okSig=" + sig + "</div>" });
+  return { okTpl: t, okSig: sig };
 }
 function secret_() { const s = PropertiesService.getScriptProperties().getProperty("SECRET"); if (!s) throw new Error("no-secret"); return s; }
 function hmac_(v) { return hex_(Utilities.computeHmacSha256Signature(v, secret_())); }
 function tok_(email, rec) { return hmac_("tok|" + email + "|" + rec.tenantId + "|" + rec.ver).slice(0, 32); }
-function okSig_(email, rec, industry, collective, exp) { return hmac_("ok|" + email + "|" + rec.tenantId + "|" + rec.ver + "|" + (industry || "general") + "|" + (collective || "") + "|" + exp).slice(0, 32); }
-function auth_(email, tok) { // מחזיר את רשומת המעסיק אם הטוקן תקף, לא מבוטל ולא פג
+function okSig_(email, rec, tpl) { return hmac_("ok|" + email + "|" + rec.tenantId + "|" + rec.ver + "|" + rec.industry + "|" + canon_(tpl)).slice(0, 32); }
+function auth_(email, tok) {
   email = String(email || "").trim().toLowerCase();
   const rec = emp_(email);
   if (!rec || rec.revoked || new Date(rec.exp) < new Date() || !tok) return null;
   try { return safeEq_(tok_(email, rec), String(tok)) ? rec : null; } catch (e) { return null; }
 }
+function employerOk_(reg) { // לפני כל get/submit: המעסיק לא בוטל, לא פג, ולא הוחלפה ההרשאה מאז יצירת הקישור
+  const rec = emp_(reg.owner);
+  return !!rec && !rec.revoked && new Date(rec.exp) >= new Date() && rec.ver === reg.ver && rec.tenantId === reg.tenantId;
+}
 function safeEq_(a, b) { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; }
+
+/* ---------- סכימת תנאים ---------- */
+function schema_(t) {
+  const num = function (v) { return v !== "" && v !== undefined && isFinite(Number(v)) && Number(v) > 0; };
+  if (Number(t.v) !== TERMS_VER) return "version";
+  if (["new", "change"].indexOf(t.mode || "new") < 0) return "mode";
+  if ((t.mode || "new") === "new" && ["print", "michpal"].indexOf(t.f101) < 0) return "f101";
+  if (!num(t.wage) || ["hourly", "monthly"].indexOf(t.wageType) < 0 || !num(t.weeklyHours)) return "wage";
+  if (!t.role || !t.manager || !t.harassContact || !t.signer) return "required";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(t.mode === "change" ? t.effDate : t.start))) return "date";
+  if (t.days && (!Array.isArray(t.days) || t.days.length !== 7)) return "days";
+  return "";
+}
+function tplOk_(t, tpl) { // התנאים בפועל בתוך התבנית שאושרה
+  if (tpl.role && tpl.role !== t.role) return false;
+  if (tpl.wageType && tpl.wageType !== t.wageType) return false;
+  if (tpl.minWage && Number(t.wage) < Number(tpl.minWage)) return false;
+  if (tpl.empPct && Number(tpl.empPct) !== Number(t.empPct || 6)) return false;
+  if (tpl.erPct && Number(tpl.erPct) !== Number(t.erPct || 6.5)) return false;
+  if (tpl.sevPct && Number(tpl.sevPct) !== Number(t.sevPct || 6)) return false;
+  if ((tpl.collective || "") !== (t.collective || "")) return false;
+  if (t.breakPermit && !tpl.breakPermit) return false;
+  if (t.night && !tpl.night) return false;
+  return true;
+}
 
 /* ---------- קישורים ---------- */
 function register_(d) {
@@ -107,26 +146,27 @@ function register_(d) {
   if (!terms) return out_({ ok: false, err: "no-terms" });
   delete terms.tok;
   if (String(terms.ownerEmail || "").trim().toLowerCase() !== owner || terms.linkId !== linkId) return out_({ ok: false, err: "mismatch" });
-  // זהות העסק נקבעת לפי רשומת המעסיק בשרת, לא לפי מה שהוזן בדף
+  const bad = schema_(terms); if (bad) return out_({ ok: false, err: "schema:" + bad });
+  // זהות העסק והענף – מרשומת המעסיק בשרת, לא מהדף
   terms.company = rec.company; terms.companyId = rec.companyId; terms.tenantId = rec.tenantId;
-  // ענף / הסכם קיבוצי: רק עם אישור משרד חתום, למעסיק הזה, לענף ולהסכם האלה, ובתוקף
-  const branch = (terms.industry && terms.industry !== "general") || terms.collective;
-  if (branch) {
-    const exp = String(terms.okExp || "");
-    if (!terms.okSig || !exp || exp < new Date().toISOString().slice(0, 10) ||
-        !safeEq_(okSig_(owner, rec, terms.industry, terms.collective, exp), String(terms.okSig))) return out_({ ok: false, err: "branch-not-approved" });
+  if (rec.industry !== "general") terms.industry = rec.industry;
+  // חריגה (ענף מאומת, ענף שהמעסיק בחר, הסכם קיבוצי, היתר הפסקות, לילה) – רק בתוך תבנית חתומה ובתוקף
+  const exc = rec.industry !== "general" || (terms.industry && terms.industry !== "general") || terms.collective || terms.breakPermit || terms.night;
+  if (exc) {
+    const tpl = terms.okTpl && typeof terms.okTpl === "object" ? terms.okTpl : null;
+    if (!tpl || !terms.okSig || !tpl.exp || tpl.exp < new Date().toISOString().slice(0, 10) ||
+        !safeEq_(okSig_(owner, rec, tpl), String(terms.okSig)) || !tplOk_(terms, tpl)) return out_({ ok: false, err: "not-approved" });
   }
-  const want = terms.mode === "change" ? 1 : terms.f101 === "print" ? 2 : 1;
-  if (!want) return out_({ ok: false, err: "schema" });
   const json = canon_(terms);
   if (json.length > MAX_TERMS) return out_({ ok: false, err: "terms-size" });
   const sha = hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json, Utilities.Charset.UTF_8));
   const lf = linksFolder_();
-  if (lf.getSharingAccess() !== DriveApp.Access.PRIVATE) return out_({ ok: false, err: "folder-shared" });
+  privateOk_(lf);
   const f = lf.createFile(Utilities.newBlob(json, "application/json", linkId + ".json"));
   props.setProperty("L:" + linkId, JSON.stringify({
-    owner: owner, tenantId: rec.tenantId, company: rec.company, employee: clean_(terms.empName), mode: terms.mode === "change" ? "change" : "new", f101: clean_(terms.f101),
-    sha: sha, file: f.getId(), state: "active", submits: 0, sev833: !!(terms.sec14 && Number(terms.sevPct) >= 8.33),
+    owner: owner, tenantId: rec.tenantId, ver: rec.ver, company: rec.company, employee: clean_(terms.empName),
+    mode: terms.mode === "change" ? "change" : "new", f101: clean_(terms.f101), start: String(terms.start || terms.effDate || ""),
+    sha: sha, file: f.getId(), state: "active", submits: 0, sev833: !!(terms.sec14 && Number(terms.sevPct) >= 8.33), fundKnown: !!terms.pensionFund,
     at: new Date().toISOString(), exp: new Date(Date.now() + LINK_DAYS * 864e5).toISOString()
   }));
   return out_({ ok: true, sha: sha });
@@ -138,6 +178,7 @@ function reg_(linkId) {
 function regState_(reg) {
   if (!reg) return "not-found";
   if (reg.state === "revoked") return "revoked";
+  if (!employerOk_(reg)) return "employer-revoked";
   if (reg.state === "used") return "used";
   if (new Date(reg.exp) < new Date()) return "expired";
   return "active";
@@ -158,40 +199,37 @@ function revoke_(d) {
 }
 
 /* ---------- קבלת מסמכים ----------
-   קישור אחד = מסמך אחד (activeDocId נקבע לפני כל פעולה חיצונית).
-   שמירה – קובץ אחר קובץ, והמצב נשמר אחרי כל קובץ. מייל – מסומן "pending" לפני השליחה:
-   אם התהליך נפל באמצע ואין ודאות שהמייל יצא – לא שולחים שוב, אלא עוצרים לבדיקה (needs-review).
-   היומן – עדכון לפי מזהה מסמך (upsert), לא שורה נוספת. */
+   מקור האמת: L:<linkId>.doc – מצב המסמך היחיד של הקישור. אין רשומת D נפרדת שיכולה להתפצל ממנו. */
 function submit_(d) {
   const props = PropertiesService.getScriptProperties();
   const linkId = String(d.linkId || "");
-  const reg = reg_(linkId);
+  let reg = reg_(linkId);
   if (!reg) return out_({ ok: false, err: "unregistered-link" });
   const docId = clean_(d.docId);
   if (!/^[0-9A-F]{10}$/.test(docId)) return out_({ ok: false, err: "bad-doc" });
-  const key = "D:" + docId;
-  let st = JSON.parse(props.getProperty(key) || "null");
-  if (st && st.linkId !== linkId) return out_({ ok: false, err: "doc-conflict" });
-  if (st && st.state === "done") return out_({ ok: true, dup: true });
-  if (reg.activeDocId && reg.activeDocId !== docId) return out_({ ok: false, err: reg.state === "used" ? "used" : "busy" });
+  const save = function () { props.setProperty("L:" + linkId, JSON.stringify(reg)); };
+  let st = reg.doc || null;
+  if (st && st.id !== docId) return out_({ ok: false, err: reg.state === "used" ? "used" : "busy" });
+  if (st && st.state === "done") return out_({ ok: true, dup: true });   // עקבי: גם אחרי ביטול – כבר הושלם
   const s0 = regState_(reg);
-  if (s0 === "revoked") return out_({ ok: false, err: "revoked" });
-  if (!st) {                                                     // מסמך חדש – הקישור חייב להיות פעיל
+  if (s0 === "revoked" || s0 === "employer-revoked") return out_({ ok: false, err: s0 });
+  if (!st) {
     if (s0 !== "active") return out_({ ok: false, err: s0 });
     if ((reg.submits || 0) >= MAX_SUBMITS_PER_LINK) return out_({ ok: false, err: "too-many" });
     if (String(d.termsHash || "") !== reg.sha) return out_({ ok: false, err: "terms-mismatch" });
   } else if (s0 === "expired" && new Date(reg.exp).getTime() + RETRY_GRACE_DAYS * 864e5 < Date.now()) return out_({ ok: false, err: "expired" });
-  if (st && st.mail === "pending") return out_({ ok: false, err: "needs-review" }); // לא ידוע אם המייל יצא – לא שולחים שוב
+  if (st && (st.mail === "pending" || st.mail === "needs-review")) return out_({ ok: false, err: "needs-review" });
 
-  // מבנה: מספר הקבצים לפי המסלול שנרשם
+  // מסלול: paper רק כשטופס 101 של שנת המס לא נתמך (שנת התחלה או השנה הנוכחית שונה מ-F101_YEAR)
   const mode = String(d.mode || "");
-  const allowed = reg.mode === "change" ? ["change"] : reg.f101 === "print" ? ["print", "paper"] : ["michpal"];
+  const taxYear = Math.max(Number(String(reg.start).slice(0, 4)) || 0, new Date().getFullYear());
+  const allowed = reg.mode === "change" ? ["change"] : reg.f101 === "print" ? (taxYear !== F101_YEAR ? ["paper"] : ["print"]) : ["michpal"];
   if (allowed.indexOf(mode) < 0) return out_({ ok: false, err: "schema" });
   const files = Array.isArray(d.files) ? d.files : [];
   if (files.length !== MODE_FILES[mode]) return out_({ ok: false, err: "files" });
   const total = files.reduce(function (a, f) { return a + String(f.pdf || "").length; }, 0);
-  if (total > MAX_TOTAL_B64) return out_({ ok: false, err: "size" });   // לפני פענוח
-  if (!st && MailApp.getRemainingDailyQuota() < 2) return out_({ ok: false, err: "quota" }); // מעסיק + העתק למשרד
+  if (total > MAX_TOTAL_B64) return out_({ ok: false, err: "size" });
+  if ((!st || st.mail !== "sent") && MailApp.getRemainingDailyQuota() < 2) return out_({ ok: false, err: "quota" }); // גם בניסיון חוזר
 
   const emp = reg.employee || "עובד", company = reg.company || "מעסיק", owner = reg.owner;
   const blobs = [], shas = []; let decoded = 0;
@@ -199,50 +237,74 @@ function submit_(d) {
     const bytes = Utilities.base64Decode(String(f.pdf || ""));
     decoded += bytes.length; if (decoded > MAX_DECODED) throw new Error("size");
     pdfOk_(bytes);
-    const name = (clean_(f.fname) || ("מסמך - " + emp)).replace(/\.pdf$/i, "") + ".pdf";
-    blobs.push(Utilities.newBlob(bytes, "application/pdf", name));
+    const base = (clean_(f.fname) || ("מסמך - " + emp)).replace(/\.pdf$/i, "");
+    blobs.push(Utilities.newBlob(bytes, "application/pdf", base + " [" + docId + "-" + (i + 1) + "].pdf")); // שם יציב לאיתור
     shas.push(hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes)));
   });
-  if (st && st.sha && st.sha.join() !== shas.join()) return out_({ ok: false, err: "retry-differs" });
+  if (st && st.sha.join() !== shas.join()) return out_({ ok: false, err: "retry-differs" });
 
-  if (!st) {
-    st = { state: "received", linkId: linkId, sha: shas, mode: mode, files: [], at: new Date().toISOString(), complex: (d.complex101 || []).map(clean_).slice(0, 5) };
-    props.setProperty(key, JSON.stringify(st));
-    reg.activeDocId = docId; reg.submits = (reg.submits || 0) + 1;
-    props.setProperty("L:" + linkId, JSON.stringify(reg));
+  if (!st) {                                   // claim אטומי: כתיבה אחת שתופסת את הקישור למסמך הזה
+    st = { id: docId, state: "received", sha: shas, mode: mode, files: [], at: new Date().toISOString(), complex: (d.complex101 || []).map(clean_).slice(0, 5) };
+    reg.doc = st; reg.submits = (reg.submits || 0) + 1; save();
   }
-  // שלב 1: שמירה בדרייב – קובץ אחר קובץ
+  // שלב 1: דרייב – לכל קובץ: איתור לפי שם יציב, ורק אם לא קיים – יצירה
   const root = folder_(DriveApp.getRootFolder(), ROOT_FOLDER);
-  const sub = folder_(root, clean_(company) + " – " + clean_(reg.tenantId));
-  if (sub.getSharingAccess() !== DriveApp.Access.PRIVATE || root.getSharingAccess() !== DriveApp.Access.PRIVATE) throw new Error("folder-shared");
-  for (let i = st.files.length; i < blobs.length; i++) {
-    const f = sub.createFile(blobs[i]);
-    f.setDescription("מזהה מסמך " + docId + " | גרסה " + clean_(d.agrVer) + " | SHA-256 " + shas[i] + " | תנאים " + reg.sha + " | התקבל " + new Date().toISOString());
-    st.files.push(f.getId()); st.state = "saving"; props.setProperty(key, JSON.stringify(st));
+  const sub = tenantFolder_(root, reg.tenantId, company);
+  privateOk_(root); privateOk_(sub);
+  for (let i = 0; i < blobs.length; i++) {
+    if (st.files[i]) continue;
+    const it = sub.getFilesByName(blobs[i].name);
+    const f = it.hasNext() ? it.next() : sub.createFile(blobs[i]);
+    f.setDescription("מזהה מסמך " + docId + " | גרסה " + clean_(d.agrVer) + " | SHA-256 " + shas[i] + " | תנאים " + reg.sha);
+    st.files[i] = f.getId(); st.state = "saving"; save();
   }
-  // שלב 2: מייל אחד למעסיק + העתק למשרד
+  // שלב 2: מייל. pending נכתב לפני; כל חריגה = לא ודאי → needs-review (לא נשלח שוב אוטומטית)
   if (st.mail !== "sent") {
     const terms = JSON.parse(DriveApp.getFileById(reg.file).getBlob().getDataAsString());
-    st.mail = "pending"; props.setProperty(key, JSON.stringify(st));
+    st.mail = "pending"; save();
     try {
       MailApp.sendEmail({ to: owner, cc: OFFICE_EMAIL, subject: subject_(reg, emp, company), htmlBody: body_(d, reg, terms, emp, company, docId, shas, st), attachments: blobs, name: "משרד רו\"ח שניר טרמצ'י" });
-    } catch (e) { st.mail = "failed"; props.setProperty(key, JSON.stringify(st)); throw e; } // נכשל בוודאות – מותר לנסות שוב
-    st.mail = "sent"; st.mailedAt = new Date().toISOString(); props.setProperty(key, JSON.stringify(st));
+    } catch (e) {
+      st.mail = "needs-review"; st.mailErr = String(e && e.message || e).slice(0, 200); save();
+      tasksAdd_(docId, reg, ["מייל: לא ודאי אם נשלח – לבדוק בתיבת היוצאים ואז resolveDoc"]);
+      return out_({ ok: false, err: "needs-review" });
+    }
+    st.mail = "sent"; st.mailedAt = new Date().toISOString(); save();
   }
-  // שלב 3: יומן (upsert לפי מזהה מסמך) ומשימות פתוחות למשרד
-  log_(docId, [new Date(), docId, clean_(d.agrVer), mode, company, reg.tenantId, owner, emp, shas.join(" "), reg.sha, st.files.join(" "), linkId, tasks_(reg, mode, st).join(" · ")]);
-  st.state = "done"; props.setProperty(key, JSON.stringify(st));
-  reg.state = "used"; reg.usedAt = new Date().toISOString(); props.setProperty("L:" + linkId, JSON.stringify(reg));
+  // שלב 3: יומן (upsert) + משימות (פעם אחת)
+  log_(docId, [new Date(), docId, clean_(d.agrVer), mode, company, reg.tenantId, owner, emp, shas.join(" "), reg.sha, st.files.join(" "), linkId]);
+  if (!st.tasks) { tasksAdd_(docId, reg, tasks_(reg, mode, st)); st.tasks = true; save(); }
+  st.state = "done"; reg.state = "used"; reg.usedAt = new Date().toISOString(); save();
   return out_({ ok: true });
 }
-function tasks_(reg, mode, st) { // מה עוד פתוח אחרי שהמסמכים נשלחו – קליטה לא הושלמה עד שהמשרד סוגר
+/* החלטת המשרד על מסמך שנתקע: "sent" – וידאתי שיצא; "resend" – וידאתי שלא יצא, לשלוח שוב בניסיון הבא */
+function resolveDoc(docId, how) {
+  const props = PropertiesService.getScriptProperties(), all = props.getProperties();
+  const k = Object.keys(all).filter(function (x) { return /^L:/.test(x) && (JSON.parse(all[x]).doc || {}).id === docId; })[0];
+  if (!k) throw new Error("לא נמצא");
+  const reg = JSON.parse(all[k]);
+  if (reg.doc.mail !== "needs-review" && reg.doc.mail !== "pending") throw new Error("המסמך לא במצב בדיקה");
+  reg.doc.mail = how === "sent" ? "sent" : "retry"; reg.doc.resolvedAt = new Date().toISOString();
+  props.setProperty(k, JSON.stringify(reg));
+  return reg.doc.mail;
+}
+function tasks_(reg, mode, st) { // [משימה, ימים עד יעד מתחילת העבודה]
   const t = [];
-  if (mode === "print") t.push("101 ממתין לחתימה ידנית (שבוע)");
-  if (mode === "paper") t.push("101 לא הופק – למלא טופס רשמי ידני");
-  if ((st.complex || []).length) t.push("101 לבדיקת משרד: " + st.complex.join(", "));
-  if (reg.mode !== "change") t.push("פנסיה: לבדוק סוג מוצר ובסיס בקליטה במיכפל");
-  if (reg.sev833) t.push("מכתב לקופה 8.33%: לקבל אסמכתת מסירה");
+  if (mode === "print") { t.push(["101: לקבל טופס חתום בכתב יד", 7]); t.push(["101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7]); }
+  if (mode === "paper") t.push(["101: לא הופק – למלא טופס רשמי ידני", 7]);
+  if ((st.complex || []).length) t.push(["101 מורכב: " + st.complex.join(", "), 3]);
+  if (reg.mode !== "change") { t.push(["פנסיה: לאמת ביטוח קודם, סוג מוצר ובסיס בקליטה במיכפל", 30]); if (!reg.fundKnown) t.push(["פנסיה: לקבל שם קופה ולעדכן", 30]); }
+  if (reg.sev833) t.push(["מכתב לקופה 8.33%: למסור ולקבל אסמכתה", 0]);
   return t;
+}
+function tasksAdd_(docId, reg, list) {
+  const sh = sheet_("משימות", ["נוצר", "מזהה מסמך", "לקוח", "עובד", "משימה", "אחראי", "יעד", "סטטוס", "אסמכתה / הערה"]);
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(reg.start) ? new Date(reg.start) : new Date();
+  list.forEach(function (x) {
+    const task = Array.isArray(x) ? x[0] : x, days = Array.isArray(x) ? x[1] : 1;
+    const due = new Date(Math.max(base.getTime(), Date.now()) + days * 864e5);
+    sh.appendRow([new Date(), docId, reg.tenantId, reg.employee, task, "המשרד", Utilities.formatDate(due, "Asia/Jerusalem", "dd/MM/yyyy"), "פתוח", ""]);
+  });
 }
 function pdfOk_(bytes) {
   if (!bytes.length || bytes.length > MAX_BYTES) throw new Error("size");
@@ -259,10 +321,10 @@ function body_(d, reg, t, emp, company, docId, shas, st) {
   const row = function (k, v) { return v ? "<tr><td style='color:#555;padding:2px 8px'>" + esc_(k) + "</td><td style='padding:2px 8px'><b>" + esc_(v) + "</b></td></tr>" : ""; };
   return "<div dir='rtl' style='font-family:Arial'><p>שלום,</p>" +
     "<p>מצורפים המסמכים החתומים של <b>" + esc_(emp) + "</b> ב" + esc_(company) + ".</p>" +
-    (st.mode === "print" ? "<p><b>טופס 101:</b> להדפיס, להחתים את העובד בכתב יד בחלק י' בשבוע הראשון לעבודה, ולשמור בתיק. עד החתימה – זו טיוטה.</p>" : "") +
+    (st.mode === "print" ? "<p><b>טופס 101:</b> להדפיס, להחתים את העובד בכתב יד בחלק י' בשבוע הראשון לעבודה, ולשמור בתיק. עד החתימה ובדיקת המשרד – טיוטה, לא לחישוב מס.</p>" : "") +
     (st.mode === "paper" ? "<p><b>טופס 101:</b> לא הופק – גרסת השנה עוד לא קיימת בכלי. יש למלא עם העובד טופס 101 רשמי.</p>" : "") +
     ((st.complex || []).length ? "<p style='color:#a00'><b>טופס 101 לבדיקת משרד לפני שימוש:</b> " + esc_(st.complex.join(", ")) + "</p>" : "") +
-    (Number(t.sevPct) >= 8.33 && t.sec14 ? "<p><b>פיצויים 8.33%:</b> בקובץ ההסכם יש מכתב הודעה לקופה – יש למסור אותו לקופה ולשמור אישור מסירה.</p>" : "") +
+    (Number(t.sevPct) >= 8.33 && t.sec14 ? "<p><b>פיצויים 8.33%:</b> בקובץ ההסכם יש מכתב הודעה לקופה – ההחלה מותנית במסירה בפועל. למסור ולשמור אסמכתה.</p>" : "") +
     "<p><b>התנאים כפי שנרשמו על ידך בשרת</b> (להשוואה מול ה-PDF):</p><table style='border-collapse:collapse;font-size:13px'>" +
     row("תפקיד", t.role) + row(t.mode === "change" ? "בתוקף מ" : "תחילת עבודה", t.mode === "change" ? t.effDate : t.start) +
     row("שכר", (t.wage || "") + " ₪ " + (t.wageType === "monthly" ? "לחודש" : "לשעה")) + row("היקף", (t.weeklyHours || "") + " שעות בשבוע") +
@@ -272,7 +334,7 @@ function body_(d, reg, t, emp, company, docId, shas, st) {
     row("גמול גלובלי", t.globalOT ? t.globalOT + " שעות · " + t.globalOTAmount + " ₪" : "") + row("עמלות", t.commission) + row("נסיעות", t.travel) +
     row("קרן השתלמות", t.hishEr ? "מעסיק " + t.hishEr + "% · עובד " + (t.hishEmp || "") + "%" : "") + row("תנאים נוספים", t.extras) +
     "</table><p style='font-size:12px;color:#555'>הטבלה מציגה את התנאים כפי שנשמרו בשרת. ה-PDF נוצר בטלפון של העובד; אם יש הבדל בין ה-PDF לטבלה – לא להשתמש במסמך ולפנות למשרד.</p>" +
-    "<p><b>משימות פתוחות:</b> " + esc_(tasks_(reg, st.mode, st).join(" · ")) + "</p>" +
+    "<p><b>משימות פתוחות:</b> " + esc_(tasks_(reg, st.mode, st).map(function (x) { return x[0]; }).join(" · ")) + "</p>" +
     "<p>הקבצים נשמרו בדרייב של המשרד: " + esc_(ROOT_FOLDER + " / " + company) + "</p>" +
     "<p style='color:#555;font-size:12px'>מזהה מסמך " + esc_(docId) + " · גרסה " + esc_(clean_(d.agrVer)) + "<br>טביעת התנאים (SHA-256): " + reg.sha + "<br>טביעות הקבצים: " + shas.join("<br>") + "</p>" +
     (reg.mode === "change" ? "" : "<p>תזכורת: בתחילת כל שנת מס יש לבקש מהעובד טופס 101 מעודכן.</p>") +
@@ -280,28 +342,41 @@ function body_(d, reg, t, emp, company, docId, shas, st) {
 }
 
 /* ---------- כלים ---------- */
-function log_(docId, row) {
+function logBook_() {
   const root = folder_(DriveApp.getRootFolder(), ROOT_FOLDER);
   const it = root.getFilesByName(LOG_NAME);
-  let ss;
-  if (it.hasNext()) ss = SpreadsheetApp.open(it.next());
-  else {
-    ss = SpreadsheetApp.create(LOG_NAME);
-    DriveApp.getFileById(ss.getId()).moveTo(root);
-    const sh0 = ss.getSheets()[0];
-    sh0.appendRow(["התקבל", "מזהה מסמך", "גרסה", "מסלול", "מעסיק", "מזהה לקוח", "מייל מעסיק", "עובד", "SHA-256 קבצים", "SHA-256 תנאים", "קבצים בדרייב", "מזהה קישור", "משימות פתוחות"]);
-    const p = sh0.protect().setDescription("יומן קליטות – נכתב רק על ידי הסקריפט");
-    p.removeEditors(p.getEditors()); if (p.canDomainEdit()) p.setDomainEdit(false);
-  }
-  const sh = ss.getSheets()[0], ids = sh.getDataRange().getValues().map(function (r) { return String(r[1]); });
+  if (it.hasNext()) return SpreadsheetApp.open(it.next());
+  const ss = SpreadsheetApp.create(LOG_NAME);
+  DriveApp.getFileById(ss.getId()).moveTo(root);
+  const sh0 = ss.getSheets()[0];
+  sh0.appendRow(["התקבל", "מזהה מסמך", "גרסה", "מסלול", "מעסיק", "מזהה לקוח", "מייל מעסיק", "עובד", "SHA-256 קבצים", "SHA-256 תנאים", "קבצים בדרייב", "מזהה קישור"]);
+  const p = sh0.protect().setDescription("יומן קליטות – נכתב רק על ידי הסקריפט");
+  p.removeEditors(p.getEditors()); if (p.canDomainEdit()) p.setDomainEdit(false);
+  return ss;
+}
+function sheet_(name, head) { const ss = logBook_(); let sh = ss.getSheetByName(name); if (!sh) { sh = ss.insertSheet(name); sh.appendRow(head); } return sh; }
+function log_(docId, row) {
+  const sh = logBook_().getSheets()[0], ids = sh.getDataRange().getValues().map(function (r) { return String(r[1]); });
   const at = ids.indexOf(docId);
   if (at > 0) sh.getRange(at + 1, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+}
+/* תיקייה לפי מזהה לקוח קבוע (F:<tenant> → מזהה תיקייה); שינוי שם העסק לא יוצר תיקייה חדשה */
+function tenantFolder_(root, tenantId, company) {
+  const p = PropertiesService.getScriptProperties(), id = p.getProperty("F:" + tenantId);
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
+  const f = root.createFolder(clean_(company) + " – " + clean_(tenantId)); p.setProperty("F:" + tenantId, f.getId()); return f;
+}
+/* פרטיות תיקייה: לא משותפת בקישור, ואין עורכים/צופים מלבד בעל החשבון (כולל הרשאות שירשו) */
+function privateOk_(folder) {
+  if (folder.getSharingAccess() !== DriveApp.Access.PRIVATE) throw new Error("folder-shared");
+  const me = Session.getEffectiveUser().getEmail().toLowerCase();
+  const others = folder.getEditors().concat(folder.getViewers()).map(function (u) { return u.getEmail().toLowerCase(); }).filter(function (m) { return m !== me; });
+  if (others.length) throw new Error("folder-has-users");
 }
 /* ניקוי: רק דוח – לא מוחק. מחיקה לפי מדיניות שמירה שהמשרד יקבע (ממתין להחלטת שניר). */
 function reportStale(days) {
   const all = PropertiesService.getScriptProperties().getProperties(), cut = Date.now() - (days || 90) * 864e5, out = [];
-  Object.keys(all).forEach(function (k) { if (/^[LD]:/.test(k)) { const o = JSON.parse(all[k]); if (new Date(o.usedAt || o.exp || o.at).getTime() < cut) out.push(k); } });
-  Logger.log(out.length + " רשומות ישנות מ-" + (days || 90) + " יום (לא נמחקו): " + out.join(", "));
+  Object.keys(all).forEach(function (k) { if (/^L:/.test(k)) { const o = JSON.parse(all[k]); if (new Date(o.usedAt || o.exp || o.at).getTime() < cut) out.push(k); } });
   return out;
 }
 function linksFolder_() { return folder_(folder_(DriveApp.getRootFolder(), ROOT_FOLDER), LINKS_FOLDER); }
@@ -309,7 +384,7 @@ function rate_(k, max) {
   const c = CacheService.getScriptCache(); const n = Number(c.get("r:" + k) || 0);
   if (n >= max) return false; c.put("r:" + k, String(n + 1), 3600); return true;
 }
-function canon_(o) { // JSON קנוני: מפתחות ממוינים
+function canon_(o) {
   if (Array.isArray(o)) return "[" + o.map(canon_).join(",") + "]";
   if (o && typeof o === "object") return "{" + Object.keys(o).sort().map(function (k) { return JSON.stringify(k) + ":" + canon_(o[k]); }).join(",") + "}";
   return JSON.stringify(o);
