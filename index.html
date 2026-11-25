@@ -67,6 +67,8 @@
   .kidcard{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;position:relative}
   .kidcard .x{position:absolute;left:8px;top:6px;background:none;border:0;color:#c62828;font-size:14px;cursor:pointer}
   .hidden{display:none!important}
+  body.casual .nc{display:none!important}
+  body:not(.casual) .oc{display:none!important}
   .linkbox{word-break:break-all;background:#f0f3fa;border-radius:10px;padding:10px;font-size:12.5px;direction:ltr;text-align:left;max-height:90px;overflow:auto}
   .terms{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
   .terms div{background:var(--soft);border-radius:12px;padding:10px 12px}
@@ -233,7 +235,7 @@ function probationText(t){
   const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
   return ` ${words} להעסקה הם תקופת ניסיון.`;
 }
-const AGR_VER = "3.9 (11/2026)";
+const AGR_VER = "3.10 (11/2026)";
 const LINK_VER = 5; // קישורים מגרסה קודמת לא נפתחים – המעסיק יוצר קישור חדש
 function agreementBody(t, emp){
   const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
@@ -350,6 +352,81 @@ function agreementBody(t, emp){
   ${P("העובד מאשר כי קרא את ההסכם, הבין אותו, קיבל הזדמנות לשאול שאלות ולהיוועץ, והוא מסכים לתנאיו. ההסכם נחתם בחתימה אלקטרונית (ציור חתימה על המסך; אין זו חתימה אלקטרונית מאובטחת או מאושרת). עותק חתום יימסר לכל אחד מהצדדים.")}
   <p style="margin-top:10px"><b>ולראיה באו הצדדים על החתום.</b></p></div>`;
 }
+/* עובד לפי קריאה: הודעה על תנאי העסקה + הסכם מסגרת. בלי היקף וסידור קבועים; כל הזכויות לפי הדין ולפי העבודה בפועל. */
+function pensionPara(t, emp){
+  const pens = emp && emp.pens || "", pensFund = (emp && emp.pensFund) || t.pensionFund, pAge = emp && emp.pensAge;
+  return `המעסיק יבטח את העובד בביטוח פנסיוני בקופה שיבחר העובד${pensFund ? ` (נכון למועד החתימה: ${esc(pensFund)})` : ""}, ובהיעדר בחירה – בקופת ברירת מחדל לפי הדין. ${pens === "yes" ? "העובד הצהיר כי יש לו ביטוח פנסיוני קודם; לכן, כקבוע בצו לעובד כזה, הזכאות להפרשות היא ככלל מהיום הראשון לעבודה, וההפקדות יועברו לא יאוחר מתום 3 חודשי עבודה או מתום שנת המס – לפי המוקדם." : pens === "no" ? "העובד הצהיר כי אין לו ביטוח פנסיוני קודם; לכן ההפרשות יחלו במועד הקבוע בצו ההרחבה לביטוח פנסיוני מקיף במשק לעובד כזה – ככלל, בתום 6 חודשי עבודה." : "מועד תחילת ההפרשות ייקבע לפי צו ההרחבה לביטוח פנסיוני מקיף במשק, בהתאם לשאלה אם לעובד יש ביטוח פנסיוני קודם."} ${pAge ? `לפי הצהרת העובד טרם מלאו לו ${pAge} שנים – ההפרשות לא יחלו לפני הגיעו לגיל הזכאות לפי הצו, אלא אם חלה עליו זכאות אחרת.` : ""} תקופות עבודה לפי קריאה נמנות לצורך תקופת ההמתנה לפי הצו. שיעורי ההפרשה: עובד <b>${esc(t.empPct||"6")}%</b>, מעסיק לתגמולים <b>${esc(t.erPct||"6.5")}%</b>, מעסיק לפיצויים <b>${esc(t.sevPct||"6")}%</b>, מהשכר הרגיל.`;
+}
+function casualBody(t, emp){
+  const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
+  const id = emp && emp.idNum ? esc(emp.idNum) : "<span style='color:#999'>(ת\"ז)</span>";
+  const addr = emp && emp.address ? esc(emp.address) : "";
+  let n = 0, m = 0;
+  const H = title => { n++; m = 0; return `</div><div class="sec"><h4><span class="sn">${n}</span> ${title}</h4>`; };
+  const P = (html, cond=true) => cond ? `<p>${n}.${++m} ${html}</p>` : "";
+  return `
+  <div class="parties">
+    <div><small>המעסיק</small> <b>${esc(t.company)}</b>${t.companyId ? `<br>ח.פ/ע.מ ${esc(t.companyId)}` : ""}<br>${esc(t.address)}<br>(להלן: "המעסיק")</div>
+    <div><small>העובד</small> <b>${name}</b><br>ת"ז ${id}${addr ? `<br>${addr}` : ""}<br>(להלן: "העובד")</div>
+  </div>
+  <div>
+  ${H("מהות המסמך")}
+  ${P(`מסמך זה הוא הסכם מסגרת להעסקה לפי קריאה, והוא מהווה גם הודעה לעובד על תנאי עבודתו לפי חוק הודעה לעובד ולמועמד לעבודה (תנאי עבודה ומיון והליכי קבלה לעבודה), התשס"ב-2002. על יחסי העבודה יחולו, בנוסף לאמור כאן, דיני העבודה וצווי ההרחבה הכלליים החלים על המעסיק.`)}
+  ${P(t.collective ? `על העובד חל: <b>${esc(t.collective)}</b>, והוראותיו יחולו על יחסי העבודה. ארגון העובדים: ${esc(t.unionInfo||"")}.` : `לפי הצהרת המעסיק, נכון למועד החתימה הוא אינו חבר בארגון מעסיקים ולא חל על העובד הסכם קיבוצי. אין בכך כדי לגרוע מתחולתו של צו הרחבה או הסדר אחר המחייבים את הצדדים לפי דין.`)}
+
+  ${H("התפקיד ומקום העבודה")}
+  ${P(`העובד יועסק בתפקיד <b>${esc(t.role)}</b>, לפי הוראות המעסיק${t.manager ? ` והממונה הישיר – <b>${esc(t.manager)}</b>` : ` ומי שהוא מינה לכך – <b>${esc(t.signer)}</b>`}.`)}
+  ${P(`מקום העבודה: ${t.workplace ? `<b>${esc(t.workplace)}</b>, או` : ""} המקום שבו מתקיים האירוע או העבודה שאליהם הוזמן העובד, כפי שיימסר לו מראש בכל הזמנה.`)}
+
+  ${H("העבודה לפי קריאה")}
+  ${P(`ההסכם בתוקף מיום <b>${fmtDate(t.start)}</b>. העבודה בפועל מתחילה במשמרת הראשונה שהעובד יעבוד בה.`)}
+  ${P("אין לעובד היקף משרה, ימים או שעות עבודה קבועים. המעסיק יציע לעובד משמרות לפי צורכי העבודה, ויודיע מראש על המועד, השעות המשוערות והמקום. העובד רשאי לקבל או לדחות כל הצעה. משמרת שהעובד אישר – יתייצב אליה בזמן, ויודיע מוקדם ככל האפשר אם נבצר ממנו להגיע.")}
+  ${P("אין בהסכם התחייבות של המעסיק להציע מספר מסוים של משמרות, ואין בו התחייבות של העובד לקבל משמרות.")}
+  ${P("הזכויות שתלויות בוותק, בהיקף או ברציפות – יחושבו לפי העבודה בפועל ולפי הדין. אם בפועל תיווצר עבודה קבועה ורציפה – יחולו הזכויות המגיעות לפי אותה מתכונת, ואין במסמך זה כדי לגרוע מהן.")}
+
+  ${H("שעות עבודה, הפסקות ושעות נוספות")}
+  ${P("שעות העבודה בכל משמרת יירשמו במערכת הנוכחות או בדיווח שיקבע המעסיק, מתחילת המשמרת ועד סיומה. העובד ידווח באופן מלא ומדויק; אסור לדווח עבור עובד אחר. המעסיק ימסור לעובד, לפי בקשתו, את פירוט השעות שנרשמו.")}
+  ${P(`לפי חוק שעות עבודה ומנוחה, התשי"א-1951: יום עבודה רגיל – עד 8 שעות (7 שעות ביום שלפני יום המנוחה, וביום שיש בו שעתיים לפחות בין 22:00 ל-06:00); במשמרת של 6 שעות ומעלה תינתן הפסקה של 45 דקות, מהן 30 רצופות. בהפסקה העובד רשאי לצאת ממקום העבודה; אם יידרש להישאר – ההפסקה תיחשב שעות עבודה ותשולם.`)}
+  ${P("שעות נוספות – רק לפי דרישת המעסיק או באישורו, ובגמול לפי החוק: 125% בעד שתי השעות הנוספות הראשונות ביום, ו-150% בעד כל שעה נוספת שלאחריהן, וכן מעבר ל-42 שעות רגילות בשבוע. עבודה ביום המנוחה השבועי תיעשה רק לפי היתר ותשולם לפי החוק. בין משמרת למשמרת – מנוחה כקבוע בדין.")}
+
+  ${H("השכר")}
+  ${P(`בעד כל שעת עבודה בפועל ישולם לעובד <b>שכר שעתי בסך ${esc(t.wage)} ₪ ברוטו</b>, ובכל מקרה לא פחות משכר המינימום לשעה כפי שיעודכן מעת לעת.`)}
+  ${P("השכר משתלם בעד חודש קלנדרי, בהעברה לחשבון הבנק של העובד, לא יאוחר מה-9 בחודש שאחרי החודש שבו עבד. בכל חודש שבו עבד יקבל העובד תלוש שכר כדין.")}
+  ${P(`מהשכר ינוכו מס הכנסה, דמי ביטוח לאומי וביטוח בריאות, חלק העובד בהפרשות לפנסיה וכל ניכוי אחר המותר לפי חוק הגנת השכר, התשי"ח-1958.`)}
+  ${P(`תנאים נוספים: ${esc(t.extras)}`, !!t.extras)}
+
+  ${H("חופשה, מחלה, חגים, הבראה ונסיעות")}
+  ${P(`<b>חופשה שנתית</b> – לפי חוק חופשה שנתית, התשי"א-1951, לפי ימי העבודה בפועל כקבוע בחוק לעובד שאינו עובד במתכונת קבועה; ככל שלא נוצלה – תשולם פדיון חופשה כדין.`)}
+  ${P(`<b>דמי מחלה</b> – לפי חוק דמי מחלה, התשל"ו-1976, בצבירה יחסית לעבודה בפועל ובתנאים הקבועים בחוק.`)}
+  ${P("<b>חגים</b> – לפי צו ההרחבה הכללי ובתנאי הזכאות הקבועים בו (בין היתר ותק של שלושה חודשים, ואי-היעדרות ביום שלפני החג וביום שאחריו ללא הסכמת המעסיק).")}
+  ${P("<b>דמי הבראה</b> – לפי צו ההרחבה, לאחר שנת עבודה, וביחס להיקף העבודה בפועל.")}
+  ${P(`<b>נסיעות</b> – החזר הוצאות נסיעה לעבודה וממנה לפי צו ההרחבה${t.travel ? `: ${esc(t.travel)}` : ", לפי ימי העבודה בפועל"}.`)}
+  ${P("<b>שירות מילואים</b> – זכויות העובד יהיו לפי הדין.")}
+
+  ${H("ביטוח פנסיוני ופיצויים")}
+  ${P(pensionPara(t, emp))}
+  ${P(`<b>סעיף 14:</b> על הפקדות המעסיק לפיצויים בשיעור 6%, המתחייבות לפי צו ההרחבה לביטוח פנסיוני מקיף במשק, יחול סעיף 14 לחוק פיצויי פיטורים, התשכ"ג-1963, כך שיבואו במקום <b>72%</b> מפיצויי הפיטורים בעד השכר והתקופה שבעדם הופקדו. את היתרה ישלים המעסיק בסיום העבודה, ככל שתקום לעובד זכאות לפיצויי פיטורים לפי הדין.`, !!t.sec14)}
+  ${P(`<b>קרן השתלמות</b> – החל מ${t.hishFrom ? esc(t.hishFrom) : "תחילת העבודה"}: הפרשות מעסיק ${esc(t.hishEr||"7.5")}% והפרשות עובד ${esc(t.hishEmp||"2.5")}% מהשכר הרגיל.`, !!(t.hishEmp || t.hishEr))}
+
+  ${H("התנהגות, רכוש וסודיות")}
+  ${P("העובד יבצע את עבודתו במסירות ובאדיבות, ישמור על נהלי הבטיחות, השירות והלבוש שנמסרו לו, ועל רכוש המעסיק והלקוחות. ניכוי משכר העובד ייעשה רק כמותר בחוק הגנת השכר.")}
+  ${P("העובד ישמור בסודיות מידע על לקוחות המעסיק, האירועים והמשתתפים בהם, ולא יצלם או יפרסם אותם ברשתות חברתיות ללא אישור. אין באמור כדי להגביל דיווח כדין לרשות מוסמכת.")}
+  ${P("העובד יפעל בכל הקשור לכספים, לקופה, לטיפים ולמלאי לפי נהלי המעסיק, וידווח מיד על חוסר או אי-התאמה. אין בכך כדי להטיל עליו אחריות אוטומטית לחוסרים.", !!t.cash)}
+  ${P("במקום העבודה עשויות להיות מצלמות אבטחה, למטרות ביטחון ובטיחות בלבד, לפי מדיניות שנמסרה לעובד בכתב ולפי הדין.", !!t.cameras)}
+
+  ${H("מניעת הטרדה מינית")}
+  ${P(`המעסיק פועל לפי החוק למניעת הטרדה מינית, התשנ"ח-1998. האחראי/ת לטיפול בתלונות: <b>${esc(t.harassContact)}</b>. אין באמור כדי לגרוע מזכות העובד לפנות לרשויות.`)}
+
+  ${H("סיום ההתקשרות")}
+  ${P(`כל צד רשאי להודיע על סיום ההתקשרות. הודעה מוקדמת, שימוע לפני פיטורים וכל זכות אחרת בסיום – לפי הדין ולפי הוותק וההיקף בפועל, כקבוע בחוק הודעה מוקדמת לפיטורים ולהתפטרות, התשס"א-2001.`)}
+  ${P("בסיום ישולמו לעובד כל הזכויות המגיעות לו לפי הדין, וימסרו לו תלוש גמר חשבון, מכתב שחרור לקופה וטופס 161 ככל שנדרש. העובד יחזיר ציוד ובגדי עבודה שקיבל; אין בכך כדי לעכב תשלום שכר.")}
+
+  ${H("הצהרות העובד וכללי")}
+  ${P("העובד מצהיר כי הפרטים שמסר נכונים ומלאים. שינוי בפרטי טופס 101 (מצב משפחתי, ילדים, כתובת, עבודה נוספת) – יודיע בתוך 7 ימים, כנדרש בתקנות מס הכנסה; שינוי בחשבון הבנק – בהקדם.")}
+  ${P("אין במסמך זה כדי לגרוע מזכות המוקנית לעובד לפי דין, צו הרחבה, הסכם קיבוצי או הסדר אחר המחייב את הצדדים; במקרה של סתירה – תחול ההוראה המחייבת. שינוי בתנאים יימסר לעובד בהודעה בכתב כדין.")}
+  ${P("העובד מאשר כי קרא את המסמך, הבין אותו והסכים לו. המסמך נחתם בחתימה אלקטרונית (ציור חתימה על המסך; אין זו חתימה אלקטרונית מאובטחת או מאושרת). עותק חתום יימסר לעובד.")}
+  <p style="margin-top:10px"><b>ולראיה באו הצדדים על החתום.</b></p></div>`;
+}
 function fundNotice(t, empName, empId){
   return `<div class="doc">
     <div class="dh"><div><div class="t">הודעה לקופה</div><div class="s">החלת סעיף 14 לחוק פיצויי פיטורים · מזהה מסמך ${DOC_ID}</div></div><div class="c">${esc(t.company)}</div></div>
@@ -387,6 +464,12 @@ function changeBody(t, emp){
   <p>העובד מאשר בחתימתו כי קיבל את ההודעה וקרא אותה. אישור הקבלה אינו מהווה הסכמה לשינוי שמרע את תנאי העבודה.</p>`;
 }
 function termsGrid(t){
+  if(t.mode === "casual") return `<div class="terms">
+    <div><small>תפקיד</small><b>${esc(t.role)}</b></div>
+    <div><small>שכר</small><b>${wageLine(t)}</b></div>
+    <div><small>היקף</small><b>לפי קריאה – בלי היקף קבוע</b></div>
+    <div><small>תשלום</small><b>חודשי, עד ה-9</b></div>
+  </div>`;
   return `<div class="terms">
     <div><small>תפקיד</small><b>${esc(t.role)}</b></div>
     <div><small>תחילת עבודה</small><b>${fmtDate(t.start)}</b></div>
@@ -407,8 +490,9 @@ function renderSetup(){
   $("#app").innerHTML = `
   <div class="card">
     <h2><span class="n">1</span>מה מכינים?</h2>
-    ${radio("mode",[["new","עובד חדש – הסכם עבודה"],["change","עובד קיים – הודעה על שינוי תנאים"]],"new")}
-    <div id="f101Box">
+    ${radio("mode",[["new","עובד חדש – הסכם עבודה"],["change","עובד קיים – הודעה על שינוי תנאים"]].concat(SEND_URL ? [["casual","עובדים לפי קריאה – קישור אחד לכולם"]] : []),"new")}
+    <div class="help oc">👥 <b>עובדים לפי קריאה</b> (אירועים, עבודה מזדמנת): ממלאים פעם אחת תפקיד ושכר לשעה, ומקבלים <b>קישור אחד</b> לשלוח לכל העובדים – גם בקבוצת וואטסאפ. כל עובד נרשם בשם ובמייל, ממלא פרטים, בנק וטופס 101, וחותם על תנאי ההעסקה. המסמכים של כל עובד מגיעים אליך ולמשרד בנפרד. אין היקף או סידור קבועים, ולכן אין כאן סעיפי שעות קבועות.</div>
+    <div id="f101Box" class="nc">
       <label>טופס 101</label>
       ${radio("f101",[["print","העובד ממלא כאן, וחותם בכתב יד על הטופס המודפס"],["michpal","דרך פורטל מיכפל (101 אלקטרוני מאושר)"]],"print")}
       <p class="note">טופס 101 נחתם בכתב יד או במערכת מאושרת על ידי רשות המסים. הכלי הזה ממלא את הטופס הרשמי, ואת החתימה עושים על הדף המודפס.</p>
@@ -442,7 +526,7 @@ function renderSetup(){
     <p class="note">חובה לפי החוק למניעת הטרדה מינית. מעסיק של יותר מ-25 עובדים חייב גם בתקנון.</p>
   </div>
 
-  <div class="card">
+  <div class="card nc">
     <h2><span class="n">3</span>העובד</h2>
     <div class="row">
       <div><label class="req">שם העובד</label><input id="empName" placeholder="שם פרטי ומשפחה"></div>
@@ -476,8 +560,9 @@ function renderSetup(){
     <h2><span class="n">4</span>תפקיד ושעות</h2>
     <div class="row">
       <div><label class="req">תפקיד</label><input id="role" placeholder="למשל: עובד/ת דלפק"></div>
-      <div id="startBox"><label class="req">תאריך תחילת עבודה</label><input id="start" type="date"></div>
+      <div id="startBox"><label class="req"><span class="nc">תאריך תחילת עבודה</span><span class="oc">הקישור תקף מתאריך</span></label><input id="start" type="date"></div>
     </div>
+    <div class="nc">
     <h3>ימים ושעות</h3>
     <div class="days">${dayRows}</div>
     <div class="btns"><button class="btn sec" type="button" id="fillWeek">א׳–ה׳ 09:00-17:00</button><button class="btn sec" type="button" id="clearWeek">נקה</button></div>
@@ -493,10 +578,12 @@ function renderSetup(){
     <p class="note">הפסקה שונה ביום מסוים: מוסיפים לוכסן ודקות, למשל <span dir="ltr">09:00-17:00/30</span>.</p>
     <label class="opt"><input type="checkbox" id="breakPermit"><span class="t">חל היתר להפסקות (עבודה שאינה עבודת כפיים)<small>מסירה את אזהרת 45 הדקות, והמשרד בודק שתנאי ההיתר מתקיימים.</small></span></label>
     <label class="opt"><input type="checkbox" id="breakPaid"><span class="t">העובד נדרש להישאר במקום העבודה בהפסקה – ההפסקה נחשבת שעות עבודה ומשולמת</span></label>
+    </div>
     <p class="note">שעות נוספות מחושבות לפי מתכונת השבוע: ב-5 ימים – מעל 8.6 שעות ביום (7.6 ביום המקוצר), ב-6 ימים – מעל 8, בערב יום המנוחה – מעל 7, ובכל מקרה מעל 42 שעות רגילות בשבוע.</p>
     <label>מקום העבודה (אם שונה מכתובת העסק)</label><input id="workplace">
-    <label>תקופת ניסיון</label>
-    <select id="probation"><option value="">ללא</option><option value="1">חודש</option><option value="3" selected>3 חודשים</option><option value="6">6 חודשים</option></select>
+    <div class="nc"><label>תקופת ניסיון</label>
+    <select id="probation"><option value="">ללא</option><option value="1">חודש</option><option value="3" selected>3 חודשים</option><option value="6">6 חודשים</option></select></div>
+    <p class="note oc">אין היקף, ימים או שעות קבועים: העובד מקבל הצעות למשמרות ורשאי לסרב. השעות בפועל נרשמות בכל משמרת, ושעות נוספות, הפסקות ומנוחה – לפי החוק (כתוב בתנאים).</p>
   </div>
 
   <div class="card">
@@ -505,12 +592,12 @@ function renderSetup(){
       <div><label class="req">סוג שכר</label><select id="wageType"><option value="hourly">שעתי</option><option value="monthly">חודשי</option></select></div>
       <div><label class="req">סכום ברוטו (₪)</label><input id="wage" inputmode="decimal"></div>
     </div>
-    <div class="row">
+    <div class="row nc">
       <div><label>שעות נוספות גלובליות בחודש (רק אם יש)</label><input id="globalOT" inputmode="decimal"></div>
       <div><label>סכום הגמול הגלובלי לחודש (₪)</label><input id="globalOTAmount" inputmode="decimal"></div>
     </div>
-    <label>עמלות (רק אם יש)</label><textarea id="commission" placeholder="אחוז ועל מה. למשל: 5% ממכירות שהעובד סגר"></textarea>
-    <p class="note">בהסכם נכתבים אוטומטית: בסיס לפני מע"מ, עסקאות שבוטלו, מועד תשלום ופירוט לעובד.</p>
+    <div class="nc"><label>עמלות (רק אם יש)</label><textarea id="commission" placeholder="אחוז ועל מה. למשל: 5% ממכירות שהעובד סגר"></textarea>
+    <p class="note">בהסכם נכתבים אוטומטית: בסיס לפני מע"מ, עסקאות שבוטלו, מועד תשלום ופירוט לעובד.</p></div>
     <label>החזר נסיעות</label><input id="travel" placeholder="למשל: לפי צו ההרחבה / חופשי חודשי">
     <label>תנאים נוספים</label><textarea id="extras"></textarea>
     <h3>נספחים לפי סוג העבודה</h3>
@@ -574,7 +661,9 @@ function renderSetup(){
       okSig:(PRESET && PRESET.okSig) || "", okTpl:(PRESET && PRESET.okTpl) || "", tok:(PRESET && PRESET.tok) || "",
       effDate:v("effDate"), chgReason:v("chgReason")
     };
-    if(hoursPlan(t).night) t.night = true;
+    if(t.mode === "casual"){ t.f101 = "print"; t.wageType = "hourly"; t.sevPct = "6";
+      ["empName","empEmail","weeklyHours","restDay","probation","days","globalOT","globalOTAmount","commission","pattern","breakMin","shortDay","breakPermit","breakPaid","effDate","chgReason"].forEach(k => delete t[k]); }
+    if(t.mode !== "casual" && hoursPlan(t).night) t.night = true;
     if(t.mode === "change"){ t.changed = $$("[data-chg]").filter(e => e.checked).map(e => e.dataset.chg); t.prev = {};
       t.changed.forEach(k => { if(k === "wage"){ t.prev.wage = v("prev_wage"); t.prev.wageType = v("prev_wageType"); } else t.prev[k] = v("prev_"+k); });
       if(t.changed.includes("other")) t.otherAfter = v("otherAfter"); }
@@ -592,9 +681,13 @@ function renderSetup(){
     $("#unionBox").classList.toggle("hidden", !t.collective); $("#camPolicyBox").classList.toggle("hidden", !t.cameras); $("#shortBox").classList.toggle("hidden", (t.pattern||"5") !== "5");
     const fx = $("#fixHours"); if(fx) fx.onclick = () => { $("#weeklyHours").value = fmtH(hoursPlan(collect()).net); drawChecks(); };
   };
-  const modeShow = () => { const ch = rv("mode") === "change";
+  const modeShow = () => { const ch = rv("mode") === "change", cs = rv("mode") === "casual";
+    document.body.classList.toggle("casual", cs);
     $("#changeCard").classList.toggle("hidden", !ch); $("#f101Box").classList.toggle("hidden", ch); $("#startBox").classList.toggle("hidden", ch);
-    header("למעסיק", ch ? "הודעה על שינוי תנאי עבודה" : "הכנת הסכם עבודה לעובד חדש", ch ? "לעובד קיים – העובד מאשר בחתימה" : "ממלאים תנאים, חותמים, ושולחים לעובד קישור אישי"); drawChecks(); };
+    if(cs){ $("#wageType").value = "hourly"; $("#sevPct").value = "6"; if(!$("#start").value) $("#start").value = new Date().toISOString().slice(0,10); }
+    $("#wageType").disabled = cs; $("#sevPct").disabled = cs;
+    $("#makeLink").textContent = cs ? "צור קישור לעובדים ←" : "צור קישור לעובד ←";
+    header("למעסיק", ch ? "הודעה על שינוי תנאי עבודה" : cs ? "עובדים לפי קריאה" : "הכנת הסכם עבודה לעובד חדש", ch ? "לעובד קיים – העובד מאשר בחתימה" : cs ? "קישור אחד לכל העובדים – כל אחד נרשם וחותם בעצמו" : "ממלאים תנאים, חותמים, ושולחים לעובד קישור אישי"); drawChecks(); };
   $$('[name=mode]').forEach(r => r.onchange = modeShow);
   $$("[data-chg]").forEach(el => el.addEventListener("change", () => $(`[data-chgbox="${el.dataset.chg}"]`).classList.toggle("hidden", !el.checked)));
   if(PRESET && PRESET.industry) $("#industry").value = PRESET.industry;
@@ -608,14 +701,16 @@ function renderSetup(){
   $("#another").onclick = () => { renderSetup(); window.scrollTo(0,0); };
   modeShow();
   $("#makeLink").onclick = async () => {
-    const ch = rv("mode") === "change";
-    const need = [["company","שם העסק"],["address","כתובת העסק"],["signer","שם החותם"],["ownerEmail","המייל שלך"],["empName","שם העובד"],["role","תפקיד"],["weeklyHours","היקף שעות"],["wage","סכום השכר"]];
+    const ch = rv("mode") === "change", cs = rv("mode") === "casual";
+    const need = cs ? [["company","שם העסק"],["address","כתובת העסק"],["signer","שם החותם"],["ownerEmail","המייל שלך"],["role","תפקיד"],["wage","השכר לשעה"]]
+      : [["company","שם העסק"],["address","כתובת העסק"],["signer","שם החותם"],["ownerEmail","המייל שלך"],["empName","שם העובד"],["role","תפקיד"],["weeklyHours","היקף שעות"],["wage","סכום השכר"]];
     need.push(["harassContact","האחראי לתלונות על הטרדה מינית"]);
-    if(ch) need.push(["effDate","מועד השינוי"]); else need.push(["start","תאריך תחילה"]);
+    if(ch) need.push(["effDate","מועד השינוי"]); else need.push(["start", cs ? "התאריך שממנו הקישור תקף" : "תאריך תחילה"]);
     for(const [k,n] of need){ if(!v(k)) return bad(k, "חסר: " + n); }
     if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
     if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
-    if(SEND_URL){
+    if(cs && !SEND_URL) return toast("קישור לעובדים לפי קריאה עובד רק דרך שרת המשרד.");
+    if(SEND_URL && !cs){
       const em = v("empEmail").trim().toLowerCase();
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return bad("empEmail","חסר או לא תקין: המייל של העובד (לקוד האימות)");
       if(em === v("ownerEmail").trim().toLowerCase() || em === CPA_EMAIL) return bad("empEmail","כאן כותבים את המייל של העובד עצמו – לא של המעסיק או המשרד");
@@ -638,10 +733,19 @@ function renderSetup(){
         const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({app:"office-forms-v2", action:"register", linkId:t.linkId, ownerEmail:t.ownerEmail, tok, terms:t})});
         const j = await r.json(); if(!j || !j.ok) throw new Error(j && j.err || "register");
       }catch(e){ return toast("השרת לא אישר את יצירת הקישור (" + (e.message||"שגיאה") + "). פנה/י למשרד."); }
-      frag = "#r=" + t.linkId;
+      frag = (cs ? "#g=" : "#r=") + t.linkId;
     } else frag = await packLink(t);
     const url = location.origin + location.pathname + frag;
     $("#linkTxt").textContent = url;
+    if(cs){
+      $("#waLink").href = waHref("", "", t.company, url, "casual"); $("#waLink").textContent = "שלח לעובדים בוואטסאפ";
+      $("#linkFor").innerHTML = `קישור אחד לכל העובדים · <b>${esc(t.role)}</b> · ${esc(t.wage)} ₪ לשעה · תקף עד ${fmtDate(casualEnd(t.start))}`;
+      $("#linkNote").textContent = "את הקישור אפשר לשלוח לכל העובדים, גם בקבוצה. כל עובד נרשם בשם ובמייל, מאמת קוד ושולח מסמכים משלו. עד 150 עובדים בקישור.";
+      const hist = store.get("links") || []; hist.unshift({name:"כל העובדים – " + t.role, phone:"", role:"לפי קריאה · " + t.wage + " ₪ לשעה", start:t.start, at:new Date().toISOString(), url, mode:"casual"});
+      store.set("links", hist.slice(0, 40)); drawHist();
+      $("#linkOut").classList.remove("hidden"); $("#linkOut").scrollIntoView({behavior:"smooth"});
+      return;
+    }
     $("#waLink").href = waHref(v("empPhone"), t.empName, t.company, url, t.mode);
     $("#waLink").textContent = `שלח ל${t.empName} בוואטסאפ`;
     $("#linkFor").innerHTML = ch ? `הודעה על שינוי תנאים עבור <b>${esc(t.empName)}</b> · בתוקף מ-${fmtDate(t.effDate)}` : `קישור אישי עבור <b>${esc(t.empName)}</b> · ${esc(t.role)} · מתחיל/ה ${fmtDate(t.start)}`;
@@ -659,7 +763,7 @@ function renderSetup(){
 
 function waHref(phone, name, company, url, mode){
   let p = String(phone||"").replace(/\D/g,""); if(p.startsWith("0")) p = "972" + p.slice(1);
-  const msg = mode === "change" ? `היי ${name || ""}, מצורפת הודעה על עדכון בתנאי העבודה שלך ב${company}. נא לעבור ולאשר בחתימה:\n${url}` : `היי ${name || ""}! 👋 שמחים שאת/ה מצטרף/ת ל${company}.\nבקישור ממלאים פרטים, חותמים על הסכם העבודה וממלאים טופס 101 – הכל מהטלפון, כ-10 דקות:\n${url}`;
+  const msg = mode === "casual" ? `היי! 👋 לעבודה ב${company} נרשמים כאן פעם אחת – פרטים, חשבון בנק וטופס 101, וחתימה על תנאי ההעסקה. הכל מהטלפון, כ-10 דקות:\n${url}` : mode === "change" ? `היי ${name || ""}, מצורפת הודעה על עדכון בתנאי העבודה שלך ב${company}. נא לעבור ולאשר בחתימה:\n${url}` : `היי ${name || ""}! 👋 שמחים שאת/ה מצטרף/ת ל${company}.\nבקישור ממלאים פרטים, חותמים על הסכם העבודה וממלאים טופס 101 – הכל מהטלפון, כ-10 דקות:\n${url}`;
   return "https://wa.me/" + (p.length >= 11 ? p : "") + "?text=" + encodeURIComponent(msg);
 }
 function drawHist(){
@@ -671,10 +775,14 @@ function drawHist(){
 }
 
 /* ================= employee flow ================= */
-let T = null, E = {}, F = {}, sigE = null, ATT = [], VT = "", NEED_OTP = false;
+let T = null, E = {}, F = {}, sigE = null, ATT = [], VT = "", NEED_OTP = false, GROUP = "";
 const DOC_ID = Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase();
-const MODE = () => (T && T.mode === "change") ? "change" : (T && T.f101 === "michpal") ? "michpal" : (T && T.f101 === "paper") ? "paper" : "print";
-const STEPS = () => ({change:["פרטים","אישור השינוי","שליחה"], michpal:["פרטים","הסכם עבודה","שליחה"], paper:["פרטים","הסכם עבודה","שליחה"], print:["פרטים","הסכם עבודה","טופס 101","צילומים ושליחה"]})[MODE()];
+const MODE = () => (T && T.mode === "change") ? "change" : (T && T.mode === "casual") ? (T.f101 === "paper" ? "cpaper" : "casual") : (T && T.f101 === "michpal") ? "michpal" : (T && T.f101 === "paper") ? "paper" : "print";
+const STEPS = () => ({change:["פרטים","אישור השינוי","שליחה"], michpal:["פרטים","הסכם עבודה","שליחה"], paper:["פרטים","הסכם עבודה","שליחה"], print:["פרטים","הסכם עבודה","טופס 101","צילומים ושליחה"],
+  casual:["פרטים","תנאי העסקה","טופס 101","צילומים ושליחה"], cpaper:["פרטים","תנאי העסקה","שליחה"]})[MODE()];
+const HAS101 = md => md === "print" || md === "casual";      // טופס 101 ממולא בדף
+const PAPER101 = md => md === "paper" || md === "cpaper";   // 101 רשמי על נייר מול המעסיק
+const AGR_STEP = () => T && T.mode === "casual" ? "תנאי העסקה" : "הסכם עבודה";
 const stepOf = name => { const st = STEPS(); return progress(st.indexOf(name)+1, st.length, name); };
 function ask(msg, yes, no){ return new Promise(res => {
   const o = document.createElement("div"); o.id = "askModal";
@@ -684,6 +792,46 @@ function ask(msg, yes, no){ return new Promise(res => {
   document.body.appendChild(o); }); }
 
 /* אימות זהות: קוד חד-פעמי למייל שהמעסיק רשם (מצב שרת בלבד). בלי אימות השרת לא מקבל את המסמכים. */
+const OTP_MSG = {"otp-wrong":"הקוד לא נכון.", "otp-locked":"היו יותר מדי ניסיונות. שלח/י קוד חדש.", "otp-expired":"תוקף הקוד הסתיים. שלח/י קוד חדש.", "otp-none":"צריך לשלוח קוד חדש.", "otp-limit":"נשלחו היום יותר מדי קודים. נסה/י מחר, או פנה/י למעסיק.", quota:"לא ניתן לשלוח קוד כרגע. נסה/י שוב מאוחר יותר.", rate:"יותר מדי בקשות. נסה/י שוב בעוד כמה דקות.",
+  name:"יש לכתוב שם פרטי ושם משפחה.", "emp-email":"המייל לא תקין. כותבים את המייל האישי שלך.", used:"כבר שלחת מסמכים עם המייל הזה. אם צריך לתקן – פנה/י למעסיק.", full:"הקישור מלא. בקש/י מהמעסיק קישור חדש.", expired:"תוקף הקישור הסתיים. בקש/י מהמעסיק קישור חדש.", revoked:"המעסיק ביטל את הקישור."};
+const srv = async (o) => { const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(Object.assign({app:"office-forms-v2"}, o))}); return r.json(); };
+/* קישור קבוצתי: העובד נרשם בשם ובמייל, מקבל קוד, ומשם – קישור אישי פנימי כמו בקישור רגיל */
+function renderJoin(){
+  header(T.company, "הרשמה לעבודה", `${T.role} · ${T.wage} ₪ לשעה`);
+  dock("");
+  $("#app").innerHTML = `<div class="card">
+    <h2>👋 נעים להכיר</h2>
+    <p>ממלאים שם ומייל. למייל יישלח קוד בן 6 ספרות, כדי לוודא שהמסמכים נחתמים על ידך.</p>
+    <div class="row"><div><label class="req">שם פרטי</label><input id="jFirst" autocomplete="given-name"></div><div><label class="req">שם משפחה</label><input id="jLast" autocomplete="family-name"></div></div>
+    <label class="req">המייל שלך</label><input id="jEmail" type="email" inputmode="email" autocomplete="email" dir="ltr" placeholder="name@example.com">
+    <div class="btns"><button class="btn wide" type="button" id="jSend">שלחו לי קוד</button></div>
+    <div id="otpBox" class="hidden">
+      <p class="note" id="otpTo"></p>
+      <label class="req">הקוד מהמייל</label><input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" placeholder="000000">
+      <div class="btns"><button class="btn wide" type="button" id="otpOk">אימות והמשך</button></div>
+      <p class="note">לא הגיע? בדוק/י בתיקיית הספאם, או <a href="#" id="otpAgain">שלחו שוב</a>.</p>
+    </div></div>`;
+  let child = "";
+  const send = async () => {
+    const first = $("#jFirst").value.trim(), last = $("#jLast").value.trim(), em = $("#jEmail").value.trim().toLowerCase();
+    if(!first) return bad("jFirst","חסר: שם פרטי"); if(!last) return bad("jLast","חסר: שם משפחה");
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return bad("jEmail","המייל לא תקין");
+    try{ const j = await srv({action:"gjoin", groupId:GROUP, empName:`${first} ${last}`, empEmail:em});
+      if(!j.ok) return toast(OTP_MSG[j.err] || "לא ניתן להירשם כרגע. פנה/י למעסיק.");
+      child = j.linkId; T.empName = `${first} ${last}`; E.first = first; E.last = last; E.email = em;
+      $("#otpTo").textContent = `הקוד נשלח אל ${j.to} ותקף ${j.min || 10} דקות.`; $("#otpBox").classList.remove("hidden"); $("#otpCode").focus();
+    }catch(e){ toast("אין חיבור לשרת. נסה/י שוב."); }
+  };
+  $("#jSend").onclick = send; $("#otpAgain").onclick = e => { e.preventDefault(); send(); };
+  $("#otpOk").onclick = async () => {
+    const code = $("#otpCode").value.replace(/\D/g,"");
+    if(code.length !== 6) return toast("הקוד בן 6 ספרות");
+    try{ const j = await srv({action:"otpCheck", linkId:child, code});
+      if(!j.ok) return toast((OTP_MSG[j.err] || "האימות נכשל.") + (j.err === "otp-wrong" && j.left ? ` נשארו ${j.left} ניסיונות.` : ""));
+      VT = j.vt; T.linkId = child; renderWelcome(); window.scrollTo(0,0);
+    }catch(e){ toast("אין חיבור לשרת. נסה/י שוב."); }
+  };
+}
 function renderOtp(){
   header(T.company, "אימות זהות", "לפני שממשיכים – נוודא שהקישור הגיע אליך");
   dock("");
@@ -733,10 +881,10 @@ function renderWelcome(){
   <div class="card">
     <ul class="list">
       <li><span>1️⃣</span><div><b>פרטים אישיים וחשבון בנק</b><br><span class="note">לאן להעביר את המשכורת</span></div></li>
-      <li><span>2️⃣</span><div><b>הסכם העבודה</b><br><span class="note">קוראים וחותמים באצבע</span></div></li>
-      ${md === "print" ? `<li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">הטופס שקובע כמה מס ינוכה לך. ממלאים כאן עם הסברים, ואת החתימה עושים על הטופס המודפס במקום העבודה.</span></div></li>` : `<li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">תקבל/י בנפרד הודעה מפורטל מיכפל למילוי וחתימה דיגיטלית.</span></div></li>`}
+      <li><span>2️⃣</span><div><b>${md === "casual" ? "תנאי ההעסקה" : "הסכם העבודה"}</b><br><span class="note">קוראים וחותמים באצבע</span></div></li>
+      ${HAS101(md) ? `<li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">הטופס שקובע כמה מס ינוכה לך. ממלאים כאן עם הסברים, ואת החתימה עושים על הטופס המודפס במקום העבודה.</span></div></li>` : `<li><span>3️⃣</span><div><b>טופס 101</b><br><span class="note">תקבל/י בנפרד הודעה מפורטל מיכפל למילוי וחתימה דיגיטלית.</span></div></li>`}
     </ul>
-    <div class="help">💡 כדאי להכין: ${md === "print" ? "<b>תעודת זהות עם ספח</b> (לצילום), ו" : ""}פרטי חשבון הבנק.</div>
+    <div class="help">💡 כדאי להכין: ${HAS101(md) ? "<b>תעודת זהות עם ספח</b> (לצילום), ו" : ""}פרטי חשבון הבנק.</div>
   </div>${privacyCard()}`;
   }
   $("#go").onclick = () => { if(!$("#privOk").checked){ $("#privOk").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לאשר שקראת את ההודעה על השימוש בפרטים"); } renderDetails(); };
@@ -749,7 +897,7 @@ function privacyCard(){
     <ul class="list" style="font-size:14px">
       <li><span>👤</span><div><b>מי מקבל:</b> המעסיק – ${esc(T.company)}, ${esc(T.address)} (האחראי על המידע), ו${CPA_NAME} שמכין את השכר מטעמו. ${SEND_URL ? "המסמכים עוברים ונשמרים בשירותי Google (דרייב ומייל) של המשרד, כספק שירות." : "המסמכים נשלחים במייל או בשיתוף מהטלפון שלך."}</div></li>
       <li><span>🎯</span><div><b>למה:</b> ${chg ? "תיעוד שקיבלת את ההודעה על השינוי." : "הסכם העבודה, תשלום השכר לחשבון שלך, חישוב מס הכנסה וביטוח לאומי, הפרשות לפנסיה ודיווחים לרשויות ולקופות."}</div></li>
-      <li><span>⚖️</span><div><b>חובה או רשות:</b> ${chg ? "שם ות\"ז – כדי לזהות אותך. המייל – רשות." : (MODE() === "print" ? "פרטי טופס 101 וצילום ת\"ז נמסרים לפי פקודת מס הכנסה ותקנותיה; בלעדיהם ינוכה מס מרבי. " : "טופס 101 ימולא בנפרד, ולא בדף הזה. ") + "פרטים אישיים וכתובת – לחוזה ולדיווח לרשויות. פרטי בנק – כדי לשלם שכר. שאלת הפנסיה – כדי לקבוע את מועד ההפרשות. המייל – רשות."}</div></li>
+      <li><span>⚖️</span><div><b>חובה או רשות:</b> ${chg ? "שם ות\"ז – כדי לזהות אותך. המייל – רשות." : (HAS101(MODE()) ? "פרטי טופס 101 וצילום ת\"ז נמסרים לפי פקודת מס הכנסה ותקנותיה; בלעדיהם ינוכה מס מרבי. " : "טופס 101 ימולא בנפרד, ולא בדף הזה. ") + "פרטים אישיים וכתובת – לחוזה ולדיווח לרשויות. פרטי בנק – כדי לשלם שכר. שאלת הפנסיה – כדי לקבוע את מועד ההפרשות. המייל – רשות."}</div></li>
       <li><span>📤</span><div><b>למי עוד מועבר:</b> רק כנדרש לפי דין – רשות המסים, ביטוח לאומי וקופת הפנסיה.</div></li>
       <li><span>🗂️</span><div><b>הזכויות שלך:</b> לעיין במידע ולבקש לתקן אותו – מול ${esc(T.signer)}${T.ephone ? ` (${esc(T.ephone)})` : ""} או המשרד (<span dir="ltr">${CPA_EMAIL}</span>).</div></li>
       <li><span>📱</span><div>מה שאת/ה ממלא/ת נשאר בטלפון עד השליחה. ${SEND_URL ? "" : "המערכת לא שומרת אותו בשרת."}</div></li>
@@ -760,7 +908,7 @@ function renderDetails(){
   window.scrollTo(0,0);
   header(T.company, "פרטים אישיים", "כפי שמופיעים בתעודת הזהות");
   const chg = MODE() === "change";
-  dock(`<button class="btn wide" type="button" id="next">${chg ? "המשך להודעה ←" : "המשך להסכם ←"}</button>`);
+  dock(`<button class="btn wide" type="button" id="next">${chg ? "המשך להודעה ←" : T.mode === "casual" ? "המשך לתנאי ההעסקה ←" : "המשך להסכם ←"}</button>`);
   $("#app").innerHTML = stepOf("פרטים") + `
   <div class="card">
     <h2>👤 מי את/ה</h2>
@@ -857,18 +1005,19 @@ function bankFields(){
 function renderAgreement(){
   window.scrollTo(0,0);
   const md = MODE(), chg = md === "change";
-  header(T.company, chg ? "הודעה על שינוי תנאים" : "הסכם העבודה שלך", "קוראים, מאשרים וחותמים");
-  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">${md === "print" ? "חתמתי, המשך ל-101 ←" : "חתמתי, לסיום ←"}</button>`);
+  const cs = T.mode === "casual";
+  header(T.company, chg ? "הודעה על שינוי תנאים" : cs ? "תנאי ההעסקה שלך" : "הסכם העבודה שלך", "קוראים, מאשרים וחותמים");
+  dock(`<button class="btn sec" type="button" id="back">→ חזרה</button><button class="btn" type="button" id="next" style="flex:2">${HAS101(md) ? "חתמתי, המשך ל-101 ←" : "חתמתי, לסיום ←"}</button>`);
   const emp = {fullName:`${E.first} ${E.last}`, idNum:E.idNum, address:E.street ? `${E.street} ${E.house}, ${E.city}` : "", pens:E.pens, pensFund:E.pensFund, pensAge:E.pensAge};
-  $("#app").innerHTML = stepOf(chg ? "אישור השינוי" : "הסכם עבודה") + `
+  $("#app").innerHTML = stepOf(chg ? "אישור השינוי" : AGR_STEP()) + `
   ${chg ? "" : `<div class="card">
     <h2>📋 בקצרה</h2>
     ${termsGrid(T)}
     <p class="note">ההסכם המלא למטה. גלול/י כדי לקרוא.</p>
   </div>`}
   <div class="card">
-    <div class="agr"><div class="ah"><b>${chg ? "הודעה על שינוי בתנאי העבודה" : "הסכם עבודה אישי"}</b><span>${chg ? "לפי חוק הודעה לעובד" : "והודעה לעובד על תנאי עבודה"}</span></div>${chg ? changeBody(T, emp) : agreementBody(T, emp)}</div>
-    <label class="opt"><input type="checkbox" id="agree"><span class="t">${chg ? "קיבלתי את ההודעה וקראתי אותה" : `קראתי את ההסכם ואני מסכים/ה לתנאיו${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}`}</span></label>
+    <div class="agr"><div class="ah"><b>${chg ? "הודעה על שינוי בתנאי העבודה" : cs ? "תנאי העסקה – עבודה לפי קריאה" : "הסכם עבודה אישי"}</b><span>${chg ? "לפי חוק הודעה לעובד" : cs ? "הסכם מסגרת והודעה לעובד על תנאי עבודה" : "והודעה לעובד על תנאי עבודה"}</span></div>${chg ? changeBody(T, emp) : cs ? casualBody(T, emp) : agreementBody(T, emp)}</div>
+    <label class="opt"><input type="checkbox" id="agree"><span class="t">${chg ? "קיבלתי את ההודעה וקראתי אותה" : `קראתי את ${cs ? "תנאי ההעסקה" : "ההסכם"} ואני מסכים/ה להם${T.sec14 ? ", כולל החלת סעיף 14 על הפיצויים" : ""}`}</span></label>
     <h3>✍️ החתימה שלך</h3>
     <p class="note">חותמים באצבע בתוך המסגרת.</p>
     <canvas class="sig" id="sigE"></canvas>
@@ -880,7 +1029,7 @@ function renderAgreement(){
     if(!$("#agree").checked){ $("#agree").closest(".opt").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לסמן שקראת ואת/ה מסכים/ה להסכם"); }
     if(sigE.isEmpty()){ $("#sigE").scrollIntoView({behavior:"smooth",block:"center"}); return toast("חסרה חתימה"); }
     E.sig = sigE.data(); E.signedAt = nowStamp();
-    if(md === "print") render101(); else renderSend();
+    if(HAS101(md)) render101(); else renderSend();
   };
 }
 
@@ -958,7 +1107,7 @@ function render101(){
     <h2><span class="n">ד</span>ההכנסה מהעבודה הזו</h2>
     <div class="help">ברוב המקרים: <b>משכורת חודש</b>. "משרה נוספת" – אם יש לך עבודה עיקרית אחרת.</div>
     <select id="incType"><option>משכורת חודש</option><option>משכורת בעד משרה נוספת</option><option>משכורת חלקית</option><option>שכר עבודה (עובד יומי)</option><option>קצבה</option><option>מלגה</option></select>
-    <label>תאריך תחילת העבודה בשנת המס</label><input id="incStart" type="date" value="${esc(T.start||"")}">
+    <label>תאריך תחילת העבודה בשנת המס</label><input id="incStart" type="date" value="${esc(T.mode === "casual" ? (T.start > new Date().toISOString().slice(0,10) ? T.start : new Date().toISOString().slice(0,10)) : (T.start||""))}">
   </div>
 
   <div class="card">
@@ -1252,6 +1401,22 @@ function sigBlock(){
 }
 function agreementPages(){
   const name = `${E.first} ${E.last}`;
+  if(T.mode === "casual") return `<div class="doc">
+    <div class="dh"><div><div class="t">תנאי העסקה – עבודה לפי קריאה</div><div class="s">הסכם מסגרת והודעה לעובד על תנאי עבודה · נחתם דיגיטלית · גרסה ${AGR_VER} · מזהה מסמך ${DOC_ID}</div></div><div class="c">${esc(T.company)}</div></div>
+    <div class="box"><table class="kv">
+      <tr><td class="k">תפקיד</td><td>${esc(T.role)}</td><td class="k">בתוקף מ</td><td>${fmtDate(T.start)}</td></tr>
+      <tr><td class="k">שכר</td><td>${wageLine(T)}</td><td class="k">היקף</td><td>לפי קריאה – בלי היקף קבוע</td></tr>
+    </table></div>
+    ${casualBody(T, {fullName:name, idNum:E.idNum, address:`${E.street} ${E.house}, ${E.city}`, pens:E.pens, pensFund:E.pensFund, pensAge:E.pensAge}).replace('class="parties"','class="two"')}
+    <h4>פרטי העובד</h4>
+    <table class="kv">
+      <tr><td class="k">שם</td><td>${esc(name)}</td><td class="k">ת"ז</td><td>${esc(E.idNum)}</td></tr>
+      <tr><td class="k">כתובת</td><td>${esc(E.street)} ${esc(E.house)}, ${esc(E.city)} ${esc(E.zip)}</td><td class="k">טלפון</td><td>${esc(E.phone)}</td></tr>
+      <tr><td class="k">בנק</td><td colspan="3">${esc(E.bankName || "בנק " + E.bank)} (${esc(E.bank)}) · סניף ${esc(E.branch)}${E.branchName ? " " + esc(E.branchName) : ""} · חשבון ${esc(E.account)}</td></tr>
+    </table>
+    <p class="s" style="font-size:11px;color:#666">תאריך מסירת ההודעה לעובד: ${esc(E.signedAt)}</p>
+    ${sigBlock()}
+  </div>`;
   if(MODE() === "change") return `<div class="doc">
     <div class="dh"><div><div class="t">הודעה על שינוי בתנאי העבודה</div><div class="s">לפי חוק הודעה לעובד · נחתם דיגיטלית · מזהה מסמך ${DOC_ID}</div></div><div class="c">${esc(T.company)}</div></div>
     ${changeBody(T, {fullName:name, idNum:E.idNum}).replace('class="parties"','class="two"')}
@@ -1333,10 +1498,13 @@ function renderSend(){
   const md = MODE(), who = `${E.first} ${E.last}`;
   header(T.company, "כמעט סיימנו! ✨", "המסמכים שלך נוצרים עכשיו");
   dock("");
-  const plan = md === "change" ? [{title:"הודעה על שינוי תנאים (חתומה)", fname:clean(`הודעה על שינוי תנאים - ${who}.pdf`), html:buildAgreementHtml}]
+  const cdoc = {title:"תנאי העסקה לפי קריאה (חתום)", fname:clean(`תנאי העסקה לפי קריאה - ${who}.pdf`), html:buildAgreementHtml};
+  const plan = md === "casual" ? [cdoc, {title:"טופס 101 להדפסה וחתימה + צילומים", fname:clean(`טופס 101 להדפסה - ${who}.pdf`), html:build101Html}]
+    : md === "cpaper" ? [cdoc]
+    : md === "change" ? [{title:"הודעה על שינוי תנאים (חתומה)", fname:clean(`הודעה על שינוי תנאים - ${who}.pdf`), html:buildAgreementHtml}]
     : md === "michpal" || md === "paper" ? [{title:"הסכם עבודה חתום", fname:clean(`הסכם עבודה - ${who}.pdf`), html:buildAgreementHtml}]
     : [{title:"הסכם עבודה חתום", fname:clean(`הסכם עבודה - ${who}.pdf`), html:buildAgreementHtml}, {title:"טופס 101 להדפסה וחתימה + צילומים", fname:clean(`טופס 101 להדפסה - ${who}.pdf`), html:build101Html}];
-  $("#app").innerHTML = (md === "print" ? stepOf("צילומים ושליחה") : stepOf("שליחה")) + `
+  $("#app").innerHTML = (HAS101(md) ? stepOf("צילומים ושליחה") : stepOf("שליחה")) + `
   <div class="card hero">
     <div class="big" id="pdfIcon">⏳</div>
     <h2 id="pdfState">מכין את המסמכים…</h2>
@@ -1347,7 +1515,7 @@ function renderSend(){
     <p class="note" style="margin-top:10px" id="sendNote">ייפתח חלון השיתוף של הטלפון. בחר/י <b>Gmail</b> או אפליקציית מייל, ושלח/י אל:<br><span dir="ltr">${esc(T.ownerEmail)}</span> · <span dir="ltr">${CPA_EMAIL}</span></p>
     <div class="btns"><button class="btn sec" type="button" id="dl" disabled>⬇️ עותק לעצמי</button><a class="btn sec" id="mail">✉️ פתח מייל מוכן</a></div>
   </div>`;
-  const subject = (md === "change" ? "הודעה על שינוי תנאי עבודה – " : "הסכם עבודה" + (md === "print" ? " וטופס 101 – " : " – ")) + `${who} – ${T.company}`;
+  const subject = (md === "change" ? "הודעה על שינוי תנאי עבודה – " : T.mode === "casual" ? "תנאי העסקה לפי קריאה" + (md === "casual" ? " וטופס 101 – " : " – ") : "הסכם עבודה" + (md === "print" ? " וטופס 101 – " : " – ")) + `${who} – ${T.company}`;
   $("#mail").href = `mailto:${T.ownerEmail}?cc=${CPA_EMAIL}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent("שלום,\nמצורפים המסמכים (PDF).\n\n" + who + ", " + E.phone)}`;
   $("#mail").onclick = () => { if(DOCS.length) downloadAll(); setTimeout(() => renderThanks(false), 600); };
   DOCS = [];
@@ -1403,13 +1571,13 @@ function renderThanks(shared){
   <div class="card">
     <h2>מה הלאה?</h2>
     <ul class="list">
-      ${md === "print" ? `<li><span>✍️</span><div>המעסיק ידפיס לך את טופס 101 – עובר/ת על הפרטים וחותם/ת בכתב יד, בשבוע הראשון לעבודה. עד אז ינוכה מס לפי הכללים למי שלא מסר טופס.</div></li>` : ""}
+      ${HAS101(md) ? `<li><span>✍️</span><div>המעסיק ידפיס לך את טופס 101 – עובר/ת על הפרטים וחותם/ת בכתב יד, בשבוע הראשון לעבודה. עד אז ינוכה מס לפי הכללים למי שלא מסר טופס.</div></li>` : ""}
       ${md === "michpal" ? `<li><span>📱</span><div>בקרוב תגיע אליך הודעה מפורטל מיכפל למילוי וחתימה על טופס 101.</div></li>` : ""}
-      ${md === "paper" ? `<li><span>✍️</span><div>טופס 101 לשנה זו ימולא מול המעסיק על גבי הטופס הרשמי, בשבוע הראשון לעבודה.</div></li>` : ""}
+      ${PAPER101(md) ? `<li><span>✍️</span><div>טופס 101 לשנה זו ימולא מול המעסיק על גבי הטופס הרשמי, בשבוע הראשון לעבודה.</div></li>` : ""}
       ${md === "change" ? "" : `<li><span>💰</span><div>המשכורת תועבר לחשבון שמסרת, לא יאוחר מה-9 בחודש שאחרי חודש העבודה.</div></li>`}
       <li><span>🔄</span><div>אם משהו משתנה – כתובת, מצב משפחתי, ילדים, חשבון בנק או עבודה נוספת – עדכן/י את ${esc(T.signer)} בתוך שבוע, כדי שהמס יחושב נכון.</div></li>
       <li><span>❓</span><div>שאלה על התלוש או על המס? פנה/י ל${esc(T.signer)}${T.ephone ? ` (${esc(T.ephone)})` : ""} או ל${CPA_NAME}: <span dir="ltr">${CPA_EMAIL}</span>.</div></li>
-      <li><span>📄</span><div>שמור/י לעצמך עותק חתום של ${md === "change" ? "ההודעה" : "ההסכם"} – בכפתור למטה.</div></li>
+      <li><span>📄</span><div>שמור/י לעצמך עותק חתום של ${md === "change" ? "ההודעה" : T.mode === "casual" ? "תנאי ההעסקה" : "ההסכם"} – בכפתור למטה.</div></li>
     </ul>
     <div class="btns"><button class="btn sec wide" type="button" id="mine">⬇️ עותק לעצמי</button></div>
   </div>`;
@@ -1421,7 +1589,14 @@ async function route(){
   const h = location.hash;
   const stop = msg => { header("", "לא ניתן לפתוח את הקישור", ""); $("#app").innerHTML = `<div class="card warn">${msg}</div>`; };
   try{
-    if(h.startsWith("#r=")){
+    if(h.startsWith("#g=")){
+      if(!SEND_URL) throw new Error("bad");
+      GROUP = h.slice(3).replace(/[^0-9a-f]/g,"");
+      const j = await srv({action:"gget", groupId:GROUP});
+      if(!j.ok) return stop({expired:"תוקף הקישור הסתיים. בקש/י מהמעסיק קישור חדש.", revoked:"המעסיק ביטל את הקישור הזה.", "employer-revoked":"הקישור כבר לא פעיל. פנה/י למעסיק."}[j.err] || "הקישור לא נמצא. בקש/י מהמעסיק לשלוח אותו שוב.");
+      T = j.terms; T.termsHash = j.sha;
+    }
+    else if(h.startsWith("#r=")){
       if(!SEND_URL) throw new Error("bad");
       const id = h.slice(3).replace(/[^0-9a-f]/g,"");
       const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({app:"office-forms-v2", action:"get", linkId:id})});
@@ -1437,7 +1612,7 @@ async function route(){
   }
   if(T && Number(T.v) !== LINK_VER) return stop("הקישור הזה נוצר בגרסה קודמת של הטופס, ולא ניתן להשתמש בו. בקש/י מהמעסיק ליצור קישור חדש – זה לוקח דקה.");
   if(T && checkTerms(T, {approved:approved(T)}).err.length) return stop("בתנאים שבקישור יש שגיאה שהמעסיק צריך לתקן. בקש/י ממנו ליצור קישור חדש.");
-  if(T){ NEED_OTP ? renderOtp() : renderWelcome(); return; }
+  if(T){ GROUP ? renderJoin() : NEED_OTP ? renderOtp() : renderWelcome(); return; }
   if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
   renderSetup();
 }

@@ -424,5 +424,53 @@ t("R7: יום לילה שאינו ערב מנוחה – עדיין 420", (() => 
   t("OTP: מכסת מייל כמעט נגמרה – לא שולחים קוד", post(z.E, { action: "otp", linkId: L1 }).err === "quota");
 }
 
+// ---------- קישור קבוצתי – עובדים לפי קריאה ----------
+{
+  const G1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const cas = (extra) => Object.assign({ v: 5, linkId: G1, ownerEmail: OWN, company: "עדי ועמית", address: "מלכיה 50", role: "מלצר/ית", signer: "עדי", harassContact: "עדי 0542824326",
+    agrVer: "3.10", wage: "45", wageType: "hourly", start: "2026-12-01", mode: "casual", f101: "print", sec14: true, sevPct: "6" }, extra || {});
+  const E = makeEnv(); const tok = employer(E, OWN);
+  const r = post(E, { action: "register", linkId: G1, ownerEmail: OWN, tok, terms: cas() });
+  t("קבוצתי: נרשם קישור קבוצתי (G:) עם תוקף", r.ok && r.group && !!E._state.props["G:" + G1] && !E._state.props["L:" + G1] && r.until === "2027-03-01");
+  t("קבוצתי: שכר מתחת למינימום – נדחה", post(E, { action: "register", linkId: L2, ownerEmail: OWN, tok, terms: cas({ linkId: L2, wage: "30" }) }).err === "rules");
+  t("קבוצתי: עם סידור/היקף – נדחה", post(E, { action: "register", linkId: L2, ownerEmail: OWN, tok, terms: cas({ linkId: L2, weeklyHours: "20" }) }).ok === false);
+  t("קבוצתי: בלי הרשאת מעסיק – נדחה", post(E, { action: "register", linkId: L2, ownerEmail: OWN, tok: "x".repeat(32), terms: cas({ linkId: L2 }) }).err === "not-authorized");
+  const gg = post(E, { action: "gget", groupId: G1 });
+  t("קבוצתי: gget מחזיר תנאים וטביעה", gg.ok && gg.terms.role === "מלצר/ית" && gg.sha === r.sha);
+  t("קבוצתי: get רגיל על מזהה קבוצה – לא נמצא", post(E, { action: "get", linkId: G1 }).err === "not-found");
+  t("קבוצתי: הרשמה בלי שם מלא – נדחה", post(E, { action: "gjoin", groupId: G1, empName: "דנה", empEmail: "dana@example.com" }).err === "name");
+  t("קבוצתי: הרשמה עם מייל המעסיק – נדחה", post(E, { action: "gjoin", groupId: G1, empName: "דנה כהן", empEmail: OWN }).err === "emp-email");
+  const before = E._state.mails.length;
+  const j = post(E, { action: "gjoin", groupId: G1, empName: "דנה כהן", empEmail: "Dana@Example.com" });
+  t("קבוצתי: הרשמה יוצרת קישור אישי ושולחת קוד למייל העובד", j.ok && /^[0-9a-f]{32}$/.test(j.linkId) && E._state.mails.length === before + 1 && E._state.mails[before].to === "dana@example.com");
+  const child = JSON.parse(E._state.props["L:" + j.linkId]);
+  t("קבוצתי: הקישור האישי – אותה טביעת תנאים, מסלול casual, שם העובד", child.sha === r.sha && child.mode === "casual" && child.employee === "דנה כהן" && child.group === G1);
+  const j2 = post(E, { action: "gjoin", groupId: G1, empName: "דנה כהן", empEmail: "dana@example.com" });
+  t("קבוצתי: אותו מייל שוב – אותו קישור אישי (לא נוצר כפול)", j2.ok && j2.linkId === j.linkId && JSON.parse(E._state.props["G:" + G1]).joins === 1);
+  const c = codeOf(E), v = post(E, { action: "otpCheck", linkId: j.linkId, code: c });
+  t("קבוצתי: אימות קוד לקישור האישי", v.ok && !!v.vt);
+  const subC = (mode, files) => post(E, { action: "submit", vt: v.vt, linkId: j.linkId, docId: "ABCDEF0001", termsHash: r.sha, mode, agrVer: "3.10", files });
+  t("קבוצתי: הגשה במסלול print – נדחה (רק casual)", subC("print", [{ fname: "a.pdf", pdf }, { fname: "b.pdf", pdf: pdf2 }]).err === "schema");
+  const s = subC("casual", [{ fname: "a.pdf", pdf }, { fname: "b.pdf", pdf: pdf2 }]);
+  const m = mails(E).pop();
+  t("קבוצתי: הגשה התקבלה, 2 קבצים בתיקיית המעסיק", s.ok && pdfCount(E) === 2 && E._state.files.some(f => /תנאי העסקה לפי קריאה - דנה כהן/.test(f.name)));
+  t("קבוצתי: מייל למעסיק ולמשרד – נושא 'לפי קריאה'", m && m.to === OWN && m.cc === ME && /מסמכי עובד לפי קריאה – דנה כהן – טייפון/.test(m.subject) && /לפי קריאה/.test(m.htmlBody));
+  const tasks = (E._state.sheets["משימות"] || { rows: [] }).rows.map(x => x[5]).join("|");
+  t("קבוצתי: משימות – קליטה במיכפל, 101 חתום, פנסיה", /עובד לפי קריאה/.test(tasks) && /101: לקבל טופס חתום/.test(tasks) && /פנסיה/.test(tasks));
+  t("קבוצתי: אחרי הגשה – אותו מייל לא נרשם שוב", post(E, { action: "gjoin", groupId: G1, empName: "דנה כהן", empEmail: "dana@example.com" }).err === "used");
+  const j3 = post(E, { action: "gjoin", groupId: G1, empName: "יוסי לוי", empEmail: "yossi@example.com" });
+  t("קבוצתי: עובד נוסף נרשם באותו קישור", j3.ok && j3.linkId !== j.linkId && JSON.parse(E._state.props["G:" + G1]).joins === 2);
+  E.revokeGroup(G1);
+  t("קבוצתי: אחרי ביטול – אין הרשמה חדשה", post(E, { action: "gjoin", groupId: G1, empName: "רון כץ", empEmail: "ron@example.com" }).err === "revoked");
+  t("קבוצתי: אחרי ביטול – גם הקישור האישי שנרשם נחסם", post(E, { action: "otp", linkId: j3.linkId }).err === "revoked");
+  const E2 = makeEnv(); const tok2 = employer(E2, OWN); post(E2, { action: "register", linkId: G1, ownerEmail: OWN, tok: tok2, terms: cas() });
+  const g2 = JSON.parse(E2._state.props["G:" + G1]); g2.joins = g2.max; E2._state.props["G:" + G1] = JSON.stringify(g2);
+  t("קבוצתי: הקבוצה מלאה – הרשמה נדחית", post(E2, { action: "gjoin", groupId: G1, empName: "רון כץ", empEmail: "ron@example.com" }).err === "full");
+  const g3 = JSON.parse(E2._state.props["G:" + G1]); g3.exp = "2020-01-01T00:00:00Z"; E2._state.props["G:" + G1] = JSON.stringify(g3);
+  t("קבוצתי: פג תוקף – הקישור לא נפתח", post(E2, { action: "gget", groupId: G1 }).err === "expired");
+  E2.revokeEmployer(OWN); const g4 = JSON.parse(E2._state.props["G:" + G1]); g4.exp = "2099-01-01T00:00:00Z"; E2._state.props["G:" + G1] = JSON.stringify(g4);
+  t("קבוצתי: הרשאת המעסיק בוטלה – הקישור הקבוצתי נחסם", post(E2, { action: "gget", groupId: G1 }).err === "employer-revoked");
+}
+
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

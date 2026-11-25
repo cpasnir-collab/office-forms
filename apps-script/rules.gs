@@ -78,7 +78,7 @@ const numOk = v => v !== "" && v !== undefined && isFinite(Number(v)) && Number(
 /* שכבת קלט סגורה – לפני כל חישוב. כל שדה נבדק לסוג (לא String() על מערכים/אובייקטים) ולטווח,
    ואחר כך הכול מנורמל פעם אחת לאובייקט קנוני (מחרוזות), ורק הוא משמש לחישוב ולטביעה. */
 const BOOL_KEYS = ["breakPaid","sec14","breakPermit","cash","cameras","youth","camPolicy","night"];
-const ENUMS = {mode:["new","change"], pattern:["5","6"], restDay:["שבת","שישי","ראשון"], wageType:["hourly","monthly"], f101:["print","michpal","paper"],
+const ENUMS = {mode:["new","change","casual"], pattern:["5","6"], restDay:["שבת","שישי","ראשון"], wageType:["hourly","monthly"], f101:["print","michpal","paper"],
   industry:INDUSTRIES.map(x => x[0]), shortDay:["0","1","2","3","4","5","6"]};
 const NUM_KEYS = ["wage","weeklyHours","globalOT","globalOTAmount","empPct","erPct","sevPct","hishEr","hishEmp","breakMin"];
 const TEXT_KEYS = ["company","companyId","address","role","manager","signer","harassContact","empName","collective","unionInfo","commission","travel","extras","pensionFund","workplace","otherAfter","chgReason","ownerEmail","empEmail","deductions","ephone","hishFrom","probation"];
@@ -128,6 +128,7 @@ function checkTerms(t, ctx){
   const bad = validateInput(t);
   if(bad.length) return {err: bad, warn, plan: null};      // קלט לא תקין – לא מחשבים כלום
   t = normalizeTerms(t);                                   // מכאן – רק האובייקט הקנוני
+  if(t.mode === "casual") return checkCasual(t, ok);
   const plan = hoursPlan(t);
   if(["net","regular","ot","dailyOT","weeklyOT"].some(k => !isFinite(plan[k]) || plan[k] < 0)) return {err: ["חישוב השעות לא תקין – בדוק/י את הימים, השעות וההפסקות."], warn, plan};
   plan.sh.forEach((s,i) => {
@@ -195,6 +196,38 @@ function checkTerms(t, ctx){
   if(!plan.workDays && t.mode === "change" && (t.changed||[]).some(k => k === "sched" || k === "hours")) err.push("שינוי בשעות או בסידור – יש למלא את ימי ושעות העבודה החדשים. שעות משתנות בלי סידור – רק בבדיקת משרד.");
   if(t.harassContact && !/\d{6,}|@/.test(t.harassContact.replace(/[\s-]/g,""))) err.push("באחראי לתלונות על הטרדה מינית יש לרשום גם דרך פנייה – טלפון או מייל.");
   if(t.mode === "change") changeCheck(t).forEach(x => err.push(x));
+  return {err, warn, plan};
+}
+/* עובד לפי קריאה (קישור קבוצתי): אין היקף וסידור קבועים – שכר שעתי בלבד, תבנית אחת לכל העובדים שנרשמים בקישור.
+   הקישור תקף CASUAL_DAYS ימים ולא אחרי MINW_KNOWN_UNTIL; השכר נבדק מול המינימום בתחילת התקופה ובסופה. */
+const CASUAL_DAYS = 90;
+function casualEnd(start){ if(!validDate(start)) return ""; const d = new Date(start + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + CASUAL_DAYS); const e = d.toISOString().slice(0,10); return e < MINW_KNOWN_UNTIL ? e : MINW_KNOWN_UNTIL; }
+function checkCasual(t, ok){
+  const err = [], warn = [], plan = hoursPlan({});
+  const need = [["company","זהות המעסיק"],["address","כתובת המעסיק"],["role","התפקיד"],["wage","השכר לשעה"],["start","תאריך שממנו הקישור תקף"],["signer","שם החותם מטעם המעסיק"],["harassContact","האחראי לטיפול בתלונות על הטרדה מינית ודרך הפנייה"]];
+  need.forEach(([k,n]) => { if(!t[k]) err.push(`חסר פרט חובה: ${n}.`); });
+  if(t.wageType !== "hourly") err.push("לעובדים לפי קריאה – שכר שעתי בלבד.");
+  if(t.days || t.weeklyHours || t.globalOT || t.globalOTAmount || t.commission || t.probation) err.push("בקישור לעובדים לפי קריאה אין סידור קבוע, היקף, גמול גלובלי, עמלות או תקופת ניסיון. עובד קבוע – בהסכם עבודה רגיל.");
+  if(t.f101 !== "print") err.push("בקישור לעובדים לפי קריאה העובד ממלא טופס 101 בדף.");
+  if(t.start && !validDate(t.start)) err.push(`התאריך (${t.start}) אינו תאריך קיים.`);
+  const on = t.start || "", end = casualEnd(on), mw = on ? minWageAt(on) : null, mw2 = end ? minWageAt(end) : null;
+  if(on && !mw) err.push(`התאריך (${fmtDate(on)}) לפני 1.4.2023 – אין בכלי טבלת שכר מינימום לתקופה זו.`);
+  if(on && on >= MINW_KNOWN_UNTIL) err.push(`התאריך (${fmtDate(on)}) מאוחר מדי – טבלת שכר המינימום בכלי עוד לא עודכנה. יש לפנות למשרד.`);
+  if(on && on > new Date(Date.now() + 60*864e5).toISOString().slice(0,10)) err.push("הקישור יכול להתחיל לכל היותר בעוד 60 יום.");
+  if(t.wage !== undefined && t.wage !== "" && !numOk(t.wage)) err.push("סכום השכר לא תקין.");
+  if(mw && numOk(t.wage)){ const top = mw2 && mw2.h > mw.h ? mw2 : mw;
+    if(Number(t.wage) < top.h) err.push(`השכר השעתי (${t.wage} ₪) נמוך משכר המינימום לשעה (${top.h} ₪ מ-${fmtDate(top.from)}; מקור: ${MINW_SRC})${top !== mw ? " – הקישור תקף גם אחרי העדכון" : ""}.`); }
+  if(t.youth) err.push("עובדים מתחת לגיל 18 – לא בקישור הזה. מסלול נוער לא נתמך בכלי – יש לפנות למשרד.");
+  const branch = (t.industry && t.industry !== "general") || t.collective;
+  if(branch && !ok) err.push("נבחר ענף שעשוי לחול עליו צו הרחבה ענפי, או הוזן הסכם קיבוצי. המסמך לא יופק בלי אישור משרד חתום, שקיים רק בקישור מעסיק שהמשרד הפיק.");
+  if(ok){ const miss = tplMiss(t); if(miss.length) err.push(`התנאים חורגים מהתבנית שהמשרד אישר: ${miss.join(", ")}.`); }
+  if(t.collective && !t.unionInfo) err.push("הוזן הסכם קיבוצי – יש לרשום את שם ארגון העובדים ומענו (חוק הודעה לעובד).");
+  if(t.sevPct && Number(t.sevPct) < 8.33 && !t.sec14) err.push("ב-6% לפיצויים סעיף 14 חל מכוח צו ההרחבה לביטוח פנסיוני. ביטול הסימון מחייב בדיקת משרד.");
+  if(t.sec14 && Number(t.sevPct) >= 8.33) err.push("בקישור לעובדים לפי קריאה – פיצויים 6% (סעיף 14 לפי הצו). 8.33% מחייב מכתב לקופה לכל עובד – בהסכם רגיל.");
+  if(t.cameras && !t.camPolicy) err.push("סומנו מצלמות – יש לאשר שמדיניות המצלמות (מיקום ומטרה) נמסרה לעובדים בכתב.");
+  if(t.harassContact && !/\d{6,}|@/.test(t.harassContact.replace(/[\s-]/g,""))) err.push("באחראי לתלונות על הטרדה מינית יש לרשום גם דרך פנייה – טלפון או מייל.");
+  if(on && Number(on.slice(0,4)) > F101_YEAR) err.push(`טופס 101 בכלי הוא גרסת ${F101_YEAR}. עד לעדכון הטופס – יש לפנות למשרד.`);
+  if(end) warn.push(`הקישור הקבוצתי תקף עד ${fmtDate(end)}. כל עובד נרשם בו פעם אחת: פרטים, טופס 101 וחתימה על תנאי ההעסקה.`);
   return {err, warn, plan};
 }
 /* הודעה על שינוי: כל פרט שמשתנה – ערך קודם מובנה; ה"אחרי" מאותו אובייקט שמזין את התנאים. אין הערות חופשיות. */

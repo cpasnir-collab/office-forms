@@ -458,6 +458,12 @@ async def main():
                 if d.get("action") == "register":
                     if d.get("tok") != "TESTTOK": return await route.fulfill(json={"ok":False,"err":"not-authorized"})
                     reg.append(d); store[d["linkId"]] = d["terms"]; return await route.fulfill(json={"ok":True,"sha":"a"*64})
+                if d.get("action") == "gget":
+                    t = store.get(d.get("groupId")); return await route.fulfill(json={"ok":True,"terms":t,"sha":"a"*64} if t and t.get("mode") == "casual" else {"ok":False,"err":"not-found"})
+                if d.get("action") == "gjoin":
+                    otps.append(d)
+                    if len((d.get("empName") or "").split()) < 2: return await route.fulfill(json={"ok":False,"err":"name"})
+                    store["c"*32] = store.get(d.get("groupId")); return await route.fulfill(json={"ok":True,"linkId":"c"*32,"to":"da***@example.com","min":10})
                 if d.get("action") == "get":
                     t = store.get(d.get("linkId")); return await route.fulfill(json={"ok":True,"terms":t,"sha":"a"*64} if t else {"ok":False,"err":"not-found"})
                 if d.get("action") == "otp":
@@ -504,6 +510,38 @@ async def main():
             await pg.goto("about:blank"); await pg.goto(BASE + "#r=" + "0"*32); await pg.wait_for_timeout(600)
             check("G-40: קישור אטום לא קיים – הודעה ברורה", "לא נמצא" in await pg.inner_text("#app"))
 
+            # ---- עובדים לפי קריאה: קישור קבוצתי ----
+            await employer(pg, pre=preset({"tok":"TESTTOK"}), days=False)
+            await pg.click("label:has(input[name=mode][value=casual])"); await pg.wait_for_timeout(200)
+            check("קבוצתי: במצב לפי קריאה – אין שדות עובד וסידור", not await pg.is_visible("#empName") and not await pg.is_visible("#weeklyHours") and await pg.is_disabled("#wageType"))
+            await pg.fill("#wage", "30"); await pg.wait_for_timeout(200)
+            check("קבוצתי: שכר מתחת למינימום – שגיאה", "נמוך משכר המינימום" in await pg.inner_text("#checks"))
+            await pg.fill("#wage", "45"); await pg.fill("#start", "2026-12-01"); await pg.wait_for_timeout(200)
+            c = await pg.inner_text("#checks")
+            check("קבוצתי: בלי שגיאות, עם תוקף הקישור", "⛔" not in c and "תקף עד" in c, c[:200])
+            nreg = len(reg); gl = await make_link(pg)
+            check("קבוצתי: קישור #g= והתנאים בשרת בלי עובד", "#g=" in gl and len(reg) == nreg + 1 and reg[-1]["terms"]["mode"] == "casual" and "empName" not in reg[-1]["terms"] and "days" not in reg[-1]["terms"])
+            check("קבוצתי: וואטסאפ בלי מספר – לשליחה לקבוצה", "wa.me/?text=" in (await pg.get_attribute("#waLink", "href") or ""))
+            await pg.goto("about:blank"); await pg.goto(gl); await pg.wait_for_timeout(600)
+            check("קבוצתי: העובד רואה מסך הרשמה עם תפקיד ושכר", await pg.locator("#jSend").count() == 1 and "45" in (await pg.text_content("#sub") or ""))
+            await pg.fill("#jFirst", "דנה"); await pg.fill("#jLast", "כהן"); await pg.fill("#jEmail", "dana@example.com"); await pg.click("#jSend"); await pg.wait_for_timeout(300)
+            check("קבוצתי: נשלחה הרשמה עם שם מלא ומייל", otps[-1].get("action") == "gjoin" and otps[-1].get("empName") == "דנה כהן")
+            await pg.fill("#otpCode", "123456"); await pg.click("#otpOk"); await pg.wait_for_timeout(400)
+            check("קבוצתי: אחרי אימות – מסך פתיחה עם תנאי העסקה", "תנאי ההעסקה" in await pg.inner_text("#app"))
+            await pg.check("#privOk"); await pg.click("#go")
+            for k,v in {"idNum":"000000018","birth":"1995-05-05","phone":"0500000000","street":"הרצל","house":"12","city":"קריית שמונה","bank":"12","branch":"718","account":"123456"}.items(): await put(pg, k, v)
+            check("קבוצתי: השם מההרשמה ממולא", await pg.input_value("#first") == "דנה" and await pg.input_value("#email") == "dana@example.com")
+            await pg.click("label:has(input[name=gender][value='נקבה'])"); await pg.click("label:has(input[name=pens][value=no])"); await pg.click("#next"); await pg.wait_for_timeout(300)
+            a = await pg.inner_text("#app")
+            check("קבוצתי: מסמך 'תנאי העסקה – עבודה לפי קריאה' עם השכר", "עבודה לפי קריאה" in a and "45 ₪" in a and "רשאי לקבל או לדחות" in a)
+            await pg.check("#agree"); await sign(pg, "#sigE"); await pg.click("#next"); await pg.wait_for_timeout(400)
+            check("קבוצתי: אחרי החתימה – טופס 101", await pg.locator("[name=marital]").count() > 0)
+            await fill101(pg); await finish_print(pg); docs = await wait_docs(pg, 2)
+            check("קבוצתי: נוצרו 2 מסמכים – תנאי העסקה ו-101", len(docs) == 2 and "תנאי העסקה לפי קריאה" in docs[0]["f"] and "101" in docs[1]["f"], str(docs))
+            await save_docs(pg, "casual")
+            ns = len(sub); await pg.click("#share"); await pg.wait_for_timeout(1500)
+            check("קבוצתי: הגשה עם הקישור האישי, מסלול casual ו-2 קבצים", len(sub) == ns + 1 and sub[-1]["linkId"] == "c"*32 and sub[-1]["mode"] == "casual" and len(sub[-1]["files"]) == 2)
+            check("קבוצתי: מסך תודה", "תודה" in (await pg.text_content("h1") or ""))
             check("אין שגיאות JavaScript בדף", not errs, "; ".join(errs[:3]))
             await b.close()
     finally:

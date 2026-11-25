@@ -1,5 +1,5 @@
 /**
- * office-forms 3.9 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.10 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים, עובדים לפי קריאה)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
  * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
@@ -8,6 +8,8 @@
  *   3. לכל מעסיק: mintEmployer("mail", "שם העסק", "ח.פ", "מזהה-לקוח", "ענף") – קישור המעסיק נשלח למייל המשרד בלבד (לא נרשם ביומן).
  *      תבנית ענפית/חריגה: mintApproval("mail", {role, wageType, minWage, empPct, erPct, sevPct, collective, breakPermit, night}, 30).
  *      ביטול/רוטציה: revokeEmployer("mail") – כל הקישורים הפעילים של המעסיק נחסמים מיד (get/submit), ולא רק יצירת קישורים חדשים.
+ *      קישור קבוצתי לעובדים לפי קריאה (#g=): המעסיק יוצר בדף, כל עובד נרשם בשם ומייל, מאמת קוד ומקבל קישור אישי פנימי.
+ *      ביטול קישור קבוצתי: revokeGroup("<groupId>"). עובדים שכבר נרשמו – הקישור האישי שלהם נחסם גם הוא.
  *   4. מסמך שנתקע בבדיקה (needs-review): resolveDoc("<linkId>", "resend") או resolveDoc("<linkId>", "sent").
  *   קבצי הפרויקט: Code.gs + rules.gs (עותק זהה של rules.js מהמאגר – אותם כללים בדף ובשרת).
  *
@@ -25,7 +27,8 @@ const MAX_BYTES = 20 * 1024 * 1024, MAX_TOTAL_B64 = 32 * 1024 * 1024, MAX_TERMS 
 const LINK_DAYS = 30, RETRY_GRACE_DAYS = 7, MAX_SUBMITS_PER_LINK = 5;
 const TERMS_VER = 5; // F101_YEAR, INDUSTRIES, TPL_KEYS, checkTerms, hoursPlan, tplMiss, validDate – ב-rules.gs
 const SITE = "https://cpasnir-collab.github.io/office-forms/";
-const MODE_FILES = { print: 2, michpal: 1, paper: 1, change: 1 };
+const MODE_FILES = { print: 2, michpal: 1, paper: 1, change: 1, casual: 2, cpaper: 1 };
+const GROUP_MAX = 150, GROUP_JOINS_DAY = 60; // קישור קבוצתי: עד 150 עובדים, עד 60 הרשמות חדשות ביום
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -39,6 +42,8 @@ function doPost(e) {
     if (d.action === "register") return register_(d);
     if (d.action === "get") return get_(d);
     if (d.action === "revoke") return revoke_(d);
+    if (d.action === "gget") return gget_(d);
+    if (d.action === "gjoin") return gjoin_(d);
     if (d.action === "otp") return otp_(d);
     if (d.action === "otpCheck") return otpCheck_(d);
     if (d.action === "submit") return submit_(d);
@@ -49,7 +54,7 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.9" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.10" }); }
 
 /* ---------- הרשאות מעסיק ---------- */
 function setup() {
@@ -112,7 +117,14 @@ function safeEq_(a, b) { if (a.length !== b.length) return false; let r = 0; for
 function schema_(t) {
   const num = function (v) { return v !== "" && v !== undefined && isFinite(Number(v)) && Number(v) > 0; };
   if (Number(t.v) !== TERMS_VER) return "version";
-  if (["new", "change"].indexOf(t.mode || "new") < 0) return "mode";
+  if (["new", "change", "casual"].indexOf(t.mode || "new") < 0) return "mode";
+  if (t.mode === "casual") {
+    if (!num(t.wage) || t.wageType !== "hourly" || t.f101 !== "print") return "wage";
+    if (!t.role || !t.harassContact || !t.signer) return "required";
+    if (!validDate(String(t.start))) return "date";
+    if (t.days || t.weeklyHours || t.empName || t.empEmail) return "casual";
+    return "";
+  }
   if ((t.mode || "new") === "new" && ["print", "michpal"].indexOf(t.f101) < 0) return "f101";
   if (!num(t.wage) || ["hourly", "monthly"].indexOf(t.wageType) < 0 || !num(t.weeklyHours)) return "wage";
   if (!t.role || !t.manager || !t.harassContact || !t.signer) return "required";
@@ -129,7 +141,7 @@ function register_(d) {
   if (!rec) return out_({ ok: false, err: "not-authorized" });
   if (!rate_("reg:" + owner, 30)) return out_({ ok: false, err: "rate" });
   const props = PropertiesService.getScriptProperties();
-  if (props.getProperty("L:" + linkId)) return out_({ ok: false, err: "exists" });
+  if (props.getProperty("L:" + linkId) || props.getProperty("G:" + linkId)) return out_({ ok: false, err: "exists" });
   let terms = d.terms && typeof d.terms === "object" && !Array.isArray(d.terms) ? d.terms : null;
   if (!terms) return out_({ ok: false, err: "no-terms" });
   delete terms.tok;
@@ -151,6 +163,17 @@ function register_(d) {
   // כל כללי ההעסקה – אותו קוד כמו בדף (rules.gs): מינימום לפי תאריך וסוג, שעות, הפסקות, מנוחה, היקף, תאריכים
   const ruleErr = checkTerms(terms, { approved: verified }).err;
   if (ruleErr.length) return out_({ ok: false, err: "rules", detail: ruleErr.slice(0, 5) });
+  const casual = terms.mode === "casual";
+  if (casual) {                                                                // קישור קבוצתי: בלי עובד ובלי מייל עובד – כל עובד נרשם בעצמו (gjoin_)
+    const json0 = canon_(terms);
+    if (json0.length > MAX_TERMS) return out_({ ok: false, err: "terms-size" });
+    const sha0 = hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json0, Utilities.Charset.UTF_8));
+    const lf0 = linksFolder_(); privateOk_(lf0);
+    const f0 = lf0.createFile(Utilities.newBlob(json0, "application/json", "group-" + linkId + ".json"));
+    props.setProperty("G:" + linkId, JSON.stringify({ owner: owner, tenantId: rec.tenantId, ver: rec.ver, company: rec.company, role: clean_(terms.role), start: terms.start,
+      sha: sha0, file: f0.getId(), state: "active", joins: 0, max: GROUP_MAX, at: new Date().toISOString(), exp: casualEnd(terms.start) + "T23:59:59+02:00" }));
+    return out_({ ok: true, sha: sha0, group: true, until: casualEnd(terms.start) });
+  }
   const empEmail = String(terms.empEmail || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(empEmail) || empEmail === owner || empEmail === OFFICE_EMAIL) return out_({ ok: false, err: "emp-email" }); // אימות זהות: קוד חד-פעמי נשלח לכאן
   terms.empEmail = empEmail;
@@ -175,6 +198,7 @@ function reg_(linkId) {
 function regState_(reg) {
   if (!reg) return "not-found";
   if (reg.state === "revoked") return "revoked";
+  if (reg.group) { const g = grp_(reg.group); if (!g || g.state === "revoked") return "revoked"; }
   if (!employerOk_(reg)) return "employer-revoked";
   if (reg.state === "used") return "used";
   if (new Date(reg.exp) < new Date()) return "expired";
@@ -202,27 +226,89 @@ function revoke_(d) {
   return out_({ ok: true });
 }
 
+/* ---------- קישור קבוצתי – עובדים לפי קריאה ----------
+   G:<groupId> = תבנית אחת (קובץ תנאים + טביעה). כל עובד נרשם בשם ומייל → נוצר לו קישור אישי פנימי L:<childId>
+   עם אותה טביעת תנאים, ומשם הכול כמו בקישור רגיל: קוד חד-פעמי למייל, הגשה אחת, תיוק, יומן ומשימות.
+   אותו מייל באותה קבוצה = אותו קישור אישי (GE:<groupId>:<hmac(email)>), כך שאי אפשר להירשם פעמיים. */
+function grp_(gid) {
+  if (!/^[0-9a-f]{32}$/.test(String(gid || ""))) return null;
+  return JSON.parse(PropertiesService.getScriptProperties().getProperty("G:" + gid) || "null");
+}
+function grpState_(g) {
+  if (!g) return "not-found";
+  if (g.state === "revoked") return "revoked";
+  if (!employerOk_(g)) return "employer-revoked";
+  if (new Date(g.exp) < new Date()) return "expired";
+  return "active";
+}
+function gget_(d) {
+  if (!rate_("get", 300)) return out_({ ok: false, err: "rate" });
+  const g = grp_(d.groupId), st = grpState_(g);
+  if (st !== "active") return out_({ ok: false, err: st });
+  return out_({ ok: true, terms: termsOf_(g), sha: g.sha, until: String(g.exp).slice(0, 10) });
+}
+function gjoin_(d) {
+  if (!rate_("gjoin", 300)) return out_({ ok: false, err: "rate" });
+  const gid = String(d.groupId || ""), g = grp_(gid), st = grpState_(g);
+  if (st !== "active") return out_({ ok: false, err: st });
+  const name = clean_(d.empName).replace(/\s+/g, " ");
+  if (name.length < 4 || name.split(" ").length < 2) return out_({ ok: false, err: "name" });
+  const email = String(d.empEmail || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email === g.owner || email === OFFICE_EMAIL) return out_({ ok: false, err: "emp-email" });
+  const props = PropertiesService.getScriptProperties(), key = "GE:" + gid + ":" + hmac_("ge|" + gid + "|" + email).slice(0, 24);
+  let childId = props.getProperty(key), child = childId ? reg_(childId) : null;
+  if (child) {
+    const cs = regState_(child);
+    if (cs === "used") return out_({ ok: false, err: "used" });
+    if (cs !== "active") child = null;                                         // פג – נרשם מחדש
+    else if (child.employee !== name) { child.employee = name; props.setProperty("L:" + childId, JSON.stringify(child)); }
+  }
+  if (!child) {
+    if ((g.joins || 0) >= (g.max || GROUP_MAX)) return out_({ ok: false, err: "full" });
+    const day = new Date().toISOString().slice(0, 10);
+    if (g.day !== day) { g.day = day; g.today = 0; }
+    if ((g.today || 0) >= GROUP_JOINS_DAY) return out_({ ok: false, err: "rate" });
+    childId = Utilities.getUuid().replace(/-/g, "").toLowerCase();
+    const today = new Date().toISOString().slice(0, 10);
+    child = { owner: g.owner, tenantId: g.tenantId, ver: g.ver, company: g.company, employee: name, mode: "casual", f101: "print",
+      start: g.start > today ? g.start : today, sha: g.sha, file: g.file, state: "active", submits: 0, empEmail: email, sev833: false, fundKnown: false,
+      group: gid, at: new Date().toISOString(), exp: new Date(Date.now() + LINK_DAYS * 864e5).toISOString() };
+    g.joins = (g.joins || 0) + 1; g.today = (g.today || 0) + 1;
+    props.setProperty("L:" + childId, JSON.stringify(child)); props.setProperty(key, childId); props.setProperty("G:" + gid, JSON.stringify(g));
+  }
+  const o = otpSend_(childId);
+  if (!o.ok) return out_(o);
+  return out_({ ok: true, linkId: childId, to: o.to, min: o.min });
+}
+function revokeGroup(gid) {
+  const g = grp_(gid); if (!g) return false;
+  g.state = "revoked"; g.revokedAt = new Date().toISOString();
+  PropertiesService.getScriptProperties().setProperty("G:" + gid, JSON.stringify(g));
+  return true;
+}
+
 /* ---------- אימות זהות העובד (החלטה 3) ----------
    קוד בן 6 ספרות למייל שהמעסיק רשם לעובד. נשמרת רק טביעת HMAC של הקוד. תוקף 10 דקות, 5 ניסיונות לקוד, 5 שליחות ביום לקישור.
    אחרי אימות – אסימון vt שקשור לקוד הנוכחי. submit בלעדיו נחסם. */
 const OTP_MIN = 10, OTP_TRIES = 5, OTP_SENDS = 5;
 function mask_(e) { const p = String(e).split("@"); return p[0].slice(0, 2) + "***@" + p[1]; }
 function vt_(linkId, n) { return hmac_("vt|" + linkId + "|" + n).slice(0, 32); }
-function otp_(d) {
-  if (!rate_("otp", 200)) return out_({ ok: false, err: "rate" });
-  const linkId = String(d.linkId || ""), reg = reg_(linkId), st = regState_(reg);
-  if (st !== "active") return out_({ ok: false, err: st });
-  if (!reg.empEmail) return out_({ ok: false, err: "emp-email" });
+function otp_(d) { return out_(otpSend_(String(d.linkId || ""))); }
+function otpSend_(linkId) {
+  if (!rate_("otp", 200)) return { ok: false, err: "rate" };
+  const reg = reg_(linkId), st = regState_(reg);
+  if (st !== "active") return { ok: false, err: st };
+  if (!reg.empEmail) return { ok: false, err: "emp-email" };
   const day = new Date().toISOString().slice(0, 10), o = reg.otp && reg.otp.day === day ? reg.otp : { day: day, sends: 0, n: reg.otp ? reg.otp.n : 0 };
-  if (o.sends >= OTP_SENDS) return out_({ ok: false, err: "otp-limit" });
-  if (MailApp.getRemainingDailyQuota() < 3) return out_({ ok: false, err: "quota" });
+  if (o.sends >= OTP_SENDS) return { ok: false, err: "otp-limit" };
+  if (MailApp.getRemainingDailyQuota() < 3) return { ok: false, err: "quota" };
   const num = parseInt(hmac_("code|" + linkId + "|" + Utilities.getUuid()).slice(0, 12), 16) % 1000000;
   const code = ("00000" + num).slice(-6);
   reg.otp = { day: day, sends: o.sends + 1, n: (o.n || 0) + 1, h: hmac_("otp|" + linkId + "|" + code), exp: Date.now() + OTP_MIN * 6e4, tries: 0, ok: false };
   PropertiesService.getScriptProperties().setProperty("L:" + linkId, JSON.stringify(reg));
   MailApp.sendEmail({ to: reg.empEmail, subject: "קוד אימות – " + reg.company, name: reg.company,
     htmlBody: '<div dir="rtl" style="font-family:Arial,sans-serif">שלום ' + esc_(reg.employee) + ',<br><br>קוד האימות למסמכי העבודה מ' + esc_(reg.company) + ' הוא:<br><br><b style="font-size:24px;letter-spacing:4px">' + code + '</b><br><br>הקוד תקף ' + OTP_MIN + ' דקות. אם לא ביקשת אותו – אפשר להתעלם מהמייל.</div>' });
-  return out_({ ok: true, to: mask_(reg.empEmail), min: OTP_MIN });
+  return { ok: true, to: mask_(reg.empEmail), min: OTP_MIN };
 }
 function otpCheck_(d) {
   const linkId = String(d.linkId || ""), reg = reg_(linkId), st = regState_(reg);
@@ -241,7 +327,8 @@ function otpCheck_(d) {
 /* ---------- קבלת מסמכים ----------
    מקור האמת: L:<linkId>.doc. המפתח החיצוני לכל דבר (יומן, משימות, הכרעה) הוא linkId – 128 ביט מהשרת, לא docId מהדף.
    ב-claim נקבע manifest קנוני: שם קובץ שרתי, סוג, SHA-256 ומסלול. אחר כך רק הוא קובע. */
-const DOC_KINDS = { print: ["הסכם עבודה", "טופס 101 להדפסה"], michpal: ["הסכם עבודה"], paper: ["הסכם עבודה"], change: ["הודעה על שינוי תנאים"] };
+const DOC_KINDS = { print: ["הסכם עבודה", "טופס 101 להדפסה"], michpal: ["הסכם עבודה"], paper: ["הסכם עבודה"], change: ["הודעה על שינוי תנאים"],
+  casual: ["תנאי העסקה לפי קריאה", "טופס 101 להדפסה"], cpaper: ["תנאי העסקה לפי קריאה"] };
 function submit_(d) {
   const props = PropertiesService.getScriptProperties();
   const linkId = String(d.linkId || "");
@@ -271,7 +358,7 @@ function submit_(d) {
   if (st) { if (mode !== st.mode) return out_({ ok: false, err: "schema" }); }
   else {
     const taxYear = Math.max(Number(String(reg.start).slice(0, 4)) || 0, new Date().getFullYear());
-    const allowed = reg.mode === "change" ? ["change"] : reg.f101 === "print" ? (taxYear !== F101_YEAR ? ["paper"] : ["print"]) : ["michpal"];
+    const allowed = reg.mode === "change" ? ["change"] : reg.mode === "casual" ? (taxYear !== F101_YEAR ? ["cpaper"] : ["casual"]) : reg.f101 === "print" ? (taxYear !== F101_YEAR ? ["paper"] : ["print"]) : ["michpal"];
     if (allowed.indexOf(mode) < 0) return out_({ ok: false, err: "schema" });
   }
   const files = Array.isArray(d.files) ? d.files : [];
@@ -382,8 +469,9 @@ function installReconcile() { // אידמפוטנטי – לא יוצר טריג
 /* משימות: [סוג קבוע, תיאור, ימים, בסיס]. בסיס "start" = מתחילת העבודה (יעד חוקי – לא נדחה בגלל קליטה מאוחרת), "now" = ממועד האירוע. */
 function tasks_(reg, mode, st) {
   const t = [];
-  if (mode === "print") { t.push(["101-sign", "101: לקבל טופס חתום בכתב יד", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7, "start"]); }
-  if (mode === "paper") { t.push(["101-paper", "101: לא הופק – למלא טופס רשמי ידני", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס", 7, "start"]); }
+  if (mode === "casual") t.push(["casual", "עובד לפי קריאה: לקלוט במיכפל כעובד שעתי (תשלום חודשי), לפי הדיווח על המשמרות", 7, "start"]);
+  if (mode === "print" || mode === "casual") { t.push(["101-sign", "101: לקבל טופס חתום בכתב יד", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס (כולל אסמכתאות)", 7, "start"]); }
+  if (mode === "paper" || mode === "cpaper") { t.push(["101-paper", "101: לא הופק – למלא טופס רשמי ידני", 7, "start"]); t.push(["101-review", "101: בדיקת משרד לפני שימוש לחישוב מס", 7, "start"]); }
   if (mode === "michpal") t.push(["101-michpal", "101 בפורטל מיכפל: לוודא שהעובד מילא וחתם, ולבדוק לפני שימוש", 7, "start"]);
   if ((st.complex || []).length) t.push(["101-complex", "101 מורכב: " + st.complex.join(", "), 3, "start"]);
   if (reg.mode !== "change") {
@@ -431,18 +519,19 @@ function pdfOk_(bytes) {
   ["/JavaScript", "/Launch", "/EmbeddedFile", "/RichMedia", "/XFA"].forEach(function (k) { if (txt.indexOf(k) >= 0) throw new Error("pdf-active-content"); });
 }
 function latin_(bytes) { const parts = []; for (let i = 0; i < bytes.length; i += 8192) parts.push(String.fromCharCode.apply(null, bytes.slice(i, i + 8192).map(function (b) { return b & 255; }))); return parts.join(""); }
-function subject_(reg, emp, company) { return (reg.mode === "change" ? "הודעה על שינוי תנאי עבודה – " : "מסמכי עובד – ") + emp + " – " + company; }
+function subject_(reg, emp, company) { return (reg.mode === "change" ? "הודעה על שינוי תנאי עבודה – " : reg.mode === "casual" ? "מסמכי עובד לפי קריאה – " : "מסמכי עובד – ") + emp + " – " + company; }
 function body_(d, reg, t, emp, company, docId, shas, st, linkId) {
   const row = function (k, v) { return v ? "<tr><td style='color:#555;padding:2px 8px'>" + esc_(k) + "</td><td style='padding:2px 8px'><b>" + esc_(v) + "</b></td></tr>" : ""; };
   return "<div dir='rtl' style='font-family:Arial'><p>שלום,</p>" +
     "<p>מצורפים המסמכים החתומים של <b>" + esc_(emp) + "</b> ב" + esc_(company) + ".</p>" +
-    (st.mode === "print" ? "<p><b>טופס 101:</b> להדפיס, להחתים את העובד בכתב יד בחלק י' בשבוע הראשון לעבודה, ולשמור בתיק. עד החתימה ובדיקת המשרד – טיוטה, לא לחישוב מס.</p>" : "") +
-    (st.mode === "paper" ? "<p><b>טופס 101:</b> לא הופק – גרסת השנה עוד לא קיימת בכלי. יש למלא עם העובד טופס 101 רשמי.</p>" : "") +
+    (reg.mode === "casual" ? "<p><b>עובד לפי קריאה</b> – נרשם בקישור הקבוצתי. אין היקף או סידור קבועים; השכר לפי השעות בפועל, בתלוש חודשי.</p>" : "") +
+    (st.mode === "print" || st.mode === "casual" ? "<p><b>טופס 101:</b> להדפיס, להחתים את העובד בכתב יד בחלק י' בשבוע הראשון לעבודה, ולשמור בתיק. עד החתימה ובדיקת המשרד – טיוטה, לא לחישוב מס.</p>" : "") +
+    (st.mode === "paper" || st.mode === "cpaper" ? "<p><b>טופס 101:</b> לא הופק – גרסת השנה עוד לא קיימת בכלי. יש למלא עם העובד טופס 101 רשמי.</p>" : "") +
     ((st.complex || []).length ? "<p style='color:#a00'><b>טופס 101 לבדיקת משרד לפני שימוש:</b> " + esc_(st.complex.join(", ")) + "</p>" : "") +
     (Number(t.sevPct) >= 8.33 && t.sec14 ? "<p><b>פיצויים 8.33%:</b> בקובץ ההסכם יש מכתב הודעה לקופה – ההחלה מותנית במסירה בפועל. למסור ולשמור אסמכתה.</p>" : "") +
     "<p><b>התנאים כפי שנרשמו על ידך בשרת</b> (להשוואה מול ה-PDF):</p><table style='border-collapse:collapse;font-size:13px'>" +
-    row("תפקיד", t.role) + row(t.mode === "change" ? "בתוקף מ" : "תחילת עבודה", t.mode === "change" ? t.effDate : t.start) +
-    row("שכר", (t.wage || "") + " ₪ " + (t.wageType === "monthly" ? "לחודש" : "לשעה")) + row("היקף", (t.weeklyHours || "") + " שעות בשבוע") +
+    row("תפקיד", t.role) + row(t.mode === "change" ? "בתוקף מ" : t.mode === "casual" ? "הקישור הקבוצתי תקף מ" : "תחילת עבודה", t.mode === "change" ? t.effDate : t.start) +
+    row("שכר", (t.wage || "") + " ₪ " + (t.wageType === "monthly" ? "לחודש" : "לשעה")) + row("היקף", t.mode === "casual" ? "לפי קריאה – בלי היקף קבוע" : (t.weeklyHours || "") + " שעות בשבוע") +
     row("פנסיה", "עובד " + (t.empPct || 6) + "% · מעסיק " + (t.erPct || 6.5) + "% · פיצויים " + (t.sevPct || 6) + "%" + (t.sec14 ? " (סעיף 14)" : "")) +
     row("ממונה ישיר", t.manager) + row("ימים ושעות", (t.days || []).map(function (x, i) { return x ? ["א", "ב", "ג", "ד", "ה", "ו", "ש"][i] + " " + x : ""; }).filter(String).join(", ")) +
     row("יום מנוחה", t.restDay) + row("הפסקה", (t.breakMin || 0) + " דקות" + (t.breakPaid ? " (משולמת)" : "")) +
