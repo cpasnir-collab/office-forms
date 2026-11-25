@@ -81,7 +81,7 @@ const BOOL_KEYS = ["breakPaid","sec14","breakPermit","cash","cameras","youth","c
 const ENUMS = {mode:["new","change"], pattern:["5","6"], restDay:["שבת","שישי","ראשון"], wageType:["hourly","monthly"], f101:["print","michpal","paper"],
   industry:INDUSTRIES.map(x => x[0]), shortDay:["0","1","2","3","4","5","6"]};
 const NUM_KEYS = ["wage","weeklyHours","globalOT","globalOTAmount","empPct","erPct","sevPct","hishEr","hishEmp","breakMin"];
-const TEXT_KEYS = ["company","companyId","address","role","manager","signer","harassContact","empName","collective","unionInfo","commission","travel","extras","pensionFund","workplace","otherAfter","chgReason","ownerEmail","deductions","ephone","hishFrom","probation"];
+const TEXT_KEYS = ["company","companyId","address","role","manager","signer","harassContact","empName","collective","unionInfo","commission","travel","extras","pensionFund","workplace","otherAfter","chgReason","ownerEmail","empEmail","deductions","ephone","hishFrom","probation"];
 const scalar = v => typeof v === "string" || (typeof v === "number" && isFinite(v));
 const fin = v => scalar(v) && String(v).trim() !== "" && /^-?\d+(\.\d+)?$/.test(String(v).trim()) && isFinite(Number(v));
 function validateInput(t){

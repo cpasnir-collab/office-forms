@@ -1,5 +1,5 @@
 /**
- * office-forms 3.8 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
+ * office-forms 3.9 – קליטת מסמכי עובד (הסכם עבודה, טופס 101 להדפסה, הודעה על שינוי תנאים)
  * רץ בחשבון הגוגל של המשרד. שומר את תנאי ההעסקה בצד השרת, מקבל PDF חתום, שומר בדרייב, מתעד ושולח במייל.
  *
  * פריסה (שניר, פעם אחת – לא לפני החלטות G-29/G-37/G-38):
@@ -39,6 +39,8 @@ function doPost(e) {
     if (d.action === "register") return register_(d);
     if (d.action === "get") return get_(d);
     if (d.action === "revoke") return revoke_(d);
+    if (d.action === "otp") return otp_(d);
+    if (d.action === "otpCheck") return otpCheck_(d);
     if (d.action === "submit") return submit_(d);
     return out_({ ok: false, err: "bad-action" });
   } catch (err) {
@@ -47,7 +49,7 @@ function doPost(e) {
     try { lock.releaseLock(); } catch (x) {}
   }
 }
-function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.8" }); }
+function doGet() { return out_({ ok: true, service: "office-forms", ver: "3.9" }); }
 
 /* ---------- הרשאות מעסיק ---------- */
 function setup() {
@@ -149,6 +151,9 @@ function register_(d) {
   // כל כללי ההעסקה – אותו קוד כמו בדף (rules.gs): מינימום לפי תאריך וסוג, שעות, הפסקות, מנוחה, היקף, תאריכים
   const ruleErr = checkTerms(terms, { approved: verified }).err;
   if (ruleErr.length) return out_({ ok: false, err: "rules", detail: ruleErr.slice(0, 5) });
+  const empEmail = String(terms.empEmail || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(empEmail) || empEmail === owner || empEmail === OFFICE_EMAIL) return out_({ ok: false, err: "emp-email" }); // אימות זהות: קוד חד-פעמי נשלח לכאן
+  terms.empEmail = empEmail;
   const json = canon_(terms);
   if (json.length > MAX_TERMS) return out_({ ok: false, err: "terms-size" });
   const sha = hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json, Utilities.Charset.UTF_8));
@@ -158,7 +163,7 @@ function register_(d) {
   props.setProperty("L:" + linkId, JSON.stringify({
     owner: owner, tenantId: rec.tenantId, ver: rec.ver, company: rec.company, employee: clean_(terms.empName),
     mode: terms.mode === "change" ? "change" : "new", f101: clean_(terms.f101), start: String(terms.start || terms.effDate || ""),
-    sha: sha, file: f.getId(), state: "active", submits: 0, sev833: !!(terms.sec14 && Number(terms.sevPct) >= 8.33), fundKnown: !!terms.pensionFund,
+    sha: sha, file: f.getId(), state: "active", submits: 0, empEmail: empEmail, sev833: !!(terms.sec14 && Number(terms.sevPct) >= 8.33), fundKnown: !!terms.pensionFund,
     at: new Date().toISOString(), exp: new Date(Date.now() + LINK_DAYS * 864e5).toISOString()
   }));
   return out_({ ok: true, sha: sha });
@@ -197,6 +202,42 @@ function revoke_(d) {
   return out_({ ok: true });
 }
 
+/* ---------- אימות זהות העובד (החלטה 3) ----------
+   קוד בן 6 ספרות למייל שהמעסיק רשם לעובד. נשמרת רק טביעת HMAC של הקוד. תוקף 10 דקות, 5 ניסיונות לקוד, 5 שליחות ביום לקישור.
+   אחרי אימות – אסימון vt שקשור לקוד הנוכחי. submit בלעדיו נחסם. */
+const OTP_MIN = 10, OTP_TRIES = 5, OTP_SENDS = 5;
+function mask_(e) { const p = String(e).split("@"); return p[0].slice(0, 2) + "***@" + p[1]; }
+function vt_(linkId, n) { return hmac_("vt|" + linkId + "|" + n).slice(0, 32); }
+function otp_(d) {
+  if (!rate_("otp", 200)) return out_({ ok: false, err: "rate" });
+  const linkId = String(d.linkId || ""), reg = reg_(linkId), st = regState_(reg);
+  if (st !== "active") return out_({ ok: false, err: st });
+  if (!reg.empEmail) return out_({ ok: false, err: "emp-email" });
+  const day = new Date().toISOString().slice(0, 10), o = reg.otp && reg.otp.day === day ? reg.otp : { day: day, sends: 0, n: reg.otp ? reg.otp.n : 0 };
+  if (o.sends >= OTP_SENDS) return out_({ ok: false, err: "otp-limit" });
+  if (MailApp.getRemainingDailyQuota() < 3) return out_({ ok: false, err: "quota" });
+  const num = parseInt(hmac_("code|" + linkId + "|" + Utilities.getUuid()).slice(0, 12), 16) % 1000000;
+  const code = ("00000" + num).slice(-6);
+  reg.otp = { day: day, sends: o.sends + 1, n: (o.n || 0) + 1, h: hmac_("otp|" + linkId + "|" + code), exp: Date.now() + OTP_MIN * 6e4, tries: 0, ok: false };
+  PropertiesService.getScriptProperties().setProperty("L:" + linkId, JSON.stringify(reg));
+  MailApp.sendEmail({ to: reg.empEmail, subject: "קוד אימות – " + reg.company, name: reg.company,
+    htmlBody: '<div dir="rtl" style="font-family:Arial,sans-serif">שלום ' + esc_(reg.employee) + ',<br><br>קוד האימות למסמכי העבודה מ' + esc_(reg.company) + ' הוא:<br><br><b style="font-size:24px;letter-spacing:4px">' + code + '</b><br><br>הקוד תקף ' + OTP_MIN + ' דקות. אם לא ביקשת אותו – אפשר להתעלם מהמייל.</div>' });
+  return out_({ ok: true, to: mask_(reg.empEmail), min: OTP_MIN });
+}
+function otpCheck_(d) {
+  const linkId = String(d.linkId || ""), reg = reg_(linkId), st = regState_(reg);
+  if (st !== "active") return out_({ ok: false, err: st });
+  const o = reg.otp;
+  if (!o || !o.h) return out_({ ok: false, err: "otp-none" });
+  if (o.tries >= OTP_TRIES) return out_({ ok: false, err: "otp-locked" });
+  if (Date.now() > o.exp) return out_({ ok: false, err: "otp-expired" });
+  const code = String(d.code || "").replace(/\D/g, "");
+  const save = function () { PropertiesService.getScriptProperties().setProperty("L:" + linkId, JSON.stringify(reg)); };
+  if (code.length !== 6 || !safeEq_(hmac_("otp|" + linkId + "|" + code), o.h)) { o.tries++; save(); return out_({ ok: false, err: o.tries >= OTP_TRIES ? "otp-locked" : "otp-wrong", left: OTP_TRIES - o.tries }); }
+  o.ok = true; o.h = ""; save();                                          // קוד חד-פעמי: אחרי שימוש אי אפשר לאמת בו שוב
+  return out_({ ok: true, vt: vt_(linkId, o.n) });
+}
+
 /* ---------- קבלת מסמכים ----------
    מקור האמת: L:<linkId>.doc. המפתח החיצוני לכל דבר (יומן, משימות, הכרעה) הוא linkId – 128 ביט מהשרת, לא docId מהדף.
    ב-claim נקבע manifest קנוני: שם קובץ שרתי, סוג, SHA-256 ומסלול. אחר כך רק הוא קובע. */
@@ -214,6 +255,7 @@ function submit_(d) {
   if (st && st.state === "done") return out_({ ok: true, dup: true });
   const s0 = regState_(reg);
   if (s0 === "revoked" || s0 === "employer-revoked") return out_({ ok: false, err: s0 });
+  if (!(st && st.state === "done") && !(reg.otp && reg.otp.ok && safeEq_(vt_(linkId, reg.otp.n), String(d.vt || "")))) return out_({ ok: false, err: "otp-required" }); // אימות זהות לפני כל קבלה
   if (!st) {
     if (s0 !== "active") return out_({ ok: false, err: s0 });
     if ((reg.submits || 0) >= MAX_SUBMITS_PER_LINK) return out_({ ok: false, err: "too-many" });

@@ -37,6 +37,7 @@ async def employer(pg, mode="new", f101="print", wage="40", sev="6", days=True, 
             else: vals["prev_"+k] = v
     if extra: vals.update(extra)
     for k,v in vals.items(): await pg.fill("#"+k, v)
+    if await pg.locator("#empEmail").count() and "empEmail" not in vals: await pg.fill("#empEmail", "worker@example.com")
     if days: await pg.click("#fillWeek")
     if weekly: await pg.fill("#weeklyHours", weekly)
     await pg.select_option("#sevPct", sev)
@@ -56,6 +57,8 @@ async def put(pg, k, v):
 async def employee(pg, link, gender="נקבה", marital="רווק/ה", kids=None, other="none", coord="none", credits=("c1",), answers=None, birth="1990-05-05", pens="no"):
     """answers: list of True/False for modal dialogs in order"""
     await pg.goto("about:blank"); await pg.goto(link); await pg.wait_for_timeout(500)
+    if await pg.locator("#otpSend").count():
+        await pg.click("#otpSend"); await pg.wait_for_timeout(300); await pg.fill("#otpCode", "123456"); await pg.click("#otpOk"); await pg.wait_for_timeout(400)
     await pg.check("#privOk"); await pg.click("#go")
     for k,v in {"idNum":"000000018","birth":birth,"phone":"0500000000","email":"emp@example.com","street":"הרצל","house":"12","city":"קריית שמונה","zip":"1101101","bank":"12","branch":"718","account":"123456"}.items():
         el = pg.locator("#"+k)
@@ -442,7 +445,7 @@ async def main():
             check("G-18: בלי ת\"ז ישראלית – מסמך זיהוי חלופי מתקבל", len(await pg.evaluate("DOCS")) == 2 and "מסמך זיהוי" in await pg.evaluate("attachPages()"))
 
             # ---------- תרחיש 11: שליחה אוטומטית מול שרת דמה (קישור אטום) ----------
-            reg, sub, store = [], [], {}
+            reg, sub, store, otps = [], [], {}, []
             async def mock(route):
                 d = json.loads(route.request.post_data or "{}")
                 if d.get("action") == "register":
@@ -450,7 +453,12 @@ async def main():
                     reg.append(d); store[d["linkId"]] = d["terms"]; return await route.fulfill(json={"ok":True,"sha":"a"*64})
                 if d.get("action") == "get":
                     t = store.get(d.get("linkId")); return await route.fulfill(json={"ok":True,"terms":t,"sha":"a"*64} if t else {"ok":False,"err":"not-found"})
+                if d.get("action") == "otp":
+                    otps.append(d); return await route.fulfill(json={"ok":True,"to":"wo***@example.com","min":10})
+                if d.get("action") == "otpCheck":
+                    return await route.fulfill(json={"ok":True,"vt":"v"*32} if d.get("code") == "123456" else {"ok":False,"err":"otp-wrong","left":4})
                 sub.append(d)
+                if d.get("vt") != "v"*32: return await route.fulfill(json={"ok":False,"err":"otp-required"})
                 if d.get("linkId") not in store: return await route.fulfill(json={"ok":False,"err":"unregistered-link"})
                 if d.get("termsHash") != "a"*64: return await route.fulfill(json={"ok":False,"err":"terms-mismatch"})
                 return await route.fulfill(json={"ok":True})
@@ -463,6 +471,17 @@ async def main():
             await employer(pg, pre=preset({"tok":"TESTTOK"})); link = await make_link(pg)
             check("G-28/29: קישור אטום (#r=, 32 תווים) והתנאים נשמרו בשרת", "#r=" in link and len(link.split("#r=")[1]) == 32 and len(reg) == 1 and reg[0]["terms"]["wage"] == "40" and "tok" not in reg[0]["terms"])
             check("G-28: אין תנאים בתוך הקישור", "#k=" not in link and len(link) < 120)
+            check("OTP: מייל העובד נשלח לשרת בתנאים", reg[0]["terms"].get("empEmail") == "worker@example.com")
+            await employer(pg, pre=preset({"tok":"TESTTOK"}), extra={"empEmail":"uri@example.com"}); l3 = await make_link(pg)
+            check("OTP: מייל העובד זהה למייל המעסיק – אין קישור", not l3 and len(reg) == 1 and "המייל של העובד עצמו" in await pg.inner_text("#toast"))
+            await employer(pg, pre=preset({"tok":"TESTTOK"}), extra={"empEmail":"לא-מייל"}); l3 = await make_link(pg)
+            check("OTP: מייל עובד לא תקין – אין קישור", not l3 and len(reg) == 1)
+            await pg.goto("about:blank"); await pg.goto(link); await pg.wait_for_timeout(600)
+            check("OTP: העובד רואה מסך אימות לפני הטפסים", await pg.locator("#otpSend").count() == 1 and await pg.locator("#go").count() == 0)
+            await pg.click("#otpSend"); await pg.wait_for_timeout(300)
+            check("OTP: אחרי שליחה – מוצג המייל המוסתר", "wo***@example.com" in await pg.inner_text("#otpTo") and len(otps) == 1)
+            await pg.fill("#otpCode", "000000"); await pg.click("#otpOk"); await pg.wait_for_timeout(300)
+            check("OTP: קוד שגוי – נשארים במסך, הודעה עם מספר ניסיונות", await pg.locator("#otpCode").count() == 1 and "נשארו 4" in await pg.inner_text("#toast"))
             await pg.goto("about:blank"); await pg.goto(BASE + "#k=AAAA"); await pg.wait_for_timeout(400)
             check("G-28/G-40: במצב שרת קישור ידני (#k=) נדחה", "גרסה ידנית" in await pg.inner_text("#app"))
             await employer(pg, pre=preset({"tok":"TESTTOK","industry":"construction","okSig":"S"*32,"okTpl":{"role":"עובד דלפק","exp":"2099-01-01"}}))
@@ -473,6 +492,7 @@ async def main():
             await pg.click("#share"); await pg.wait_for_timeout(1500)
             check("תרחיש 11: נשלחו 2 קבצים עם מזהה קישור, מזהה מסמך וטביעת תנאים", len(sub) == 1 and len(sub[0]["files"]) == 2 and sub[0]["linkId"] == reg[0]["linkId"] and sub[0]["mode"] == "print" and len(sub[0]["docId"]) == 10 and sub[0]["termsHash"] == "a"*64)
             check("G-35: הדף לא שולח מייל עובד לשרת", "employeeEmail" not in sub[0])
+            check("OTP: ההגשה כוללת את אסימון האימות", sub[0].get("vt") == "v"*32)
             check("תרחיש 11: מסך תודה אחרי שליחה", "תודה" in (await pg.text_content("h1") or ""))
             await pg.goto("about:blank"); await pg.goto(BASE + "#r=" + "0"*32); await pg.wait_for_timeout(600)
             check("G-40: קישור אטום לא קיים – הודעה ברורה", "לא נמצא" in await pg.inner_text("#app"))

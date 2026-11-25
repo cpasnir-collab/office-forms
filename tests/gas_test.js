@@ -66,16 +66,18 @@ const pdf2 = pdfB("%PDF-1.4\n2 0 obj << /Type /Page >> endobj\n" + "y".repeat(20
 const post = (env, o) => env.doPost({ postData: { contents: JSON.stringify(Object.assign({ app: "office-forms-v2" }, o)) } });
 const L1 = "0123456789abcdef0123456789abcdef", L2 = "fedcba9876543210fedcba9876543210";
 const WEEK = ["09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "", ""];
-const terms = (id, owner, extra) => Object.assign({ v: 5, linkId: id, ownerEmail: owner, company: "טייפון", address: "הרצל 1, חיפה", empName: "בדיקה", role: "עובד", manager: "נדב", signer: "נדב", harassContact: "נדב 0501234567",
+const terms = (id, owner, extra) => Object.assign({ v: 5, linkId: id, ownerEmail: owner, company: "טייפון", address: "הרצל 1, חיפה", empName: "בדיקה", role: "עובד", manager: "נדב", signer: "נדב", harassContact: "נדב 0501234567", empEmail: "worker@example.com",
   agrVer: "3.7 (11/2026)", wage: "43", wageType: "hourly", weeklyHours: "36.25", days: WEEK, pattern: "5", shortDay: "4", breakMin: "45", restDay: "שבת", sec14: true, sevPct: "6", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
 const OWN = "nadavlevvy@gmail.com";
 let pass = 0, fail = 0;
 const t = (name, cond) => { if (cond) { pass++; console.log("✓ " + name); } else { fail++; console.log("✗ " + name); } };
 const pdfCount = E => E._state.files.filter(f => f.blob && f.blob.type === "application/pdf").length;
 function vmSet(E, name, fn) { E[name] = fn; }
-function ready(opts, tm) { const E = makeEnv(opts); const tok = employer(E, OWN); const r = post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok, terms: terms(L1, OWN, tm) }); return { E, tok, sha: r.sha }; }
-const sub2 = (E, sha, docId, extra) => post(E, Object.assign({ action: "submit", linkId: L1, docId, termsHash: sha, mode: "print", agrVer: "3.4", files: [{ fname: "הסכם.pdf", pdf }, { fname: "101.pdf", pdf: pdf2 }] }, extra || {}));
-const mails = E => E._state.mails.filter(m => !/קישור מעסיק|אישור תבנית/.test(m.subject));
+const codeOf = E => { const m = E._state.mails.filter(x => /קוד אימות/.test(x.subject)).pop(); return m && m.htmlBody.match(/>(\d{6})</)[1]; };
+const verify = (E, id) => { const before = E._state.mails.length; post(E, { action: "otp", linkId: id }); const c = codeOf(E); E._state.mails.splice(before); const r = post(E, { action: "otpCheck", linkId: id, code: c }); (E._vt = E._vt || {})[id] = r.vt; return r.vt; };
+function ready(opts, tm) { const E = makeEnv(opts); const tok = employer(E, OWN); const r = post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok, terms: terms(L1, OWN, tm) }); if (r.ok) verify(E, L1); return { E, tok, sha: r.sha }; }
+const sub2 = (E, sha, docId, extra) => post(E, Object.assign({ action: "submit", vt: (E._vt || {})[L1], linkId: L1, docId, termsHash: sha, mode: "print", agrVer: "3.4", files: [{ fname: "הסכם.pdf", pdf }, { fname: "101.pdf", pdf: pdf2 }] }, extra || {}));
+const mails = E => E._state.mails.filter(m => !/קישור מעסיק|אישור תבנית|קוד אימות/.test(m.subject));
 const regOf = (E, id) => JSON.parse(E._state.props["L:" + (id || L1)]);
 
 // ---------- הרשאת מעסיק ----------
@@ -135,7 +137,7 @@ t("G-32: PDF קטוע נדחה", sub2(x.E, x.sha, "ABCDEF0123", { files: [{ fnam
 t("G-33: גודל מצטבר נבדק לפני פענוח", /size|too-big/.test(sub2(x.E, x.sha, "ABCDEF0123", { files: [{ fname: "a.pdf", pdf: "A".repeat(33 * 1024 * 1024) }, { fname: "b.pdf", pdf }] }).err));
 t("R3-07: כששנת המס אינה 2026 – paper מתקבל, print נדחה", (() => { const y = ready(); const g = regOf(y.E); g.start = "2027-01-05"; y.E._state.props["L:" + L1] = JSON.stringify(g); return sub2(y.E, y.sha, "ABCDE22222").err === "schema" && sub2(y.E, y.sha, "ABCDE22222", { mode: "paper", files: [{ fname: "a.pdf", pdf }] }).ok === true; })());
 t("R4-07: retry שחוצה שנה – המסלול שנקבע ב-claim נשמר (print), בלי תקיעה", (() => { const y = ready({ failSaveAt: 2 }); sub2(y.E, y.sha, "ABCDE33333"); const g = regOf(y.E); g.start = "2027-01-05"; y.E._state.props["L:" + L1] = JSON.stringify(g); return sub2(y.E, y.sha, "ABCDE33333").ok === true && sub2(y.E, y.sha, "ABCDE33333", { mode: "paper", files: [{ fname: "a.pdf", pdf }] }).dup === true; })());
-t("G-33: מכסת מייל נגמרה – לא שומרים כלום", (() => { const y = ready({ quota: 1 }); return sub2(y.E, y.sha, "ABCDEF0123").err === "quota" && pdfCount(y.E) === 0; })());
+t("G-33: מכסת מייל נגמרה – לא שומרים כלום", (() => { const y = ready(); y.E._state.opts.quota = 1; return sub2(y.E, y.sha, "ABCDEF0123").err === "quota" && pdfCount(y.E) === 0; })());
 t("G-37: תיקייה משותפת בקישור – לא שומרים", (() => { const y = ready({ sharedFolder: "C-100" }); return sub2(y.E, y.sha, "ABCDEF0123").ok === false && mails(y.E).length === 0; })());
 t("R3-08: משתמש נוסף עם הרשאה לתיקיית הלקוח – לא שומרים", (() => { const y = ready({ editorIn: "C-100" }); return sub2(y.E, y.sha, "ABCDEF0123").err === "folder-has-users" && mails(y.E).length === 0; })());
 t("R3-08: משתמש נוסף בתיקיית הקישורים – לא נרשם קישור", (() => { const E2 = makeEnv({ editorIn: "_קישורים" }); const k = employer(E2, OWN); return post(E2, { action: "register", linkId: L1, ownerEmail: OWN, tok: k, terms: terms(L1, OWN) }).err === "folder-has-users"; })());
@@ -262,8 +264,9 @@ t("R4-05: קובץ שנמחק אחרי שמירת המזהה – מזוהה, ל�
 // R4-06: מפתח = linkId; docId זהה בשני קישורים לא מתערבב
 E = makeEnv(); tk = employer(E, OWN);
 const sA = post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk, terms: terms(L1, OWN) }).sha, sB = post(E, { action: "register", linkId: L2, ownerEmail: OWN, tok: tk, terms: terms(L2, OWN, { empName: "שני" }) }).sha;
-post(E, { action: "submit", linkId: L1, docId: "1234512345", termsHash: sA, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
-post(E, { action: "submit", linkId: L2, docId: "1234512345", termsHash: sB, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
+verify(E, L1); verify(E, L2);
+post(E, { action: "submit", vt: E._vt[L1], linkId: L1, docId: "1234512345", termsHash: sA, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
+post(E, { action: "submit", vt: E._vt[L2], linkId: L2, docId: "1234512345", termsHash: sB, mode: "print", files: [{ fname: "a", pdf }, { fname: "b", pdf: pdf2 }] });
 t("R4-06: אותו docId בשני קישורים – שתי שורות יומן נפרדות ומשימות נפרדות", E._state.sheets["log"].rows.length === 3 && E._state.sheets["משימות"].rows.filter(r => r[0].endsWith("|101-sign")).length === 2);
 t("R4-06: resolveDoc עם ערך לא מוכר – נדחה", (() => { try { E.resolveDoc(L1, "yes"); return false; } catch (e) { return /sent או resend/.test(e.message); } })());
 t("R4-06: resolveDoc מתעד מי ומתי", (() => { const y = ready({ failMail: 1 }); sub2(y.E, y.sha, "BCBCB99999"); y.E.resolveDoc(L1, "sent"); const r0 = regOf(y.E).doc.resolution; return r0.how === "sent" && r0.by === ME && !!r0.at; })());
@@ -336,7 +339,7 @@ const B = { mode: "new", start: "2026-05-01", f101: "michpal", company: "test", 
   days: ["08:00-16:00", "08:00-16:00", "08:00-16:00", "08:00-16:00", "08:00-16:00", "", ""], breakMin: 45, weeklyHours: 36.25, wage: 40, wageType: "hourly", empPct: 6, erPct: 6.5, sevPct: 6, sec14: true };
 E = makeEnv(); tk = employer(E, OWN);
 const CT = (patch) => vm.runInContext("checkTerms", E)(JSON.parse(JSON.stringify(Object.assign({}, B, patch))), { approved: false });
-const REG = (patch) => { const id = L3x(); return post(E, { action: "register", linkId: id, ownerEmail: OWN, tok: tk, terms: Object.assign({ v: 5, linkId: id, ownerEmail: OWN, signer: "x", empName: "x" }, JSON.parse(JSON.stringify(Object.assign({}, B, patch)))) }); };
+const REG = (patch) => { const id = L3x(); return post(E, { action: "register", linkId: id, ownerEmail: OWN, tok: tk, terms: Object.assign({ v: 5, linkId: id, ownerEmail: OWN, signer: "x", empName: "x", empEmail: "worker@example.com" }, JSON.parse(JSON.stringify(Object.assign({}, B, patch)))) }); };
 const SIX = ["08:00-14:45", "08:00-14:45", "08:00-14:45", "08:00-14:45", "08:00-14:45", "08:00-14:45", ""];
 const SHORT0 = ["08:00-17:21", "08:00-16:21", "08:00-17:21", "08:00-17:21", "08:00-17:21", "", ""];
 let c0 = CT({});
@@ -385,6 +388,41 @@ const c7e = CT7({ shortDay: 4, days: ["08:00-17:21", "08:00-17:21", "08:00-17:21
 t("R7: ראשון–חמישי ושבת מנוחה – ללא שינוי (42 רגילות, 0 נוספות)", c7e.err.length === 0 && c7e.plan.regular === 42 && c7e.plan.ot === 0);
 t("R7: 6 ימים – ערב המנוחה נשאר 420, שאר הימים 480", (() => { const c = CT7({ pattern: "6", shortDay: "", days: SIX, weeklyHours: 36 }); return c.plan.rows[5].norm === 420 && c.plan.rows[0].norm === 480; })());
 t("R7: יום לילה שאינו ערב מנוחה – עדיין 420", (() => { const c = CT7({ days: ["", "", "", "", "16:00-24:00", "", ""], weeklyHours: 7.25 }); return c.plan.rows[4].norm === 420; })());
+
+// ---------- אימות זהות (OTP) – החלטה 3 ----------
+{
+  const fresh = () => { const E = makeEnv(); const tok = employer(E, OWN); return { E, tok, sha: post(E, { action: "register", linkId: L1, ownerEmail: OWN, tok, terms: terms(L1, OWN) }).sha }; };
+  let y = makeEnv(), tk2 = employer(y, OWN);
+  t("OTP: יצירת קישור בלי מייל עובד – נדחית", post(y, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk2, terms: terms(L1, OWN, { empEmail: "" }) }).err === "emp-email");
+  t("OTP: מייל העובד זהה למייל המעסיק – נדחה", post(y, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk2, terms: terms(L1, OWN, { empEmail: OWN }) }).err === "emp-email");
+  t("OTP: מייל העובד הוא מייל המשרד – נדחה", post(y, { action: "register", linkId: L1, ownerEmail: OWN, tok: tk2, terms: terms(L1, OWN, { empEmail: ME }) }).err === "emp-email");
+  let z = fresh();
+  t("OTP: הגשה בלי אימות – נחסמת, לא נשמר קובץ ולא נשלח מייל", sub2(z.E, z.sha, "ABCDEF0123").err === "otp-required" && pdfCount(z.E) === 0 && mails(z.E).length === 0);
+  const r1 = post(z.E, { action: "otp", linkId: L1 }), om = z.E._state.mails.filter(m => /קוד אימות/.test(m.subject));
+  t("OTP: הקוד נשלח רק למייל העובד שבשרת, מוסתר בתשובה", r1.ok && r1.to === "wo***@example.com" && om.length === 1 && om[0].to === "worker@example.com" && /\d{6}/.test(om[0].htmlBody));
+  t("OTP: בשרת נשמרת רק טביעה, לא הקוד עצמו", !JSON.stringify(z.E._state.props).includes(codeOf(z.E)));
+  let w = post(z.E, { action: "otpCheck", linkId: L1, code: "000000" === codeOf(z.E) ? "111111" : "000000" });
+  t("OTP: קוד שגוי – נדחה ומראה כמה ניסיונות נשארו", w.err === "otp-wrong" && w.left === 4);
+  for (let i = 0; i < 4; i++) w = post(z.E, { action: "otpCheck", linkId: L1, code: "999999" === codeOf(z.E) ? "888888" : "999999" });
+  t("OTP: אחרי 5 ניסיונות שגויים – נעול, גם הקוד הנכון לא עובר", w.err === "otp-locked" && post(z.E, { action: "otpCheck", linkId: L1, code: codeOf(z.E) }).err === "otp-locked");
+  z = fresh(); post(z.E, { action: "otp", linkId: L1 }); const c1 = codeOf(z.E);
+  const ok1 = post(z.E, { action: "otpCheck", linkId: L1, code: c1 });
+  t("OTP: קוד נכון – מחזיר אסימון", ok1.ok && /^[0-9a-f]{32}$/.test(ok1.vt));
+  t("OTP: הקוד חד-פעמי – שימוש חוזר נדחה", post(z.E, { action: "otpCheck", linkId: L1, code: c1 }).err === "otp-none");
+  post(z.E, { action: "otp", linkId: L1 });
+  t("OTP: קוד חדש נשלח – האסימון הישן כבר לא תקף", sub2(z.E, z.sha, "ABCDEF0123", { vt: ok1.vt }).err === "otp-required" && pdfCount(z.E) === 0);
+  const c2 = codeOf(z.E), ok2 = post(z.E, { action: "otpCheck", linkId: L1, code: c2 });
+  t("OTP: עם אסימון תקף – ההגשה עוברת", sub2(z.E, z.sha, "ABCDEF0123", { vt: ok2.vt }).ok === true && mails(z.E).length === 1);
+  t("OTP: אסימון של קישור אחד לא עובד בקישור אחר", (() => { const q = fresh(); post(q.E, { action: "register", linkId: L2, ownerEmail: OWN, tok: q.tok, terms: terms(L2, OWN) }); const v1 = verify(q.E, L1); return post(q.E, { action: "submit", vt: v1, linkId: L2, docId: "ABCDEF0124", termsHash: "x", mode: "print", files: [] }).err === "otp-required"; })());
+  z = fresh(); post(z.E, { action: "otp", linkId: L1 }); { const rg = regOf(z.E); rg.otp.exp = Date.now() - 1000; z.E._state.props["L:" + L1] = JSON.stringify(rg); }
+  t("OTP: קוד שפג תוקפו (10 דקות) – נדחה", post(z.E, { action: "otpCheck", linkId: L1, code: codeOf(z.E) }).err === "otp-expired");
+  z = fresh(); for (let i = 0; i < 5; i++) post(z.E, { action: "otp", linkId: L1 });
+  t("OTP: יותר מ-5 שליחות ביום לקישור – נחסם", post(z.E, { action: "otp", linkId: L1 }).err === "otp-limit");
+  z = fresh(); post(z.E, { action: "revoke", linkId: L1, tok: z.tok });
+  t("OTP: קישור שבוטל – לא שולחים קוד", post(z.E, { action: "otp", linkId: L1 }).err === "revoked" && z.E._state.mails.filter(m => /קוד אימות/.test(m.subject)).length === 0);
+  z = fresh(); z.E._state.opts.quota = 2;
+  t("OTP: מכסת מייל כמעט נגמרה – לא שולחים קוד", post(z.E, { action: "otp", linkId: L1 }).err === "quota");
+}
 
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

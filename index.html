@@ -233,7 +233,7 @@ function probationText(t){
   const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
   return ` ${words} להעסקה הם תקופת ניסיון.`;
 }
-const AGR_VER = "3.8 (11/2026)";
+const AGR_VER = "3.9 (11/2026)";
 const LINK_VER = 5; // קישורים מגרסה קודמת לא נפתחים – המעסיק יוצר קישור חדש
 function agreementBody(t, emp){
   const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
@@ -448,6 +448,8 @@ function renderSetup(){
       <div><label class="req">שם העובד</label><input id="empName" placeholder="שם פרטי ומשפחה"></div>
       <div><label>הנייד של העובד</label><input id="empPhone" inputmode="tel" placeholder="לשליחה ישירה בוואטסאפ"></div>
     </div>
+    ${SEND_URL ? `<label class="req">המייל של העובד</label><input id="empEmail" type="email" dir="ltr" placeholder="name@example.com">
+    <p class="note">לאימות זהות: לפני החתימה העובד יקבל למייל הזה קוד חד-פעמי. המייל לא נכנס לקישור.</p>` : ""}
     <p class="note">כך תדע/י לאיזה עובד שייך כל קישור. השם יופיע גם אצל העובד כשהוא פותח את הקישור. הטלפון לא נכנס לקישור.</p>
     <label class="opt"><input type="checkbox" id="youth"><span class="t">העובד/ת מתחת לגיל 18 בתחילת העבודה<small>לנוער חלים כללים אחרים – הכלי לא מפיק לו מסמכים, והמשרד מטפל.</small></span></label>
   </div>
@@ -559,7 +561,7 @@ function renderSetup(){
   const v = id => ($("#"+id)||{value:""}).value.trim();
   const collect = () => {
     const t = {
-      v:3, mode:rv("mode"), f101:rv("mode")==="change" ? "" : rv("f101"), ownerEmail:v("ownerEmail"), empName:v("empName"),
+      v:3, mode:rv("mode"), f101:rv("mode")==="change" ? "" : rv("f101"), ownerEmail:v("ownerEmail"), empName:v("empName"), empEmail:SEND_URL ? v("empEmail").trim().toLowerCase() : "",
       company:v("company"), companyId:v("companyId"), deductions:v("deductions"), ephone:v("ephone"), address:v("address"), industry:v("industry"), collective:v("collective"),
       signer:v("signer"), manager:v("manager"), harassContact:v("harassContact"),
       role:v("role"), start:rv("mode")==="change" ? v("origStart") : v("start"), weeklyHours:v("weeklyHours"), restDay:v("restDay"), probation:rv("mode")==="change" ? "" : v("probation"),
@@ -613,6 +615,11 @@ function renderSetup(){
     for(const [k,n] of need){ if(!v(k)) return bad(k, "חסר: " + n); }
     if(!/^\S+@\S+\.\S+$/.test(v("ownerEmail"))) return bad("ownerEmail","המייל לא תקין");
     if(v("ownerEmail").toLowerCase() === CPA_EMAIL) return bad("ownerEmail","כאן כותבים את המייל של המעסיק. המשרד מקבל עותק אוטומטית.");
+    if(SEND_URL){
+      const em = v("empEmail").trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return bad("empEmail","חסר או לא תקין: המייל של העובד (לקוד האימות)");
+      if(em === v("ownerEmail").trim().toLowerCase() || em === CPA_EMAIL) return bad("empEmail","כאן כותבים את המייל של העובד עצמו – לא של המעסיק או המשרד");
+    }
     if(v("deductions") && !/^9\d{8}$/.test(v("deductions"))) return bad("deductions","תיק ניכויים: 9 ספרות שמתחילות ב-9");
     const t = collect(), {err} = checkTerms(t, {approved:approved(t)});
     if(err.length){ $("#checks").scrollIntoView({behavior:"smooth",block:"center"}); return toast("יש לתקן את השגיאות בבדיקת התקינות"); }
@@ -664,7 +671,7 @@ function drawHist(){
 }
 
 /* ================= employee flow ================= */
-let T = null, E = {}, F = {}, sigE = null, ATT = [];
+let T = null, E = {}, F = {}, sigE = null, ATT = [], VT = "", NEED_OTP = false;
 const DOC_ID = Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase();
 const MODE = () => (T && T.mode === "change") ? "change" : (T && T.f101 === "michpal") ? "michpal" : (T && T.f101 === "paper") ? "paper" : "print";
 const STEPS = () => ({change:["פרטים","אישור השינוי","שליחה"], michpal:["פרטים","הסכם עבודה","שליחה"], paper:["פרטים","הסכם עבודה","שליחה"], print:["פרטים","הסכם עבודה","טופס 101","צילומים ושליחה"]})[MODE()];
@@ -676,6 +683,38 @@ function ask(msg, yes, no){ return new Promise(res => {
   o.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { o.remove(); res(b.dataset.a === "1"); });
   document.body.appendChild(o); }); }
 
+/* אימות זהות: קוד חד-פעמי למייל שהמעסיק רשם (מצב שרת בלבד). בלי אימות השרת לא מקבל את המסמכים. */
+function renderOtp(){
+  header(T.company, "אימות זהות", "לפני שממשיכים – נוודא שהקישור הגיע אליך");
+  dock("");
+  const linkId = location.hash.slice(3).replace(/[^0-9a-f]/g,"");
+  const call = async (o) => { const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(Object.assign({app:"office-forms-v2", linkId}, o))}); return r.json(); };
+  const msg = {"otp-wrong":"הקוד לא נכון.", "otp-locked":"היו יותר מדי ניסיונות. שלח/י קוד חדש.", "otp-expired":"תוקף הקוד הסתיים. שלח/י קוד חדש.", "otp-none":"צריך לשלוח קוד חדש.", "otp-limit":"נשלחו היום יותר מדי קודים לקישור הזה. נסה/י מחר, או פנה/י למעסיק.", quota:"לא ניתן לשלוח קוד כרגע. נסה/י שוב מאוחר יותר.", rate:"יותר מדי בקשות. נסה/י שוב בעוד כמה דקות."};
+  $("#app").innerHTML = `<div class="card">
+    <p>כדי לוודא שהמסמכים נחתמים על ידך, נשלח קוד בן 6 ספרות למייל שהמעסיק רשם עבורך.</p>
+    <div class="btns"><button class="btn wide" type="button" id="otpSend">שלחו לי קוד</button></div>
+    <div id="otpBox" class="hidden">
+      <p class="note" id="otpTo"></p>
+      <label class="req">הקוד מהמייל</label><input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" placeholder="000000">
+      <div class="btns"><button class="btn wide" type="button" id="otpOk">אימות והמשך</button></div>
+      <p class="note">לא הגיע? בדוק/י בתיקיית הספאם, או <a href="#" id="otpAgain">שלחו שוב</a>. אם המייל לא נכון – פנה/י למעסיק.</p>
+    </div></div>`;
+  const send = async () => {
+    try{ const j = await call({action:"otp"});
+      if(!j.ok) return toast(msg[j.err] || "לא ניתן לשלוח קוד. פנה/י למעסיק.");
+      $("#otpTo").textContent = `הקוד נשלח אל ${j.to} ותקף ${j.min || 10} דקות.`; $("#otpBox").classList.remove("hidden"); $("#otpCode").focus();
+    }catch(e){ toast("אין חיבור לשרת. נסה/י שוב."); }
+  };
+  $("#otpSend").onclick = send; $("#otpAgain").onclick = e => { e.preventDefault(); send(); };
+  $("#otpOk").onclick = async () => {
+    const code = $("#otpCode").value.replace(/\D/g,"");
+    if(code.length !== 6) return toast("הקוד בן 6 ספרות");
+    try{ const j = await call({action:"otpCheck", code});
+      if(!j.ok) return toast((msg[j.err] || "האימות נכשל.") + (j.err === "otp-wrong" && j.left ? ` נשארו ${j.left} ניסיונות.` : ""));
+      VT = j.vt; renderWelcome(); window.scrollTo(0,0);
+    }catch(e){ toast("אין חיבור לשרת. נסה/י שוב."); }
+  };
+}
 function renderWelcome(){
   header(T.company, T.empName ? `שלום ${T.empName.split(" ")[0]}! 👋` : "ברוך/ה הבא/ה! 👋", "עוד כמה דקות וסיימת את כל הניירת");
   if(T.empName && !E.first){ const parts = T.empName.trim().split(/\s+/); E.first = parts[0]; E.last = parts.slice(1).join(" "); }
@@ -1328,7 +1367,7 @@ function renderSend(){
         const files = [];
         for(const d of DOCS){ files.push({fname:d.fname, pdf: await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(d.blob); })}); }
         const resp = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({
-          app:"office-forms-v2", action:"submit", linkId:T.linkId||"", files, docId:DOC_ID, agrVer:AGR_VER, mode:md, taxYear:taxYear(), company:T.company, employee:who, role:T.role, start:fmtDate(T.start),
+          app:"office-forms-v2", action:"submit", vt:VT, linkId:T.linkId||"", files, docId:DOC_ID, agrVer:AGR_VER, mode:md, taxYear:taxYear(), company:T.company, employee:who, role:T.role, start:fmtDate(T.start),
           termsHash:T.termsHash || "", complex101:F.complex || [] })});
         const j = await resp.json();
         if(j && j.ok){ renderThanks(true); return; }
@@ -1388,7 +1427,7 @@ async function route(){
       const r = await fetch(SEND_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({app:"office-forms-v2", action:"get", linkId:id})});
       const j = await r.json();
       if(!j.ok) return stop({used:"המסמכים בקישור הזה כבר נשלחו. אם צריך לשלוח שוב – בקש/י מהמעסיק קישור חדש.", expired:"תוקף הקישור (30 יום) הסתיים. בקש/י מהמעסיק קישור חדש.", revoked:"המעסיק ביטל את הקישור הזה."}[j.err] || "הקישור לא נמצא. בקש/י מהמעסיק לשלוח אותו שוב.");
-      T = j.terms; T.termsHash = j.sha;
+      T = j.terms; T.termsHash = j.sha; NEED_OTP = true;
     }
     else if((h.startsWith("#k=") || h.startsWith("#e=")) && SEND_URL) return stop("הקישור הזה מגרסה ידנית ואינו תקף במערכת השליחה. בקש/י מהמעסיק ליצור קישור חדש.");
     else if(h.startsWith("#k=")) T = await unpackK(h.slice(3));
@@ -1398,7 +1437,7 @@ async function route(){
   }
   if(T && Number(T.v) !== LINK_VER) return stop("הקישור הזה נוצר בגרסה קודמת של הטופס, ולא ניתן להשתמש בו. בקש/י מהמעסיק ליצור קישור חדש – זה לוקח דקה.");
   if(T && checkTerms(T, {approved:approved(T)}).err.length) return stop("בתנאים שבקישור יש שגיאה שהמעסיק צריך לתקן. בקש/י ממנו ליצור קישור חדש.");
-  if(T){ renderWelcome(); return; }
+  if(T){ NEED_OTP ? renderOtp() : renderWelcome(); return; }
   if(h.startsWith("#s=")){ try{ PRESET = b64urlDecode(h.slice(3)); }catch(e){ PRESET = null; } }
   renderSetup();
 }
