@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = "http://localhost:8765/"
-OUT = os.environ.get("OUT", "/tmp/v35")
+OUT = os.environ.get("OUT", "/tmp/v36")
 os.makedirs(OUT, exist_ok=True)
 URI = {"company":"אורי כלפה","companyId":"024592693","deductions":"904105525","address":"עירית 1, קריית שמונה","signer":"אורי כלפה"}
 def preset(extra=None):
@@ -186,8 +186,8 @@ async def main():
             await pg.fill("#wage", "30.61"); check("R2-02: מאי 2023 – 30.61 עובר", "נמוך משכר המינימום" not in await checks())
             await pg.fill("#start", "2023-01-10"); check("R2-02: לפני 4/2023 – אין טבלה, חוסם", "לפני 1.4.2023" in await checks())
             await pg.fill("#start", "2027-05-01"); check("R2-02: אחרי 3/2027 – חוסם עד עדכון", "טבלת שכר המינימום בכלי עוד לא עודכנה" in await checks())
-            await pg.fill("#start", "2026-12-01"); await pg.fill("#wage", "-5"); check("R2-02: שכר שלילי לא תקין", "סכום השכר לא תקין" in await checks())
-            await pg.fill("#wage", "abc"); check("R2-02: שכר לא מספרי לא תקין", "סכום השכר לא תקין" in await checks())
+            await pg.fill("#start", "2026-12-01"); await pg.fill("#wage", "-5"); check("R2-02: שכר שלילי לא תקין", "השכר לא תקין" in await checks())
+            await pg.fill("#wage", "abc"); check("R2-02: שכר לא מספרי לא תקין", "השכר לא תקין" in await checks())
             await pg.select_option("#wageType", "monthly"); await pg.fill("#wage", "3500")
             for i in range(5): await pg.fill(f"[data-day='{i}']", "08:00-17:21")
             await pg.fill("[data-day='4']", "08:00-16:21"); await pg.fill("#weeklyHours", "20"); c = await checks()

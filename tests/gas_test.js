@@ -10,7 +10,9 @@ const ME = "cpa.snir@gmail.com";
 function makeEnv(opts = {}) {
   const props = {}, cache = {}, mails = [], files = [], folders = {}, sheets = {};
   let pdfSaves = 0, fid = 0;
-  const mkFile = (name, folder, blob) => { const f = { id: "F" + files.length, name, blob, folder, desc: "", trashed: false, setDescription(d) { this.desc = d; }, getId() { return this.id; }, moveTo() {}, isTrashed() { return this.trashed; },
+  const mkFile = (name, folder, blob) => { const f = { id: "F" + files.length, name, blob, folder, desc: "", trashed: false, shared: false, extraUser: null, setDescription(d) { this.desc = d; }, getId() { return this.id; }, moveTo() {}, isTrashed() { return this.trashed; },
+    getParents() { const p = [folders[this.folder]]; let i = 0; return { hasNext: () => i < p.length, next: () => p[i++] }; }, getMimeType() { return this.blob.type || "application/json"; },
+    getSharingAccess() { return this.shared ? "ANYONE_WITH_LINK" : "PRIVATE"; }, getEditors() { return [user(ME)].concat(this.extraUser ? [user(this.extraUser)] : []); }, getViewers() { return []; },
     getBlob() { const b = this.blob; return { getBytes: () => b.bytes, getDataAsString: () => typeof b.bytes === "string" ? b.bytes : Buffer.from(b.bytes.map(x => x & 255)).toString("utf8") }; } }; files.push(f); return f; };
   const user = m => ({ getEmail: () => m });
   const mkFolder = name => folders[name] || (folders[name] = {
@@ -64,7 +66,7 @@ const post = (env, o) => env.doPost({ postData: { contents: JSON.stringify(Objec
 const L1 = "0123456789abcdef0123456789abcdef", L2 = "fedcba9876543210fedcba9876543210";
 const WEEK = ["09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "", ""];
 const terms = (id, owner, extra) => Object.assign({ v: 5, linkId: id, ownerEmail: owner, company: "טייפון", address: "הרצל 1, חיפה", empName: "בדיקה", role: "עובד", manager: "נדב", signer: "נדב", harassContact: "נדב 0501234567",
-  wage: "43", wageType: "hourly", weeklyHours: "36.25", days: WEEK, pattern: "5", shortDay: "4", breakMin: "45", restDay: "שבת", sec14: true, sevPct: "6", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
+  agrVer: "3.6 (11/2026)", wage: "43", wageType: "hourly", weeklyHours: "36.25", days: WEEK, pattern: "5", shortDay: "4", breakMin: "45", restDay: "שבת", sec14: true, sevPct: "6", start: "2026-12-01", mode: "new", f101: "print" }, extra || {});
 const OWN = "nadavlevvy@gmail.com";
 let pass = 0, fail = 0;
 const t = (name, cond) => { if (cond) { pass++; console.log("✓ " + name); } else { fail++; console.log("✗ " + name); } };
@@ -274,6 +276,59 @@ vmSet(x.E, "tasksUpsert_", realUpsert);
 const noTask = !(x.E._state.sheets["משימות"] || { rows: [] }).rows.some(r => /mail-review/.test(r[0]));
 sub2(x.E, x.sha, "CDCDC99999"); sub2(x.E, x.sha, "CDCDC99999");
 t("R4-08: אחרי כשל ביצירת משימה – ניסיון חוזר יוצר משימת בדיקה אחת בלבד", noTask && x.E._state.sheets["משימות"].rows.filter(r => /\|mail-review$/.test(r[0])).length === 1 && mails(x.E).length === 0);
+
+// ---------- סבב 5 ----------
+// R5-01: הקלט הסינתטי של ChatGPT, בדיוק – גם ב-checkTerms וגם ב-register עם הרשאה תקפה
+const R5 = { mode: "new", start: "2026-05-01", f101: "michpal", company: "test", address: "test", role: "test", manager: "test", harassContact: "0501234567", restDay: "שבת", pattern: "bogus",
+  days: ["08:00-17:00", "08:00-17:00", "08:00-17:00", "08:00-17:00", "08:00-17:00", "08:00-17:00", ""], breakMin: "bad", weeklyHours: 42, wage: 1, wageType: "monthly", empPct: 0.1, erPct: 0.1, sevPct: 0.1, sec14: true };
+E = makeEnv(); tk = employer(E, OWN);
+const ctR5 = vm.runInContext("checkTerms", E)(JSON.parse(JSON.stringify(R5)), { approved: false });
+t("R5-01: הקלט של ChatGPT – checkTerms מחזיר שגיאות (לא err:[])", ctR5.err.length >= 3 && ctR5.err.some(x => /5 או 6/.test(x)) && ctR5.err.some(x => /הפסקה/.test(x)) && ctR5.err.some(x => /פנסיה/.test(x)));
+const regR5 = post(E, { action: "register", linkId: "ab".repeat(16), ownerEmail: OWN, tok: tk, terms: Object.assign({ v: 5, linkId: "ab".repeat(16), ownerEmail: OWN, signer: "x", empName: "x" }, JSON.parse(JSON.stringify(R5))) });
+t("R5-01: אותו קלט ב-register עם הרשאה תקפה – נדחה", regR5.ok === false && regR5.err === "rules");
+const ruleCase = (extra) => { const q = post(E, { action: "register", linkId: L3x(), ownerEmail: OWN, tok: tk, terms: terms(lastL, OWN, extra) }); return q; };
+[["breakMin 'bad'", { breakMin: "bad" }], ["breakMin -60", { breakMin: "-60" }], ["breakMin 999", { breakMin: "999" }], ["breakMin null", { breakMin: null }], ["breakMin true", { breakMin: true }],
+ ["pattern לא מוכר", { pattern: "7" }], ["restDay לא מוכר", { restDay: "שני" }], ["24:59", { days: ["09:00-24:59", "09:00-17:00", "09:00-17:00", "09:00-17:00", "09:00-17:00", "", ""] }],
+ ["פנסיה 0.1", { empPct: "0.1", erPct: "0.1" }], ["פיצויים 7", { sevPct: "7" }], ["boolean כמחרוזת 'false'", { sec14: "false" }], ["שכר Infinity", { wage: "Infinity" }], ["היקף NaN", { weeklyHours: "NaN" }],
+ ["ימים לא מחרוזות", { days: [1, 2, 3, 4, 5, 6, 7] }], ["shortDay 9", { shortDay: "9" }]].forEach(([n, x]) => {
+  const q = ruleCase(x); t("R5-01: " + n + " – נדחה בשרת", q.ok === false && /^(rules|schema)/.test(q.err));
+});
+t("R5-01: קלט תקין – מתקבל (לא חוסמים יתר)", ruleCase({}).ok === true);
+t("R5-01: 24:00 כסוף יום – הפורמט תקין (נדחה רק בגלל לילה בלי אישור, לא בגלל השעה)", (() => { const c = vm.runInContext("checkTerms", E)(terms(L1, OWN, { days: ["16:00-24:00", "", "", "", "", "", ""], weeklyHours: "7.25" }), { approved: false }); return !c.err.some(x => /לא בפורמט/.test(x)) && c.err.some(x => /22:00/.test(x)); })());
+t("G-03: גם עם היתר – הפסקה 0 ביום של 8 שעות נדחית (מינימום 30)", vm.runInContext("checkTerms", E)(terms(L1, OWN, { breakPermit: true, breakMin: "0", weeklyHours: "40" }), { approved: true }).err.some(x => /לפחות 30 דקות/.test(x)));
+
+// R5-02: retry של משימת תקלה – לא דוחה יעד, לא דורס אחראי/סטטוס/אסמכתה
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDE55555");
+let shm = x.E._state.sheets["משימות"]; let rowM = shm.rows.find(r => /\|mail-review$/.test(r[0]));
+const due0 = rowM[7]; rowM[6] = "רותי"; rowM[9] = "בטיפול"; rowM[10] = "בדקתי תיבה";
+const realNow = Date.now; Date.now = () => realNow() + 2 * 864e5;
+sub2(x.E, x.sha, "ABCDE55555"); Date.now = realNow;
+rowM = shm.rows.find(r => /\|mail-review$/.test(r[0]));
+t("R5-02: ניסיון חוזר אחרי יומיים – יעד התקלה לא זז, אחראי/סטטוס/אסמכתה נשמרים", rowM[7] === due0 && rowM[6] === "רותי" && rowM[9] === "בטיפול" && rowM[10] === "בדקתי תיבה");
+x = ready({ failMail: 1 }); const keep = x.E.tasksUpsert_; vmSet(x.E, "tasksUpsert_", function () { throw new Error("sheet-down"); });
+sub2(x.E, x.sha, "ABCDE66666"); vmSet(x.E, "tasksUpsert_", keep);
+const rc = x.E.reconcile();
+t("R5-02: כשל בלי retry – reconcile יוצר משימת בדיקה, בלי שליחה", rc.some(z => /review/.test(z)) && x.E._state.sheets["משימות"].rows.some(r => /\|mail-review$/.test(r[0])) && mails(x.E).length === 0);
+x = ready(); x.E._state.opts.throwOnSet = (k, v) => k.startsWith("L:") && v.doc && v.doc.state === "done";
+sub2(x.E, x.sha, "ABCDE77777"); const rc2 = x.E.reconcile();
+t("R5-02: מייל יצא אבל לא נסגר – reconcile סוגר בלי מייל נוסף", rc2.some(z => /closed/.test(z)) && regOf(x.E).doc.state === "done" && mails(x.E).length === 1);
+t("R5-02: resolveDoc נכשל לפני יצירת משימה – reconcile משלים", (() => { const y = ready({ failMail: 1 }); sub2(y.E, y.sha, "ABCDE88888"); const k2 = y.E.tasksUpsert_; vmSet(y.E, "tasksUpsert_", function () { throw new Error("x"); });
+  try { y.E.resolveDoc(L1, "sent"); } catch (e) {} vmSet(y.E, "tasksUpsert_", k2); const out = y.E.reconcile(); return regOf(y.E).doc.state === "done" && out.some(z => /closed/.test(z)) && mails(y.E).length === 0; })());
+
+// R5-03: קובץ שהועבר / שותף, תנאים ששונו, agrVer שונה ב-retry
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDE99999"); x.E.resolveDoc(L1, "resend");
+x.E._state.files.find(f => f.blob && f.blob.type === "application/pdf").folder = "root";
+t("R5-03: קובץ שהועבר לתיקייה אחרת – נעצר", sub2(x.E, x.sha, "ABCDE99999").err === "file-problem" && mails(x.E).length === 0);
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDEAAAAA"); x.E.resolveDoc(L1, "resend");
+x.E._state.files.find(f => f.blob && f.blob.type === "application/pdf").shared = true;
+t("R5-03: קובץ ששותף בקישור – נעצר", sub2(x.E, x.sha, "ABCDEAAAAA").err === "file-problem");
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDEBBBBB"); x.E.resolveDoc(L1, "resend");
+x.E._state.files.find(f => f.blob && f.blob.type === "application/pdf").extraUser = "spy@x.com";
+t("R5-03: קובץ עם משתמש נוסף – נעצר", sub2(x.E, x.sha, "ABCDEBBBBB").err === "file-problem");
+x = ready(); const tf = x.E._state.files.find(f => f.id === regOf(x.E).file); tf.blob = Object.assign({}, tf.blob, { bytes: tf.blob.bytes.replace('"43"', '"99"') });
+t("R5-03: תנאים ששונו בקובץ אחרי הרישום – get ו-submit נעצרים", post(x.E, { action: "get", linkId: L1 }).ok === false && sub2(x.E, x.sha, "ABCDECCCCC").err === "terms-tampered" && mails(x.E).length === 0);
+x = ready({ failMail: 1 }); sub2(x.E, x.sha, "ABCDEDDDDD", { agrVer: "9.9" }); x.E.resolveDoc(L1, "resend"); sub2(x.E, x.sha, "ABCDEDDDDD", { agrVer: "1.0-זיוף" });
+t("R5-03: agrVer מהדף לא נכנס – הגרסה נקבעת מהתנאים הקנוניים ב-claim", regOf(x.E).doc.agrVer === "3.6 (11/2026)" && x.E._state.sheets["log"].rows[1][2] === "3.6 (11/2026)" && !mails(x.E)[0].htmlBody.includes("זיוף"));
 
 console.log(`\n${pass} עברו, ${fail} נכשלו`);
 process.exit(fail ? 1 : 0);

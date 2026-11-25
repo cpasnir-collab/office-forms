@@ -16,7 +16,7 @@ function parseShift(v){
   const s = String(v||"").trim(); if(!s) return null;
   const mm = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*-\s*(\d{1,2})(?::?(\d{2}))?(?:\s*\/\s*(\d{1,3}))?$/); if(!mm) return {bad:true};
   const m1 = +(mm[2]||0), m2 = +(mm[4]||0);
-  if(+mm[1] > 24 || +mm[3] > 24 || m1 > 59 || m2 > 59) return {bad:true};
+  if(+mm[1] > 23 || m1 > 59 || m2 > 59 || +mm[3] > 24 || (+mm[3] === 24 && m2 !== 0)) return {bad:true}; // 24:00 רק כסוף יום
   const st = +mm[1]*60 + m1, en = +mm[3]*60 + m2;
   if(en <= st) return {over:true, st, en};
   return {st, en, g:en-st, brk: mm[5] === undefined ? null : +mm[5]};
@@ -74,9 +74,37 @@ function tplMiss(t){ const p = t.okTpl || {}, out = [], plan = hoursPlan(t);
   if(plan.night && !p.night) out.push("עבודת לילה");
   return out.filter((x,i) => out.indexOf(x) === i); }
 const numOk = v => v !== "" && v !== undefined && isFinite(Number(v)) && Number(v) > 0;
+/* שכבת קלט סגורה – לפני כל חישוב. בלי truthiness ובלי NaN: כל ערך נבדק לסוג ולטווח. */
+const BOOL_KEYS = ["breakPaid","sec14","breakPermit","cash","cameras","youth","camPolicy","night"];
+const fin = v => v !== "" && v !== null && v !== undefined && typeof v !== "boolean" && typeof v !== "object" && isFinite(Number(v)) && String(v).trim() !== "";
+function validateInput(t){
+  const e = [], has = k => t[k] !== undefined && t[k] !== "";
+  if(t.mode !== undefined && ["new","change"].indexOf(t.mode) < 0) e.push("סוג מסמך לא מוכר.");
+  if(has("pattern") && ["5","6"].indexOf(String(t.pattern)) < 0) e.push("מתכונת שבוע חייבת להיות 5 או 6 ימים.");
+  if(has("restDay") && ["שבת","שישי","ראשון"].indexOf(t.restDay) < 0) e.push("יום מנוחה לא מוכר.");
+  if(has("shortDay") && !(/^[0-6]$/.test(String(t.shortDay)))) e.push("היום המקוצר לא תקין.");
+  if(has("breakMin") && !(/^\d{1,3}$/.test(String(t.breakMin)) && Number(t.breakMin) <= 180)) e.push("משך ההפסקה חייב להיות מספר שלם של דקות בין 0 ל-180.");
+  if(t.days !== undefined && (!Array.isArray(t.days) || t.days.length !== 7 || t.days.some(d => typeof d !== "string"))) e.push("ימי העבודה במבנה לא תקין.");
+  BOOL_KEYS.forEach(k => { if(t[k] !== undefined && typeof t[k] !== "boolean") e.push(`השדה ${k} חייב להיות כן/לא.`); });
+  [["wage","השכר"],["weeklyHours","היקף השעות"]].forEach(([k,n]) => { if(has(k) && !(fin(t[k]) && Number(t[k]) > 0)) e.push(`${n} לא תקין.`); });
+  [["globalOT","שעות גלובליות"],["globalOTAmount","סכום גלובלי"]].forEach(([k,n]) => { if(has(k) && !(fin(t[k]) && Number(t[k]) > 0)) e.push(`${n} לא תקין.`); });
+  // פנסיה: לא פחות מהשיעורים בצו ההרחבה (עובד 6%, מעסיק 6.5%, פיצויים 6% או 8.33%), ועד תקרה סבירה
+  const pct = (k, def) => has(k) ? Number(t[k]) : def;
+  if(["empPct","erPct","sevPct"].some(k => has(k) && !fin(t[k]))) e.push("שיעורי הפנסיה לא תקינים.");
+  else {
+    if(pct("empPct",6) < 6 || pct("empPct",6) > 20) e.push("הפרשת עובד לפנסיה – לפחות 6% (צו ההרחבה). שיעור אחר מחייב בדיקת משרד.");
+    if(pct("erPct",6.5) < 6.5 || pct("erPct",6.5) > 20) e.push("הפרשת מעסיק לתגמולים – לפחות 6.5% (צו ההרחבה). שיעור אחר מחייב בדיקת משרד.");
+    if([6, 8.33].indexOf(pct("sevPct",6)) < 0) e.push("הפרשה לפיצויים – 6% או 8.33% בלבד בכלי.");
+  }
+  ["hishEr","hishEmp"].forEach(k => { if(has(k) && !(fin(t[k]) && Number(t[k]) >= 0 && Number(t[k]) <= 20)) e.push("שיעורי קרן השתלמות לא תקינים."); });
+  return e;
+}
 function checkTerms(t, ctx){
   const err = [], warn = [], ok = !!(ctx && ctx.approved);
+  const bad = validateInput(t);
+  if(bad.length) return {err: bad, warn, plan: null};      // קלט לא תקין – לא מחשבים כלום
   const plan = hoursPlan(t);
+  if(["net","regular","ot","dailyOT","weeklyOT"].some(k => !isFinite(plan[k]) || plan[k] < 0)) return {err: ["חישוב השעות לא תקין – בדוק/י את הימים, השעות וההפסקות."], warn, plan};
   plan.sh.forEach((s,i) => {
     if(s && s.bad) err.push(`ביום ${DAYS[i]} השעות לא בפורמט "09:00-17:00" (אפשר להוסיף הפסקה ליום: "09:00-17:00/30").`);
     if(s && s.over) err.push(`ביום ${DAYS[i]} המשמרת חוצה את חצות. משמרות שחוצות יום לא נתמכות בכלי – יש לפנות למשרד.`);
@@ -91,6 +119,7 @@ function checkTerms(t, ctx){
   plan.rows.forEach(r => { if(r && r.net > 720) err.push(`ביום ${DAYS[r.i]} יוצאות ${fmtH(r.net/60)} שעות עבודה – יותר מ-12 שעות ביום, כולל שעות נוספות.`); });
   if(plan.otMin > MAX_WEEK_OT*60) err.push(`לפי המשמרות יש ${fmtH(plan.ot)} שעות נוספות בשבוע – מעל ${MAX_WEEK_OT}. זה חורג מההיתר הכללי ומחייב בדיקת משרד.`);
   // הפסקות – סעיף 20. גם כשהעובד נשאר במקום (ההפסקה משולמת) – ההפסקה עצמה נדרשת.
+  plan.rows.forEach(r => { if(r && r.g >= 360 && t.breakPermit && r.brk < 30) err.push(`ביום ${DAYS[r.i]} מוגדרת הפסקה של ${r.brk} דקות. גם כשחל היתר – הכלי דורש לפחות 30 דקות רצופות ביום של 6 שעות ומעלה; מקרה אחר – בדיקת משרד.`); });
   plan.rows.forEach(r => { if(r && r.g >= 360 && r.brk < 45 && !t.breakPermit) err.push(`ביום ${DAYS[r.i]} (${fmtH(r.g/60)} שעות) מוגדרת הפסקה של ${r.brk} דקות. לפי סעיף 20 לחוק נדרשת הפסקה של 45 דקות לפחות, מהן 30 רצופות${t.breakPaid ? " – גם כשהעובד נדרש להישאר במקום (אז היא משולמת)" : ""}. אם חל היתר – סמן/י אותו; זה מחייב אישור משרד.`); });
   if(t.breakPermit && !ok) err.push("סומן היתר להפסקות (עבודה שאינה עבודת כפיים). חריגה מחייבת אישור משרד חתום בקישור המעסיק.");
   if(plan.night && !ok) err.push("יש משמרת עם שעתיים לפחות בין 22:00 ל-06:00. יום כזה הוא עד 7 שעות רגילות, וחלות מגבלות עבודת לילה (סעיף 22) – מחייב אישור משרד חתום.");

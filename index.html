@@ -233,7 +233,7 @@ function probationText(t){
   const words = {1:"החודש הראשון",2:"החודשיים הראשונים",3:"שלושת החודשים הראשונים",6:"ששת החודשים הראשונים"}[n] || `${n} החודשים הראשונים`;
   return ` ${words} להעסקה הם תקופת ניסיון.`;
 }
-const AGR_VER = "3.4 (11/2026)";
+const AGR_VER = "3.6 (11/2026)";
 const LINK_VER = 5; // קישורים מגרסה קודמת לא נפתחים – המעסיק יוצר קישור חדש
 function agreementBody(t, emp){
   const name = emp && emp.fullName ? esc(emp.fullName) : "<span style='color:#999'>(שם העובד)</span>";
