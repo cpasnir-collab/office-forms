@@ -27,7 +27,7 @@ async def employer(pg, mode="new", f101="print", wage="40", sev="6", days=True, 
     await pg.goto("about:blank"); await pg.goto(BASE + (pre or PRESET)); await pg.wait_for_timeout(400)
     if not pre: await pg.select_option("#industry", "general")
     await pg.click(f"label:has(input[name=mode][value={mode}])")
-    if mode == "new": await pg.click(f"label:has(input[name=f101][value={f101}])")
+    if mode == "new": await pg.evaluate("v => { document.querySelector('input[name=f101]').value = v; }", f101)  # ממשק: רק 101 בשאלון; מיכפל נשאר לקישורים ישנים
     vals = {"ephone":"0501234567","ownerEmail":"uri@example.com","empName":"ישראל בדיקה","empPhone":"0500000000","role":"עובד דלפק","wage":wage,"pensionFund":"מגדל מקפת","harassContact":"אורי כלפה 0501234567","manager":"אורי כלפה, בעלים"}
     if mode == "new": vals["start"] = "2026-12-01"
     else:
